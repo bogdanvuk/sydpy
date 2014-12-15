@@ -15,7 +15,7 @@ SyDPy project started in an attempt to customize the MyHDL Python package to my 
 Tutorial
 ================
 
-Start with the short tutorial: :ref:'tutorial'
+Start with the short tutorial :ref:`tutorial`
 
 .. toctree::
    :maxdepth: 2
