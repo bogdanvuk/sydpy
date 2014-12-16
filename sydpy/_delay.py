@@ -16,12 +16,25 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from .sig import sig
-from .seq import seq
-from .bit import bit, Bit
+"""Module implements Delay class"""
 
-__all__ = ["sig",
-           "seq",
-           "bit",
-           "Bit"
-           ]
+from sydpy._simulator import simdelay_add, simdelay_pop
+
+class Delay(object):
+    """Class to model delay events."""
+    def unsubscribe(self, obj):
+        simdelay_pop(obj)
+        
+    def subscribe(self, obj):
+        simdelay_add(obj, self._time)
+
+    def toVerilog(self):
+        return "#{0}".format(self._time)
+
+    def __init__(self, val):
+        """Return a delay instance.
+
+        Required parameters:
+        val -- a natural integer representing the desired delay
+        """
+        self._time = val

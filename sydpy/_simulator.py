@@ -22,7 +22,7 @@ import os
 import inspect
 
 from sydpy._util._injector import features, RequiredVariable  # @UnresolvedImport
-from sydpy._util._util import factory
+from sydpy._util._util import factory, unif_enum
 from sydpy._configurator import Configurator
 
 from greenlet import greenlet
@@ -36,6 +36,28 @@ def simtime():
     """Get the current simulation time."""
     sim = RequiredVariable('Simulator')
     return sim.time
+
+def simupdate(sig):
+    """Register signal for update cycle."""
+    sim = RequiredVariable('Simulator')
+    sim.update_pool.add(sig)
+    
+def simtrig(event):
+    """Register event to trigger pool."""
+    sim = RequiredVariable('Simulator')
+    sim.trig_pool.add(event)
+    
+def simdelay_add(proc, time):
+    sim = RequiredVariable('Simulator')
+    sim.delay_pool[proc] = time + sim.time
+    
+def simdelay_pop(proc):
+    sim = RequiredVariable('Simulator')
+    sim.delay_pool.pop(proc, None)
+    
+def simproc_reg(proc):
+    sim = RequiredVariable('Simulator')
+    sim.proc_reg(proc)
    
 class SimEvent(list):
     """Simulator Event that can trigger list of callbacks.
@@ -46,7 +68,7 @@ class SimEvent(list):
     
     Callback function should return a boolean value. If it returns:
     
-    True    -- Callback is re-registered by the event
+    True    -- Callback is re-registered by the _event
     False   -- Callback is deleted from the list     
     
     Callback can be registered with or without arguments. Callback
@@ -54,10 +76,10 @@ class SimEvent(list):
     to the list. Callback with arguments is registered by adding
     a tuple to the list. The first tuple item contains function 
     reference. The rest of the items will be passed to the
-    callback once the event is triggered.
+    callback once the _event is triggered.
     """
     def __call__(self, *args, **kwargs):
-        """Trigger the event and call the callbacks.
+        """Trigger the _event and call the callbacks.
         
         The arguments passed to this function will be passed to 
         all the callbacks.
@@ -163,27 +185,15 @@ class Simulator(object):
         for e in self.extension_names:
             self.extensions.append(factory(e, self.events))
         
-        duration = self._configurator['sys', 'sim_duration', 0]
+        self.duration = self._configurator['sys', 'sim_duration', 1000]
             
         self.top_module_cls = self._configurator['sys', 'top', None] 
         
         self.top_module_name = 'top'
             
-        if duration:
-            self.events['init_start'](self)
-       
-            # If the simulation is already finished, raise StopSimulation immediately
-            # From thais point it will propagate to the caller, that can catch it.
-            if self._finished:
-                raise StopSimulation("Simulation has already finished")
-
-#             self._initialize()
-            
-            self.sched = Scheduler(self)
-#             self.sched.settrace(callback)
-            self.sched.switch(duration)
-            
-            print('DONE!')
+        self.events['init_start'](self)
+        self.sched = Scheduler(self)
+        self.sched.switch(self.duration)
 
     def wait(self, events = None):
         """Delay process execution by waiting for events."""
@@ -198,7 +208,8 @@ class Simulator(object):
         
         if duration:
             self.duration = duration
-            self.max_time = self.time + self.duration
+        
+        self.max_time = self.time + self.duration
 
         self.events['run_start'](self)
         self.running = True
@@ -228,6 +239,7 @@ class Simulator(object):
                 self.events['run_end'](self)
                 self._finalize()
                 self._finished = True
+                return 
     
     def _initialize(self):
         
@@ -239,7 +251,7 @@ class Simulator(object):
         self._proc_pool = []
 
         if isinstance(self.top_module_cls, str):
-            self.top_module = Component.factory(self.top_module_cls, 'top', None)
+            self.top_module = factory(self.top_module_cls, 'top', None)
         else:
             self.top_module = self.top_module_cls('top', None)
 

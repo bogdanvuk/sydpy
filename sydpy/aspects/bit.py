@@ -32,7 +32,7 @@ def Bit(w):
     return __bit_classes[w] 
 
 class bit(object):
-    __slots__ = ['w', 'val', 'invld']
+    __slots__ = ['val', 'invld']
     
     w = 1
     
@@ -216,7 +216,7 @@ class bit(object):
             return False
     
     def __invert__(self):
-        return self.__class__(~self.val, None, self.invld)
+        return self.__class__(~self.val, self.invld)
     
     def __concat__(self, other):
         if hasattr(other, 'w'):

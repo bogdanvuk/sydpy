@@ -41,7 +41,7 @@ class GlobconfComponentMeta(type):
         
         # Derive the hierarhical qualified_name of the component
         if parent is not None:
-            qualified_name = parent.qualified_name + '.' + name
+            qualified_name = parent.qualified_name + '/' + name
         else:
             qualified_name = name
 
@@ -87,12 +87,6 @@ class Component(object, metaclass=GlobconfComponentMeta):
         self.parent = parent
         self.name = name
         
-        # Derive the hierarhical qualified_name of the component
-        if parent is not None:
-            self.qualified_name = parent.qualified_name + '.' + name
-        else:
-            self.qualified_name = name
-        
         self.components = {}
         
         if parent is not None:
@@ -123,6 +117,43 @@ class Component(object, metaclass=GlobconfComponentMeta):
     def add(self, comp):
         """Add a new subcomponent to the component dictionary."""
         self.components[comp.name] = comp
+    
+    def find(self, qualified_name):
+        """Retreive the component from the hierarchy by its qualified name
+        
+        Required arguments:
+            qualified_name    - The qualified name of component to find
+            
+        Return values:
+            (comp, path)      - Either the found component and empty string, or
+                                the component furthest down the path and the
+                                remaining of the path that could not be traced
+        """
+        if qualified_name[0] == '/':
+            if self.parent is not None:
+                return self.parent.find(qualified_name)
+            else:
+                return self.find(qualified_name[1:])
+        elif qualified_name[0] == '.':
+            return self.find(qualified_name[1:])
+        elif qualified_name[0:1] == '..':
+            return self.parent.find(qualified_name[2:])
+        else:
+            slash_pos = qualified_name.find('/')
+
+            if slash_pos == -1:
+                if qualified_name not in self.components:
+                    return (self, qualified_name)                
+                else:
+                    return (self.components[qualified_name], '')
+            else:
+                comp_name = qualified_name[:slash_pos-1]
+                rest_path = qualified_name[slash_pos+1:]
+
+                if comp_name not in self.components:
+                    return (self, qualified_name)                
+                else:
+                    return self.components[comp_name].find(rest_path)
 
     def __getattr__(self, name):
         if name in self.components:

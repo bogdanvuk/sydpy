@@ -1,5 +1,5 @@
 from copy import copy
-from fpyga import always
+from sydpy._process import always
 
 def _sig_to_seq_arch(self, clk, data_i, data_o):
     @always(self, clk.e.posedge)

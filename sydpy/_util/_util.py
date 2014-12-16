@@ -61,4 +61,13 @@ def key_repr(key):
         else:
             return '[{0}]'.format(key)
     else:
-        return ''    
+        return ''
+    
+def unif_enum(obj):
+    if hasattr(obj, '__iter__'):
+        for e in obj:
+            yield e
+    else:
+        yield obj
+    
+    

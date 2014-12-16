@@ -1,6 +1,6 @@
 
 from copy import copy
-from fpyga import always
+from sydpy._process import always
 
 def _sig_to_seq_arch(self, clk, data_i, data_o):
     @always(self, clk.e.posedge)
@@ -39,9 +39,15 @@ class sig(object):
         
     def __call__(self, *args):
         if args:
-            return self.dtype(args[0])
+            try:
+                return self.dtype(args[0])
+            except TypeError:
+                return args[0]
         else:
-            return self.dtype()
+            try:
+                return self.dtype()
+            except TypeError:
+                return None
     
     def __init__(self, dtype=None):
         self.dtype = dtype

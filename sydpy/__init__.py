@@ -26,6 +26,14 @@ class Hdlang(Enum):
     SystemC = 3
 
 from sydpy._simulator import Simulator
+from sydpy._process import always
+from sydpy._module import Module, architecture
+from sydpy._delay import Delay
+from sydpy.procs import clkinst
     
 __all__ = ["Simulator",
+           "Module",
+           "architecture",
+           "always",
+           "Delay"
            ]
