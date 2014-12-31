@@ -22,7 +22,7 @@ import os
 import inspect
 
 from sydpy._util._injector import features, RequiredVariable  # @UnresolvedImport
-from sydpy._util._util import factory, unif_enum
+from sydpy._util._util import class_load, unif_enum, factory
 from sydpy._configurator import Configurator
 
 from greenlet import greenlet
@@ -58,6 +58,19 @@ def simdelay_pop(proc):
 def simproc_reg(proc):
     sim = RequiredVariable('Simulator')
     sim.proc_reg(proc)
+    
+def simarch_inst_start():
+    sim = RequiredVariable('Simulator')
+    sim.arch_inst += 1
+    
+def simarch_inst_stop():
+    sim = RequiredVariable('Simulator')
+    if sim.arch_inst > 0:
+        sim.arch_inst -= 1
+    
+def simarch_inst():
+    sim = RequiredVariable('Simulator')
+    return (sim.arch_inst > 0)
    
 class SimEvent(list):
     """Simulator Event that can trigger list of callbacks.
@@ -112,7 +125,7 @@ class SimEvent(list):
 class Scheduler(greenlet):
     """Simulator scheduler kernel greenlet wrapper"""
     def run(self, duration = 0, quiet = 0):
-        self.simulator.run(duration, quiet)
+        self.simulator._run(duration, quiet)
     
     def callback(self, event, args):
         """Callback that monitors process switching for debuggin purposes"""
@@ -159,6 +172,7 @@ class Simulator(object):
         self._finished = False
         self._cosim = None
         self._config = config
+        self.arch_inst = 0
         
         # Create events for Simulator extensions to hook to.
         self.events = {
@@ -178,29 +192,36 @@ class Simulator(object):
         self._configurator = Configurator(self._config)
         features.Provide('Configurator', self._configurator)
 
+        self.duration = self._configurator['sys.sim', 'duration', 1000]
+        self.max_delta_count = self._configurator['sys.sim', 'max_delta_count', 1000]
+            
+        self.top_module_cls = class_load(self._configurator['sys', 'top', None]) 
+        
+        try:
+            self._prj_path = self._configurator['sys', 'project_path']
+        except KeyError:
+            self._prj_path = os.path.dirname(inspect.getfile(self.top_module_cls))
+            self._configurator['sys', 'project_path'] = self._prj_path
+            
         # Instantiate extension classes        
         self.extension_names = self._configurator['sys', 'extensions', []]
         self.extensions = []
         
         for e in self.extension_names:
             self.extensions.append(factory(e, self.events))
-        
-        self.duration = self._configurator['sys', 'sim_duration', 1000]
             
-        self.top_module_cls = self._configurator['sys', 'top', None] 
-        
         self.top_module_name = 'top'
-            
-        self.events['init_start'](self)
         self.sched = Scheduler(self)
-        self.sched.switch(self.duration)
+        self.events['init_start'](self)
 
     def wait(self, events = None):
         """Delay process execution by waiting for events."""
         self.sched.switch(events)
 
+    def run(self):
+        self.sched.switch(self.duration)
 #     @timeit
-    def run(self, duration=0, quiet=0):
+    def _run(self, duration=0, quiet=0):
         """Start the simulator scheduler loop."""
         
         # Instantiate the user module hierarchy
@@ -232,14 +253,20 @@ class Simulator(object):
                 
                 self.delta_count += 1
                 
+                if self.delta_count > self.max_delta_count:
+                    self._finalize()
+                    self.events['run_end'](self)
+                    self._finished = True
+                    raise Exception("Maximum number of delta cycles reached: {0}".format(self.max_delta_count))
+                
             self.events['timestep_end'](self.time, self)
             
             # All events have settled, let's advance time
             if not self._advance_time():
-                self.events['run_end'](self)
                 self._finalize()
+                self.events['run_end'](self)
                 self._finished = True
-                return 
+                raise greenlet.GreenletExit 
     
     def _initialize(self):
         
@@ -250,16 +277,7 @@ class Simulator(object):
         self._ready_pool = []
         self._proc_pool = []
 
-        if isinstance(self.top_module_cls, str):
-            self.top_module = factory(self.top_module_cls, 'top', None)
-        else:
-            self.top_module = self.top_module_cls('top', None)
-
-        try:
-            self._prj_path = self._configurator['sys', 'project_path']
-        except KeyError:
-            self._prj_path = os.path.dirname(inspect.getfile(self.top_module.__class__))
-            self._configurator['sys', 'project_path'] = self._prj_path
+        self.top_module = self.top_module_cls('top', None)
 
     def _unsubscribe(self, proc):
         events = getattr(proc, 'events', None)

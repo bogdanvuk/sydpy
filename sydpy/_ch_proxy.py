@@ -20,9 +20,12 @@
 
 from sydpy import Hdlang
 from sydpy._util._util import key_repr
+from sydpy._util._symexp import SymNode
 from sydpy._signal import Signal
 from sydpy._event import Event, EventSet
-from sydpy.aspects import sig
+from sydpy.intfs import sig, tlm
+from sydpy._delay import Delay
+from sydpy._simulator import simwait, simarch_inst
 
 class ConcatProxy(object):
     """Object represents the concatenation of proxy objects and data values."""
@@ -82,7 +85,7 @@ class SubProxy(object):
     """Provides access to the parent proxy via a key."""
     def __init__(self, parent, keys=None):
         """"Create SubProxy of a parent with specific key."""
-        self.aspect = parent.aspect.deref(keys)
+        self.intf = parent.intf.deref(keys)
         self.keys = keys
         self.parent = parent
 
@@ -129,44 +132,81 @@ def _apply_subvalue(val, asp, keys, old_val):
                 
     return val
 
+def proxy_bioper(method):
+    def wrapper(self, other):
+        if simarch_inst():
+            return SymNode(self, method.__name__, other)
+        else:
+            try:
+                other = other.read()
+            except AttributeError:
+                pass
+            
+            return method(self, other)
+    return wrapper  
+
+def proxy_unoper(method):
+    def wrapper(self):
+        if simarch_inst():
+            return SymNode(self, method.__name__)
+        else:
+            return method(self)
+    return wrapper 
+
 class ChProxy(object):
+#     __slots__ = ['subintfs', 'subproxies', 'keys', 'channel', 'intf', 'parent', 
+#                  'drv', 'src', 'e', 'qualified_name', 'channel', 'next']
+    
     """Channel proxy provides access to the same Channel information using
-    different aspects (protocols)"""
-    def __init__(self, parent, channel, aspect=None, keys=None): #, parent_proxy=None):
+    different interfaces (protocols)"""
+    def __init__(self, parent, channel, intf=None, init=None, keys=None, parent_proxy=None, proxy_copy=False):
         """Create new ChProxy instance
         parent     - Module that created the proxy
         channel    - Channel to which proxy is assigned
-        aspect     - Aspect by which to access the Channel 
+        intf       - Interface by which to access the Channel 
         keys       - Keys for accessing the parts of Channel data
         """
+        self.intf = intf
+#         if intf is None:
+#             self.intf = sig()
+            
+        self.subproxies = {}
+        self.subintfs = {}
         self.keys = keys
         self.channel = channel
-        self.aspect = aspect
-        
-        if aspect is None:
-            self.aspect = sig()
-        
         self.parent = parent
         self.drv = None
         self.src = []
+        self.parent_proxy = parent_proxy
+        self.init = init
+        
+        self.qualified_name = self.parent.qualified_name + "/" + self.channel.name + '_' + self.drv_sig_name
         
         self.e = EventSet(missing_event_handle=self.missing_event)
+            
+        if parent_proxy is None:
+            self.channel.proxies[repr(self)] = self
+            
+            if not proxy_copy:
+                self.channel.connect_to_sources(self)
         
-        self.subproxies = {}
-        self.channel.proxies.add(self)
-        self.channel.connect_to_sources(self)
-    
     def setup_driver(self):
-        sig_name = self.channel.name + '_' + self.drv_sig_name
+        sig_name = self.channel.name
         
-        self.drv = self.parent.inst(Signal, sig_name, val=self.aspect(), event_set = self.e)
+        if self.drv_sig_name:
+            sig_name += '_' + self.drv_sig_name
+        
+        self.drv = self.parent.inst(Signal, sig_name, val=self.intf(), event_set = self.e)
         
         self.channel.connect_proxies_to_source(self)
         
         if 'connect' in self.e.events:
             self.e.connect.trigger()
+            
+#         if self.parent_proxy is not None:
+#             self.channel.connect_proxies_to_source(self.parent_proxy)
 
-    def write(self, val, keys=None):
+    def _write_prep(self, val, keys=None):
         if self.drv is None:
             self.setup_driver()
         
@@ -176,11 +216,23 @@ class ChProxy(object):
             pass
         
         if keys is None:
-            val = self.aspect(val)
+            val = self.intf(val)
         else:
-            val = _apply_subvalue(val, self.aspect, keys, self.drv._next)
+            val = _apply_subvalue(val, self.intf, keys, self.drv._next)
+            
+        return val
+            
+    def blk_write(self, val, keys=None):
+        val = self._write_prep(val, keys)
+        self.drv.blk_push(val)
+
+    def write(self, val, keys=None):
+        val = self._write_prep(val, keys)
         
-        self.drv.write(val)
+        if isinstance(self.intf, tlm):
+            self.drv.push(val)
+        else:
+            self.drv.write(val)
 
     def write_after(self, val, delay):
         if isinstance(val, ChProxy):
@@ -191,6 +243,34 @@ class ChProxy(object):
     def acquire(self):
         self.cur_val = self.channel.acquire(proxy=self)
         return self.cur_val
+
+    def blk_pop(self):
+        if self.drv is not None:
+            self.cur_val = self.drv.blk_pop()
+        else:
+            self.cur_val = self.channel.blk_pop(proxy=self)
+            
+        if self.cur_val is None:
+            if self.init is not None:
+                self.cur_val = self.init
+            else:
+                self.cur_val = self.intf()
+            
+        return self.cur_val
+        
+    def pop(self):
+        if self.drv is not None:
+            self.cur_val = self.drv.pop()
+        else:
+            self.cur_val = self.channel.pop(proxy=self)
+            
+        if self.cur_val is None:
+            if self.init is not None:
+                self.cur_val = self.init
+            else:
+                self.cur_val = self.intf()
+            
+        return self.cur_val
    
     def read(self, def_val=None):
         if self.drv is not None:
@@ -199,12 +279,44 @@ class ChProxy(object):
             self.cur_val = self.channel.read(proxy=self, def_val=def_val)
             
         if self.cur_val is None:
-            self.cur_val = self.aspect()
+            if self.init is not None:
+                self.cur_val = self.init
+            else:
+                self.cur_val = self.intf()
             
         return self.cur_val
     
-    def blk_write(self, val, delay=0):
-        self.channel.blk_write(val, delay, proxy=self)
+#     def blk_write(self, val, keys=None):
+#         if self.intf.def_subintf is not None:
+#             getattr(self, self.intf.def_subintf)._blk_write(val, keys)
+#         else:
+#             self._blk_write(val, keys)
+#     
+#     def blk_pop(self):
+#         if self.intf.def_subintf is not None:
+#             return getattr(self, self.intf.def_subintf)._blk_pop()
+#         else:
+#             return self._blk_pop()
+#             
+#     def pop(self):
+#         if self.intf.def_subintf is not None:
+#             return getattr(self, self.intf.def_subintf)._pop()
+#         else:
+#             return self._pop()
+#             
+#     def write(self, val, keys=None):
+#         if self.intf.def_subintf is not None:
+#             getattr(self, self.intf.def_subintf)._write(val, keys)
+#         else:
+#             self._write(val, keys)
+#     
+#     def read(self, def_val=None):
+#         if self.intf.def_subintf is not None:
+#             return getattr(self, self.intf.def_subintf)._read(def_val)
+#         else:
+#             return self._read(def_val)
+        
+    eval = read
     
     def blk_read(self):
         self.cur_val = self.channel.blk_read(proxy=self)
@@ -218,7 +330,7 @@ class ChProxy(object):
         else:
             par_str = ''
 
-        return 'to ' + self.channel.qualified_name + par_str + ' with ' + str(self.aspect) + key_str + ' aspect'
+        return 'to ' + self.channel.qualified_name + par_str + ' with ' + str(self.intf) + key_str + ' intf'
 
     def __iter__(self):
         val = self.read()
@@ -227,7 +339,12 @@ class ChProxy(object):
             
     @property
     def sourced(self):
-        return self.src or (self.drv is not None) # or (self.parent_proxy is not None) #or self.is_driver
+#         if self.intf.def_subintf is not None:
+#             def_proxy_sourced = getattr(self, self.intf.def_subintf).sourced
+#         else:
+#             def_proxy_sourced = False
+        
+        return self.src or (self.drv is not None) #or def_proxy_sourced# or (self.parent_proxy is not None) #or self.is_driver
 
     def add_source(self, src):
         if src not in self.src:
@@ -238,9 +355,9 @@ class ChProxy(object):
             event.subscribe(self.e[e_name])
 
     def get_fullname(self):
-        fullname = str(self.aspect).replace('.', '_') # + '_' + self.name.replace('.', '_')
+        fullname = str(self.intf).replace('.', '_') # + '_' + self.name.replace('.', '_')
 
-        if self.aspect.key is not None:
+        if self.intf.key is not None:
             fullname += '[' + str(self.apsect.key) + ']'
             
         return fullname
@@ -257,6 +374,9 @@ class ChProxy(object):
     def missing_event(self, event_set, event):
         e = self.create_event(event)
         
+        if not self.sourced:
+            self.channel.connect_to_sources(self)
+        
         for s in self.src:
             s_event = getattr(s.e, event)
             s_event.subscribe(e)
@@ -271,9 +391,33 @@ class ChProxy(object):
             subproxy = self.subproxies[repr(key)]
         return subproxy
     
+    def __getattr__(self, name):
+        if name == self.intf.def_subintf:
+            return self
+        elif name not in self.subintfs:
+            subintf = ChProxy(self.parent, self.channel, intf = getattr(self.intf, name), parent_proxy=self)
+            self.subintfs[name] = subintf
+        else:
+            subintf = self.subintfs[name]
+            
+        return subintf
+    
+    def __setattr__(self, name, val):
+        if name == 'intf':
+            object.__setattr__(self, 'intf', val)
+        elif self.intf is None:
+            object.__setattr__(self, name, val)
+        elif name in self.intf.subintfs:
+            self.subintfs[name] = val 
+#         elif name in self.__slots__:
+        else:
+            object.__setattr__(self, name, val)
+#         else:
+#             raise AttributeError
+
     @property
     def drv_sig_name(self):
-        return str(self.aspect).replace('.', '_') + key_repr(self.keys)
+        return str(self.intf).replace('.', '_') + key_repr(self.keys)
     
     @property
     def next(self):
@@ -282,8 +426,24 @@ class ChProxy(object):
     @next.setter
     def next(self, val):
         self.write(val)
-#         self.channel.write(val, proxy=self)
-
+        
+    @property
+    def blk_next(self):
+        raise Exception("Next is write-only property!")
+        
+    @next.setter
+    def blk_next(self, val):
+        self.blk_write(val)
+        
+    @property
+    def next_after(self):
+        raise Exception("Next is write-only property!")
+        
+    @next.setter
+    def next_after(self, val):
+        simwait(Delay(val[1]))
+        self.write(val[0])
+        
     def subscribe(self, proc):
         self.e.event_def.subscribe(proc)
         
@@ -292,28 +452,212 @@ class ChProxy(object):
 
     def _hdl_gen_decl(self, lang=Hdlang.Verilog):
         if lang == Hdlang.Verilog:
-            return 'logic {0} {1};'.format(self.aspect._hdl_gen_decl(), self.channel.name)
+            return 'logic {0} {1};'.format(self.intf._hdl_gen_decl(), self.channel.name)
             
     def _hdl_gen_ref(self, conv, lang=Hdlang.Verilog):
         if lang == Hdlang.Verilog:
             return self.channel.name + key_repr(self.keys)
-    
-    # comparisons
-    def __eq__(self, other):
-        if isinstance(other, ChProxy):
-            other = other.read()
-            
-        if isinstance(other, Signal):
-            other = other.read()
-             
-        return self.read() == other
     
     def __hash__(self):
         return object.__hash__(self.__repr__())
     
     def __ilshift__(self, other):
         self.channel.assign(other, self)
-        return None
+        return self
     
+    def __nonzero__(self):
+        if self.read():
+            return 1
+        else:
+            return 0
+
+    # length
+    def __len__(self):
+        return len(self.read())
+
+    def __bool__(self):
+        return bool(self.read())
+
+        
+    # integer-like methods
+
+#     @proxy_bioper
+    def __contains__(self, other):
+        return self.read() in other
+
+    @proxy_bioper
+    def __add__(self, other):
+        return self.read() + other
+    @proxy_bioper
+    def __radd__(self, other):
+        return other + self.read()
+
+    @proxy_bioper    
+    def __sub__(self, other):
+        return self.read() - other
+    @proxy_bioper
+    def __rsub__(self, other):
+        return other - self.read()
+
+    @proxy_bioper
+    def __mul__(self, other):
+        return self.read() * other
+    @proxy_bioper
+    def __rmul__(self, other):
+        return other * self.read()
+
+    @proxy_bioper
+    def __div__(self, other):
+        return self.read() / other
+    @proxy_bioper
+    def __rdiv__(self, other):
+        return other / self.read()
+
+    @proxy_bioper    
+    def __truediv__(self, other):
+        return self.read().__truediv__(other)
+    @proxy_bioper
+    def __rtruediv__(self, other):
+        return other.__truediv__(self.read())
+    
+    @proxy_bioper
+    def __floordiv__(self, other):
+        return self.read() // other
+    @proxy_bioper
+    def __rfloordiv__(self, other):
+        return other //  self.read()
+
+    @proxy_bioper    
+    def __mod__(self, other):
+        return self.read() % other
+    @proxy_bioper
+    def __rmod__(self, other):
+        return other % self.read()
+
+    # XXX divmod
+
+    @proxy_bioper    
+    def __pow__(self, other):
+        return self.read() ** other
+    def __rpow__(self, other):
+        return other ** self.read()
+
+    @proxy_bioper
+    def __lshift__(self, other):
+        return self.read() << other
+    @proxy_bioper
+    def __rlshift__(self, other):
+        return other << self.read()
+
+    @proxy_bioper            
+    def __rshift__(self, other):
+        return self.read() >> other
+    @proxy_bioper
+    def __rrshift__(self, other):
+        return other >> self.read()
+
+    @proxy_bioper           
+    def __and__(self, other):
+        return self.read() & other
+    @proxy_bioper
+    def __rand__(self, other):
+        return other & self.read()
+
+    @proxy_bioper
+    def __or__(self, other):
+        return self.read() | other
+    @proxy_bioper
+    def __ror__(self, other):
+        return other | self.read()
+    
+    @proxy_bioper
+    def __xor__(self, other):
+        return self.read() ^ other
+    @proxy_bioper
+    def __rxor__(self, other):
+        return other ^ self.read()
+    @proxy_unoper
+    def __neg__(self):
+        return -self.read()
+    @proxy_unoper
+    def __pos__(self):
+        return +self.read()
+    @proxy_unoper
+    def __abs__(self):
+        return abs(self.read())
+    @proxy_unoper
     def __invert__(self):
-        return ~self.read()        
+        return ~self.read()
+        
+    # conversions
+    @proxy_unoper
+    def __int__(self):
+        return int(self.read())
+    @proxy_unoper
+    def __float__(self):
+        return float(self.read())
+    @proxy_unoper
+    def __oct__(self):
+        return oct(self.read())
+    @proxy_unoper
+    def __hex__(self):
+        return hex(self.read())
+    @proxy_unoper
+    def __index__(self):
+        return int(self.read())
+    # comparisons
+    @proxy_bioper
+    def __eq__(self, other):
+#         try:
+#             other = other.read()
+#         except AttributeError:
+#             pass
+        return self.read() == other
+    
+    @proxy_bioper
+    def __ne__(self, other):
+        return self.read() != other 
+    @proxy_bioper
+    def __lt__(self, other):
+        return self.read() < other
+    @proxy_bioper
+    def __le__(self, other):
+        return self.read() <= other
+    @proxy_bioper
+    def __gt__(self, other):
+        return self.read() > other
+    @proxy_bioper
+    def __ge__(self, other):
+        return self.read() >= other
+    
+# class ChProxySubintf(ChProxy):
+#     """Channel subinterface proxy provides access parts of the interface used to access
+#     channel data"""
+#     def __init__(self, parent, channel, intf=None, keys=None, parent_proxy=None):
+#         """Create new ChProxy instance
+#         parent     - Module that created the proxy
+#         channel    - Channel to which proxy is assigned
+#         intf       - Interface by which to access the Channel 
+#         keys       - Keys for accessing the parts of Channel data
+#         """
+#         self.intf = intf
+#         if intf is None:
+#             self.intf = sig()
+#         
+#         self.subproxies = {}
+#         self.subintfs = {}
+#         self.keys = keys
+#         self.channel = channel
+# 
+#         
+#         
+#         self.parent = parent
+#         self.drv = None
+#         self.src = []
+#         
+#         if intf.name == intf.parent.def_subintf:
+#             self.e = parent_proxy.e
+#         else:
+#             self.e = EventSet(missing_event_handle=self.missing_event)
+# 
+#         self.qualified_name = self.parent.qualified_name + "/" + self.channel.name + '_' + self.drv_sig_name        

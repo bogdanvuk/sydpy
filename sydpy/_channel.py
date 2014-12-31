@@ -15,10 +15,17 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
+from sydpy._util._symexp import SymNodeVisitor
 
 """Module that implements the Channel class."""
 
 from sydpy._component import Component
+from sydpy._process import always
+from sydpy._util._util import unif_enum
+from sydpy._module import Module
+from sydpy._util._util import architecture
+from sydpy._simulator import simwait
+import types
 
 def apply_value(val, asp, keys, old_val):
     if keys is not None:
@@ -120,85 +127,138 @@ def get_relative_keys(p1, p2):
             low = max(low1, low2)
     
             return slice_or_index(high - low1, low - low1), slice_or_index(high - low2, low - low2)
-    
 
+
+class AssignVisitor(SymNodeVisitor):
+    def __init__(self):
+        self.senslist = []
+        
+    def visit_leaf(self, leaf):
+        if hasattr(leaf, 'subscribe'):
+            self.senslist.append(leaf)
+
+@architecture
 def assign_arch(self, data_i, data_o):
     
-    if isinstance(data_i, (Event, ChannelProxy)):
+    if hasattr(data_i, 'subscribe'):
         sens_list = [data_i]
     else:
-        sens_list = []
-        
-        for e in unif_enum(data_i):
-            if isinstance(e, (Event, ChannelProxy)):
-                sens_list.append(e)
+        visit = AssignVisitor()
+        visit.visit(data_i)
+        sens_list = visit.senslist
     
     @always(self, *sens_list)
     def proc():
-        data_o.next = data_i
+        data_o.next = data_i.eval()
 
-class Channel(Component):
+class Channel(Module):
     """Instances of this class allow the information they carry to be read
-    and written in various aspects (by various protocols)"""
+    and written in various interfaces (by various protocols)"""
     
     def __init__(self, name, parent):
-        self.proxies = set()
-        Component.__init__(self, name, parent)
+        self.proxies = {}
+        Module.__init__(self, name, parent)
     
     def assign(self, proxy_from, proxy_to):
-        assign_arch(self.parent, proxy_from, proxy_to)
-      
-    def read(self, proxy=None, def_val=None):
-        if proxy:
+        arch = types.MethodType(assign_arch, self)
+        self.arch_inst(arch, True, data_i=proxy_from, data_o=proxy_to)
+    
+    def read(self, proxy, def_val):
+        return self._read('read', proxy, def_val=def_val)
+    
+    def pop(self, proxy, def_val=None):
+        return self._read('pop', proxy, def_val=def_val)
+    
+    def blk_pop(self, proxy, def_val=None):
+        if not proxy.sourced:
+            self.connect_to_sources(proxy)
             if not proxy.sourced:
-                self.connect_to_sources(proxy)
-            
-            if proxy.drv:
-                return proxy.drv.read()
-            elif proxy.sourced:
-                conv_val = None
-                for s in proxy.src:
-                    val = s.read()
-                    dest_keys, src_keys = get_relative_keys(proxy, s)
+                simwait(proxy.e.connect)
+                
+        return self._read('blk_pop', proxy, def_val=def_val)
+    
+    def _read(self, func, proxy, def_val=None):
+        if not proxy.sourced:
+            self.connect_to_sources(proxy)
+        
+        if proxy.drv:
+            return getattr(proxy.drv, func)()
+        elif proxy.sourced:
+            conv_val = None
+            for s in proxy.src:
+                val = getattr(s, func)()
+                dest_keys, src_keys = get_relative_keys(proxy, s)
+                
+                if src_keys is not None:
+                    val = val.__getitem__(src_keys)
                     
-                    if src_keys is not None:
-                        val = val.__getitem__(src_keys)
+                if dest_keys is not None:
+                    conv_val = apply_value(val, proxy.intf, dest_keys, conv_val)
+                else:
+                    conv_val = val
                         
-                    if dest_keys is not None:
-                        conv_val = apply_value(val, proxy.aspect, dest_keys, conv_val)
-                    else:
-                        conv_val = val
-                            
-                return conv_val
-            else:
-                return def_val
+            return conv_val
         else:
-            return self._read(proxy)
+            return def_val
+    
+    def connect_directly_to_sources(self, proxy):
+        for rep, p in self.proxies.items():
+            if p.drv:
+                if id(p) != id(proxy):
+                    if proxy.intf == p.intf:
+                        proxy.add_source(p)
+                        return True
+                    elif proxy.intf is None:
+                        proxy.intf = p.intf
+                        proxy.add_source(p)
+                        return True
+                    
+        return False
+                    
+    def connect_source_directly_to_proxies(self, proxy):
+        for rep, p in list(self.proxies.items()):
+            if not p.sourced:
+                if id(p) != id(proxy):
+                    if proxy.intf == p.intf:
+                        p.add_source(proxy)
     
     def connect_proxies_to_source(self, proxy):
         
-        # First try direct links
-        for p in self.proxies.copy():
-            if not p.sourced:
-                if id(p) != id(proxy):
-#                     if proxy_keys_connected(proxy, p):
-                    if proxy.aspect == p.aspect:
-                        p.add_source(proxy)
+        self.connect_source_directly_to_proxies(proxy)
         
-        for p in self.proxies.copy():
-            if not p.sourced:
-                if id(p) != id(proxy):
-                    try:
-                        for arch in p.aspect.conv_path(proxy.aspect):
-                            arch(self.parent, p.aspect.clk, proxy, p)
-                    except:
-                        pass
+        try:
+            for rep, p in list(self.proxies.items()):
+                if not p.sourced:
+                    if id(p) != id(proxy):
+                        try:
+                            for arch, cfg in p.intf.conv_path(proxy.intf):
+                                arch = types.MethodType(arch,self)
+                                self.arch_inst(arch, proxy_copy=False, data_i=proxy, data_o=p, **cfg)
+                                
+#                                 self.connect_source_directly_to_proxies(proxy)
+#                                 self.connect_directly_to_sources(p)
+                        except:
+                            raise
+        except:
+            raise
                     
     def connect_to_sources(self, proxy):
  
-        for i in self.proxies.copy():
-            if i.drv:
-                if proxy_keys_connected(proxy, i):
-#                     if proxy.aspect == i.aspect:
-                    proxy.add_source(i)
-                    return 
+        if self.connect_directly_to_sources(proxy):
+            return
+        
+        for rep, p in self.proxies.items():
+            if p.drv:
+                if id(p) != id(proxy):
+                    try:
+                        for arch, cfg in proxy.intf.conv_path(p.intf):
+                            arch = types.MethodType(arch,self)
+                            self.arch_inst(arch, proxy_copy=False, data_i=p, data_o=proxy, **cfg)
+#                             self.connect_source_directly_to_proxies(p)
+#                             self.connect_directly_to_sources(proxy)
+                            return 
+                    except:
+                        self.connect_directly_to_sources(proxy)
+                        raise
+                
+                

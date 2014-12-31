@@ -16,12 +16,27 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from .sig import sig
-from .seq import seq
-from .bit import bit, Bit
+from ._type_base import conv, convgen, ConversionError
+from .bit import bit, bit8, bit16, bit32, bit64, Bit
+from .array import Array, array
+from .vector import vector, Vector
+from .struct import struct, Struct
+from .enum import Enum
 
-__all__ = ["sig",
-           "seq",
+__all__ = ["conv",
+           "convgen",
            "bit",
-           "Bit"
+           "bit8",
+           "bit16",
+           "bit32",
+           "bit64",
+           "Bit",
+           "array",
+           "Array",
+           "vector",
+           "Vector",
+           "struct",
+           "Struct",
+           "enum",
+           "Enum"
            ]

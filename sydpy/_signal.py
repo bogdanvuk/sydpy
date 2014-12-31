@@ -18,11 +18,11 @@
 
 """Module implements Signal class"""
 
-# from sydpy.tracing import VCDTrace
 from sydpy._delay import Delay 
 from sydpy._component import Component
 from sydpy._simulator import simupdate, simwait
 from enum import Enum
+from sydpy.extens.tracing import VCDTrace
 
 class SignalMem(Enum):
     signal = 0
@@ -35,6 +35,9 @@ class SignalType(Enum):
     queue = 1
     stack = 2
     delta_queue = 3
+
+class SignalQueueEmpty(Exception):
+    pass
 
 class Signal(Component):
     """Signal is smallest unit that provides evaluate-update mechanism for data."""
@@ -59,23 +62,48 @@ class Signal(Component):
             
         self.e = event_set
         
-#         if self._tracing:
-#                 
-#             self.trace_val_updated = True
-#             
-#             if val is not None:
-#                 val_str = str(self._init)
-#             else:
-#                 val_str = None
+        if self._tracing:
+                 
+            self.trace_val_updated = True
              
-#             self.traces = VCDTrace(self.name, self, init=val_str)
-            
-    def write(self, next_val, delay=0):
-        """Write a new value to the signal."""
-        self.mem.append(next_val)
+            if val is not None:
+                val_str = str(self._init)
+            else:
+                val_str = None
+            self.traces = VCDTrace(self.name, self, init=val_str)
+    
+    def blk_pop(self):
+        if not self.mem:
+            simwait(self.e.enqueued)
+        
         simupdate(self)
+        simwait(self.e.updated)
+            
+        return self._val
+    
+    def pop(self):
+        if self.mem:
+            simupdate(self)
+                        
+            return self.mem[0]
+        else:
+            raise SignalQueueEmpty
+
+    def blk_push(self, val):
+        while self.mem:
+            simwait(self.e.updated)
+        
+        self.push(val)
+           
+    def push(self, val):
+        self.mem.append(val)
         if 'enqueued' in self.e:
             self.e.enqueued.trigger()
+        
+    def write(self, val):
+        """Write a new value to the signal."""
+        self._next = val
+        simupdate(self)
         
     def write_after(self, val, delay):
         """Write a new value to the signal after a certain delay."""
@@ -89,7 +117,11 @@ class Signal(Component):
         
     def _update(self):
         """Callback called by simulator if signal registered for update cycle."""
-        next_val = self.mem.pop(0)
+        if self.mem:
+            next_val = self.mem.pop(0)
+        else:
+            next_val = self._next
+            
         val = self._val
         
         if 'updated' in self.e:

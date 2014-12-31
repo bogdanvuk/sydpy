@@ -16,34 +16,26 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-__version__ = "0.1.0a1"
+from sydpy import Module, architecture, always, rnd, simwait, Delay
+from .basic_seq import BasicSeq
 
-from enum import Enum
-
-class Hdlang(Enum):
-    Verilog = 1
-    VHDL    = 2
-    SystemC = 3
-
-class ConversionError(Exception):
-    def __init__(self, val=None):
-        self.val = val
-
-from sydpy._simulator import Simulator, simwait
-from sydpy._process import always, always_acquire, always_comb
-from sydpy._module import Module
-from sydpy._util._util import architecture
-from sydpy._delay import Delay
-from sydpy.procs import clkinst
-from sydpy.rnd import rnd
-
-from sydpy.types import *
+class BasicRndSeq(BasicSeq):
+    '''
+    classdocs
+    '''
+    def rnd_gen(self, dtype, delay=None, seed=None):
+        self.rnd_var = rnd(dtype, seed)
+        
+        while(1):
+            next_seq = next(self.rnd_var)
+            
+            try:
+                next_delay = self.rnd_var.rnd_int(delay[0], delay[1])
+            except TypeError:
+                next_delay = delay
+            
+            yield (next_seq, next_delay)
     
-__all__ = ["Simulator",
-           "Module",
-           "architecture",
-           "always",
-           "always_acquire",
-           "always_comb",
-           "Delay"
-           ]
+    @architecture
+    def tlm(self, seq_o, delay=None, seed=None, flow_ctrl=None):
+        BasicSeq.tlm(self, seq_o, self.rnd_gen(seq_o.intf.dtype, delay, seed), flow_ctrl)

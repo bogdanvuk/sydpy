@@ -16,34 +16,27 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-__version__ = "0.1.0a1"
+from sydpy._util._injector import RequiredFeature
 
-from enum import Enum
-
-class Hdlang(Enum):
-    Verilog = 1
-    VHDL    = 2
-    SystemC = 3
-
-class ConversionError(Exception):
-    def __init__(self, val=None):
-        self.val = val
-
-from sydpy._simulator import Simulator, simwait
-from sydpy._process import always, always_acquire, always_comb
-from sydpy._module import Module
-from sydpy._util._util import architecture
-from sydpy._delay import Delay
-from sydpy.procs import clkinst
-from sydpy.rnd import rnd
-
-from sydpy.types import *
+class SimtimeProgress(object):
+    '''
+    classdocs
+    '''
     
-__all__ = ["Simulator",
-           "Module",
-           "architecture",
-           "always",
-           "always_acquire",
-           "always_comb",
-           "Delay"
-           ]
+    configurator = RequiredFeature('Configurator')
+
+    def log_begin_timestep(self, time, sim):
+        if time > (self.old_time + self.step):
+            self.old_time = (time // self.step) * self.step
+            print("--{0}--".format(self.old_time))
+            
+        return True
+
+    def __init__(self, sim_events):
+        '''
+        Constructor
+        '''
+        self.step = self.configurator['SimtimeProgress', 'step', 100]
+        
+        sim_events['timestep_start'].append(self.log_begin_timestep)
+        self.old_time = 0
