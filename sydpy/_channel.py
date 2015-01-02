@@ -16,6 +16,7 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 from sydpy._util._symexp import SymNodeVisitor
+from sydpy._ch_proxy import ChIntfState
 
 """Module that implements the Channel class."""
 
@@ -155,13 +156,31 @@ class Channel(Module):
     """Instances of this class allow the information they carry to be read
     and written in various interfaces (by various protocols)"""
     
-    def __init__(self, name, parent):
-        self.proxies = {}
+    def __init__(self, name, parent, trace = True):
+        self.proxies = []
+        self.traces = []
+        self._tracing = trace
         Module.__init__(self, name, parent)
+    
+    def register_traces(self, traces):
+        if self._tracing:
+            self.traces.extend(traces)
+    
+    def register_proxy(self, proxy):
+        self.proxies.append(proxy)
+        
+        
+            
+        
+    def proxy_state_changed(self, proxy, old_state):
+        if ((proxy._state == ChIntfState.driven) and (old_state != ChIntfState.drv_con_wait)) or \
+            (proxy._state == ChIntfState.drv_con_wait):
+            self.connect_proxies_to_source(proxy)
     
     def assign(self, proxy_from, proxy_to):
         arch = types.MethodType(assign_arch, self)
-        self.arch_inst(arch, True, data_i=proxy_from, data_o=proxy_to)
+        proxy_to._state = ChIntfState.drv_con_wait
+        self.arch_inst(arch, data_i=proxy_from, data_o=proxy_to)
     
     def read(self, proxy, def_val):
         return self._read('read', proxy, def_val=def_val)
@@ -173,7 +192,7 @@ class Channel(Module):
         if not proxy.sourced:
             self.connect_to_sources(proxy)
             if not proxy.sourced:
-                simwait(proxy.e.connect)
+                simwait(proxy.e.enqueued)
                 
         return self._read('blk_pop', proxy, def_val=def_val)
     
@@ -202,24 +221,24 @@ class Channel(Module):
             return def_val
     
     def connect_directly_to_sources(self, proxy):
-        for rep, p in self.proxies.items():
-            if p.drv:
+        for p in self.proxies:
+            if p._is_driven():
                 if id(p) != id(proxy):
-                    if proxy.intf == p.intf:
+                    if proxy._intf_eq(p):
                         proxy.add_source(p)
                         return True
-                    elif proxy.intf is None:
-                        proxy.intf = p.intf
-                        proxy.add_source(p)
-                        return True
+#                     elif proxy.intf is None:
+#                         proxy.intf = p.intf
+#                         proxy.add_source(p)
+#                         return True
                     
         return False
                     
     def connect_source_directly_to_proxies(self, proxy):
-        for rep, p in list(self.proxies.items()):
-            if not p.sourced:
+        for p in self.proxies:
+            if not p._is_sourced():
                 if id(p) != id(proxy):
-                    if proxy.intf == p.intf:
+                    if p._intf_eq(proxy):
                         p.add_source(proxy)
     
     def connect_proxies_to_source(self, proxy):
@@ -227,16 +246,17 @@ class Channel(Module):
         self.connect_source_directly_to_proxies(proxy)
         
         try:
-            for rep, p in list(self.proxies.items()):
-                if not p.sourced:
+            for p in self.proxies:
+                if not p._is_sourced():
                     if id(p) != id(proxy):
                         try:
-                            for arch, cfg in p.intf.conv_path(proxy.intf):
-                                arch = types.MethodType(arch,self)
-                                self.arch_inst(arch, proxy_copy=False, data_i=proxy, data_o=p, **cfg)
+                            arch, cfg = p.conv_path(proxy)
+                            p._state = ChIntfState.drv_con_wait
+                            arch = types.MethodType(arch,self)
+                            self.arch_inst(arch, data_i=proxy, data_o=p, **cfg)
                                 
-#                                 self.connect_source_directly_to_proxies(proxy)
-#                                 self.connect_directly_to_sources(p)
+#                             self.connect_source_directly_to_proxies(proxy)
+#                             self.connect_directly_to_sources(p)
                         except:
                             raise
         except:
@@ -247,16 +267,19 @@ class Channel(Module):
         if self.connect_directly_to_sources(proxy):
             return
         
-        for rep, p in self.proxies.items():
-            if p.drv:
+        for p in self.proxies:
+            if p._is_driven():
                 if id(p) != id(proxy):
                     try:
-                        for arch, cfg in proxy.intf.conv_path(p.intf):
-                            arch = types.MethodType(arch,self)
-                            self.arch_inst(arch, proxy_copy=False, data_i=p, data_o=proxy, **cfg)
-#                             self.connect_source_directly_to_proxies(p)
-#                             self.connect_directly_to_sources(proxy)
-                            return 
+                        arch, cfg = proxy.conv_path(p)
+                        proxy._state = ChIntfState.drv_con_wait
+                        arch = types.MethodType(arch,self)
+                        self.arch_inst(arch, data_i=p, data_o=proxy, **cfg)
+                            
+#                         self.connect_source_directly_to_proxies(p)
+#                         self.connect_directly_to_sources(proxy)
+                            
+                        return 
                     except:
                         self.connect_directly_to_sources(proxy)
                         raise

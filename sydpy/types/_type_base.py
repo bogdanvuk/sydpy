@@ -49,7 +49,7 @@ class TypeBase(object):
             raise ConversionError
         
     @classmethod
-    def conv(cls, other):
+    def conv(cls, other=None):
         try:
             return getattr(cls, '_from_' + other.__class__.__name__)(other)
         except AttributeError:
@@ -58,6 +58,11 @@ class TypeBase(object):
         try:
             return getattr(other, '_to_' + cls.__name__)(cls)
         except AttributeError:
+            pass
+        
+        try:
+            return cls(other)
+        except:
             pass
         
         try:
@@ -77,7 +82,9 @@ class TypeBase(object):
                         raise ConversionError
                      
             return data_prep
-         
+        
+        except AttributeError:
+            raise ConversionError
         except TypeError:
             raise ConversionError
         except ConversionError:

@@ -38,4 +38,4 @@ class BasicRndSeq(BasicSeq):
     
     @architecture
     def tlm(self, seq_o, delay=None, seed=None, flow_ctrl=None):
-        BasicSeq.tlm(self, seq_o, self.rnd_gen(seq_o.intf.dtype, delay, seed), flow_ctrl)
+        BasicSeq.tlm(self, seq_o, self.rnd_gen(seq_o._get_dtype(), delay, seed), flow_ctrl)

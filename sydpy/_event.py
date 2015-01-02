@@ -79,7 +79,7 @@ class Event(object):
         simtrig(self)
         
     def resolve(self, pool):
-        print(str(self))
+#         print(str(self))
         
         for s in self.pool:
             try:

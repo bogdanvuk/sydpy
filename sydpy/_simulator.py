@@ -154,7 +154,7 @@ class Scheduler(greenlet):
         
         configurator = RequiredVariable('Configurator')
         
-        if configurator['sys.Scheduler', 'log_task_switching', False]:
+        if configurator['sys.scheduler', 'log_task_switching', False]:
             self.settrace(self.callback)
 
 class Simulator(object):

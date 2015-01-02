@@ -1,5 +1,7 @@
 *__pycache__/
 cosimulation/
+*_build/
+*out/
 sydpy.egg-info/
 .project
 .pydevproject

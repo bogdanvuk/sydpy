@@ -71,22 +71,50 @@ class strm(Intf):
         self.subintfs['valid'] = sig(bit, parent=self, name='valid')
         self.subintfs['ready'] = sig(bit, parent=self, name='ready')
         
-        self.def_subintf = 'data'
+        self.def_subintf = self.subintfs['data']
 
     def idle(self, proxy):
         proxy.valid.next = False
 
-    def write(self, proxy, data, last=True):
-        if proxy.ready(True):
-            proxy.valid.next = True
+    def push(self, proxy, data):
+        proxy.valid.next = True
+        
+        if proxy.ready.read(True):
             proxy.data.next = data
-            proxy.last.next = last
         else:
             raise Exception
+
+    def write(self, proxy, data):
         
-    def read(self, proxy, ):
-        if proxy.valid.read():
-            return proxy.data.read()
+#         try:
+#             last = data[1]
+#             data = data[0]
+#         except:
+#             last = True
+        
+        proxy.valid.next = True
+        proxy.data.next = data
+        
+#         if proxy.ready.read(True):
+#             proxy.valid.next = True
+#             proxy.data.next = data
+#             proxy.last.next = last
+#         else:
+#             raise Exception
+
+#         print("Proxy: " + proxy.qualified_name + ", id: " + str(id(proxy)))
+#         if (proxy.parent_proxy is not None):
+#             print("Parent: " + proxy.parent_proxy.qualified_name  + ", id: " + str(id(proxy.parent_proxy)))        
+#         print(proxy.data.drv.name)
+#         print(proxy.valid.drv.name)
+#         print(proxy.last.drv.name)
+#         print('-------------------------')
+#         
+#         pass
+#         
+    def read(self, proxy, def_val):
+        if proxy.valid.read(True):
+            return (proxy.data.read(def_val), proxy.last.read())
         else:
             raise Exception
     
@@ -99,4 +127,7 @@ class strm(Intf):
         asp_copy.data.dtype = self.data.dtype.deref(key)
         
         return asp_copy
+    
+    def __str__(self):
+        return "strm"
 

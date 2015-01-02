@@ -111,6 +111,21 @@ class array(TypeBase):
     def __iter__(self):
         return iter(self._val)
     
+    def __eq__(self, other):
+        try:
+            if len(self) == len(other):
+                try:
+                    for s, o in zip(self._val, other._val):
+                        if s != o:
+                            return False
+                    return True
+                except AttributeError:
+                    return False
+            else:
+                return False
+        except TypeError:
+            return False
+    
     def _icon(self, other):
 
         dt_remain = None

@@ -34,9 +34,10 @@ from sydpy._process import always, always_acquire, always_comb
 from sydpy._module import Module
 from sydpy._util._util import architecture
 from sydpy._delay import Delay
-from sydpy.procs import clkinst
+from sydpy.procs import Clocking
 from sydpy.rnd import rnd
-
+from sydpy.verif import *
+from sydpy.intfs import *
 from sydpy.types import *
     
 __all__ = ["Simulator",
@@ -45,5 +46,18 @@ __all__ = ["Simulator",
            "always",
            "always_acquire",
            "always_comb",
-           "Delay"
+           "Delay",
+           "Clocking",
+           "BasicRndSeq", 
+           "BasicSeq", 
+           "Sequencer",
+           "Scoreboard",
+           "sig",
+           "seq",
+           "tlm",
+           "bit",
+           "bit8",
+           "bit16",
+           "bit32",
+           "bit64"
            ]

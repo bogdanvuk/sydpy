@@ -1,23 +1,50 @@
 ..  _welcome:
 
 Welcome to SyDPy
-==================================
-
-SyDPy project started in an attempt to customize the MyHDL Python package to my needs as FPGA designer. After realization that I have already done too much tweaking, I decided to write my own package from ground-up, but kept some of the MyHDL syntax for hardware description. The following are major differences to MyHDL:
-
-- SyDPy enables TLM (Transaction Level Modelling)
-- Signals are abstracted into channels. Information in the same channels can be accessed by different processes using different protocols (on various levels of abstraction) without the need of user conversion modules.
-- Introduced global simulator configuration where user module parameters can be set using qualified names. Wildcards also supported.
-- Modules can have multiple architectures, they can be checked one against another easily.
-- Simulator kernel is extendible by registering callbacks to simulator events.
-- Basic randomization, sequencing and scoreboarding supported.
-
-Tutorial
 ================
 
+SyDPy (**System Design in Python**) aims to become an alternative to SystemVerilog and 
+`SystemC <http://www.accellera.org/downloads/standards/systemc>`_ by providing the necessary tools to cover tasks of 
+HDL design from system architecture design to HDL synthesis.
+
+SyDPy comprises an event based simulator and various classes for describing and simulating a system, all written in Python. 
+This allows an easy extension of the SyDPy with additional user classes or existing Python libraries
+
+SyDPy was written with design reuse and iterable nature of the design process in mind. Smart channels enable cosimulation of 
+module architectures written on various abstraction levels (of timing and functionality), without the need of explicit 
+interface converters in the design. Modules with higher levels of abstraction can then serve as model checkers for lower
+level modules. 
+
+SyDPy features:
+---------------
+ - RTL and TLM cosimulation
+ - Smart channels for information exchange between various interfaces
+ - Global simulator configuration for test setup
+ - Basic randomization, sequencing and scoreboarding supported
+ - Automatic model checking of different module architectures
+ - Extendible simulator kernel
+ 
+Soon available (please visit the Roadmap page for detailed list):
+-----------------------------------------------------------------
+ - Verilog cosimulation using `Verilator <http://www.veripool.org/wiki/verilator>`_
+ - Python to Verilog conversion
+ - Constrained-random verification using `SystemC Verification <http://www.accellera.org/downloads/standards/systemc>`_ library
+ 
+SyDPy project started in an attempt to customize the `MyHDL <http://www.myhdl.org/>`_ Python package to my needs as FPGA designer and hence, many similarities in syntax. 
+
+Where to start?
+===============
+
+Download the latest `source <https://github.com/bogdanvuk/sydpy>`_ from github.
+
 Start with the short tutorial :ref:`tutorial`
+
+Contents
+========
 
 .. toctree::
    :maxdepth: 2
 
    roadmap
+
+   - Signals are abstracted into channels. Information in the same channels can be accessed by different processes using different protocols (on various levels of abstraction) without the need of user conversion modules.

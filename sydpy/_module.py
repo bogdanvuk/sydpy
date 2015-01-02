@@ -98,7 +98,7 @@ class Module(Component):
             return elem
         else:
             try:
-                return ch.channel
+                return ch._channel
             except AttributeError:
                 return ch
                 
@@ -106,12 +106,16 @@ class Module(Component):
         chnl = self.get_channel(name)
 
         if not isinstance(clk, ChProxy):
-            clk = ChProxy(self, self.get_channel(clk), sig(bit))
+#             clk = ChProxy(self, self.get_channel(clk), sig(bit))
+            clk = NoneIntf(channel=self.get_channel(clk))
         
-        if (dtype is not None) and (init is not None):
-            init = dtype(init)
+#         if (dtype is not None) and (init is not None):
+#             init = dtype(init)
         
-        proxy = ChProxy(self, chnl, seq(dtype), init=init)
+#         proxy = ChProxy(self, chnl, seq(dtype), init=init)
+
+        proxy = seq(dtype=dtype, channel=chnl, parent_module=self, init=init)
+
         proxy.clk = clk
         
         return proxy
@@ -120,7 +124,9 @@ class Module(Component):
         
         chnl = self.get_channel(name)
         
-        proxy = ChProxy(self, chnl, sig(dtype), init=init)
+        proxy = sig(dtype, channel=chnl, parent_module=self, init=init)
+        
+#         proxy = ChProxy(self, chnl, sig(dtype), init=init)
 
         return proxy
     
@@ -161,7 +167,7 @@ class Module(Component):
                 intf = None
                 
                 try:
-                    proxy_intf = conf.intf
+                    channel = conf._channel
                     
 #                     #Proxy was passed as configuration
 #                     if proxy_copy:
@@ -169,7 +175,7 @@ class Module(Component):
 #                     
 #                     continue
                 except AttributeError:
-                    proxy_intf = None
+                    channel = conf
     
                 if arg in arch_annot:
                     if isinstance(arch_annot[arg], str):
@@ -180,18 +186,23 @@ class Module(Component):
                 if arg in self.intfs:
                     intf = self.intfs[arg]
 
-                try:
-                    if proxy_intf is not None:
-                        if proxy_copy or ((proxy_intf != intf) and (intf is not None)):
-                            
-                            if intf is None:
-                                intf = proxy_intf
-                            
-                            arch_config[arg] = ChProxy(self, conf.channel, intf, proxy_copy=proxy_copy)
-                    else:
-                        arch_config[arg] = ChProxy(self, conf, intf)
-                except AttributeError:
-                    arch_config[arg] = ChProxy(self, conf, intf)
+                if (intf is None) and isinstance(conf, ChProxy):
+                    continue
+                else:
+                    arch_config[arg] = ChProxy(channel=channel, parent_module=self, intf=intf)
+                
+#                 try:
+#                     if proxy_intf is not None:
+#                         if proxy_copy or ((proxy_intf != intf) and (intf is not None)):
+#                             
+#                             if intf is None:
+#                                 intf = proxy_intf
+#                             
+#                             arch_config[arg] = ChProxy(self, conf.channel, intf, proxy_copy=proxy_copy)
+#                     else:
+#                         arch_config[arg] = ChProxy(self, conf, intf)
+#                 except AttributeError:
+#                     arch_config[arg] = ChProxy(self, conf, intf)
         
         return arch_config
     
@@ -213,7 +224,7 @@ class Module(Component):
             
             if (arg in arch_func.outputs) and (arch_active == False):
                 if isinstance(conf, ChProxy):
-                    conf = conf.channel.name + "_" + arch_func.__name__
+                    conf = conf._channel.name + "_" + arch_func.__name__
                 else:
                     conf = conf  + "_" + arch_func.__name__
 

@@ -16,7 +16,7 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from .clk import clkinst
+from .clk import Clocking
 
-__all__ = ["clkinst"
+__all__ = ["Clocking"
            ]

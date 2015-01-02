@@ -18,9 +18,11 @@
 
 from copy import copy
 from sydpy import always, always_acquire
-from ._intf import Intf
+from ._intf import Intf#, ChIntfState
 from sydpy._util._util import architecture
 from sydpy.types import convgen
+from sydpy._signal import Signal
+from sydpy.extens.tracing import VCDTrace
 
 @architecture
 def _tlm_to_tlm_arch(self, data_i, data_o):
@@ -30,7 +32,7 @@ def _tlm_to_tlm_arch(self, data_i, data_o):
     @always_acquire(self, data_i)
     def acquire(data_recv):
        
-        data_conv_gen = convgen(data_recv, data_o.intf.dtype, remain[0])
+        data_conv_gen = convgen(data_recv, data_o.def_subintf, remain[0])
 
         try:
             data_prep = next(data_conv_gen)
@@ -44,56 +46,84 @@ def _tlm_to_tlm_arch(self, data_i, data_o):
 @architecture
 def _tlm_to_sig_arch(self, data_i, data_o):
     
-    @always(self, data_i.e.enqueued)
-    def proc():
-        data_o.next = data_i.pop()
+    @always_acquire(self, data_i)
+    def proc(val):
+        data_o.next = val
 
 class tlm(Intf):
     
-    def __init__(self, dtype=None, parent=None, name=''):
-        Intf.__init__(self, parent=parent, name=name)
+    _subintfs = ('data', )
+    
+    def __init__(self, dtype=None, parent=None, name=None):
+        self.data = dtype
+        self.def_subintf = dtype
+        self.drv = None
         
-        self.dtype = dtype
+        Intf.__init__(self, parent=parent, name=name)
+    
+    @property
+    def qualified_name(self):
+        if self.def_subintf is not None:
+            try:
+                dtype_name = '(' + self.def_subintf.__name__ + ')'
+            except AttributeError:
+                dtype_name = '(' + str(self.def_subintf) + ')'
+        
+        return Intf.qualified_name.fget(self) + dtype_name
+        
+#         if self.proxy._channel is not None:
+#             return self.proxy._channel.name + '.' + self.qualif_intf_name + dtype_name
+#         else:
+#             return self.qualif_intf_name + dtype_name
+    
+    def copy(self):
+        return tlm(self.def_subintf, self.parent, self.name)
+    
+    def trace_val(self, name=None):
+        return self.read()
     
     def _from_tlm(self, val):
-        yield _tlm_to_tlm_arch, {}
+        return _tlm_to_tlm_arch, {}
         
     def _to_sig(self, val):
-        yield _tlm_to_sig_arch, {}
+        return _tlm_to_sig_arch, {}
     
     def _from_sig(self, val):
         pass
-        
-    def __str__(self):
-        name = 'tlm_'
-        
-        if self.dtype is not None:
-            try:
-                name += self.dtype.__name__
-            except AttributeError:
-                name += str(self.dtype)
-            
-#         if self.clk is not None:
-#             name += ',' + str(self.clk) 
-
-        return name
     
+    def _write_prep(self, val):
+        if self.drv is None:
+            self.drv = Signal(val=self.def_subintf(), event_set = self.proxy.e)
+            
+            self.proxy._register_traces([VCDTrace(self.qualified_name, self)])
+       
+        return self.def_subintf.conv(val)
+    
+    def blk_write(self, val):
+        val = self._write_prep(val)
+        self.drv.blk_push(val)
+    
+    def write(self, val):
+        val = self._write_prep(val)
+        self.drv.push(val)
+
+       
     def _rnd(self, rnd_gen):
         try:
-            return rnd_gen._rnd(self.dtype)
+            return rnd_gen._rnd(self.def_subintf)
         except TypeError:
             return None
             
     def _hdl_gen_decl(self):
-        if self.dtype is not None:
-            return self.dtype._hdl_gen_decl()
+        if self.def_subintf is not None:
+            return self.def_subintf._hdl_gen_decl()
         else:
             return ''
     
     def deref(self, key):
         asp_copy = copy(self)
-        asp_copy.dtype = self.dtype.deref(key)
+        asp_copy.dtype = self.def_subintf.deref(key)
         
         return asp_copy
     
-    __repr__ = __str__
+#     __repr__ = __str__

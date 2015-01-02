@@ -493,7 +493,7 @@ class bit(TypeBase):
             return (self.val == other.val) and (self.vld == other.vld)
         except AttributeError:
             try:
-                return self.val == int(other)
+                return (self.val == int(other)) and (self.vld == self._mask)
             except TypeError:
                 return False
      

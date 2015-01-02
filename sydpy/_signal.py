@@ -22,7 +22,6 @@ from sydpy._delay import Delay
 from sydpy._component import Component
 from sydpy._simulator import simupdate, simwait
 from enum import Enum
-from sydpy.extens.tracing import VCDTrace
 
 class SignalMem(Enum):
     signal = 0
@@ -39,9 +38,9 @@ class SignalType(Enum):
 class SignalQueueEmpty(Exception):
     pass
 
-class Signal(Component):
+class Signal(object):
     """Signal is smallest unit that provides evaluate-update mechanism for data."""
-    def __init__(self, name, parent, val=None, stype=SignalType.signal, event_set=None, trace=False):
+    def __init__(self, val=None, stype=SignalType.signal, event_set=None, trace=False): 
         """"Create a new Signal.
         
         val       - Initialize signal with a value.
@@ -50,9 +49,9 @@ class Signal(Component):
         trace     - Should signal register for tracing or not.
         """
         
-        Component.__init__(self, name, parent)
+#         Component.__init__(self, name, parent)
         
-        self._name = name
+#         self._name = name
         self.stype = stype
         self._tracing = trace
         self.traces = None
@@ -62,16 +61,16 @@ class Signal(Component):
             
         self.e = event_set
         
-        if self._tracing:
-                 
-            self.trace_val_updated = True
-             
-            if val is not None:
-                val_str = str(self._init)
-            else:
-                val_str = None
-            self.traces = VCDTrace(self.name, self, init=val_str)
-    
+#         if self._tracing:
+#                  
+#             self.trace_val_updated = True
+#              
+#             if val is not None:
+#                 val_str = str(self._init)
+#             else:
+#                 val_str = None
+#             self.traces = VCDTrace(self.name, self, init=val_str)
+        
     def blk_pop(self):
         if not self.mem:
             simwait(self.e.enqueued)

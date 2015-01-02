@@ -91,6 +91,9 @@ class Component(object, metaclass=GlobconfComponentMeta):
         
         if parent is not None:
             parent.add(self)
+            
+    def __repr__(self):
+        return self.qualified_name
     
     def inst(self, cls, name=None, **config):
         """Create a new subcomponent.

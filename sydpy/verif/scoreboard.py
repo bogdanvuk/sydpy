@@ -35,8 +35,9 @@ class Scoreboard(Module):
         self.scoreboard_results = {
                             'ref_name': ref_name,
                             'dut_name': dut_name,
-                            'ref_s': ref_i.qualified_name,
-                            'dut_s': dut_i.qualified_name,
+                            'ref_s': ref_i._fullname,
+                            'dut_s': dut_i._fullname,
+                            'fail': [],
                             'results' : []
                            }
         
@@ -58,6 +59,13 @@ class Scoreboard(Module):
                          'dut_trans': str(dut_trans),
                          'score':   self.compare(ref_trans, dut_trans)
                          }
+                
+                if score['score'] == False:
+                    self.scoreboard_results['fail'].append(len(self.scoreboard_results['results']))
+                
+#                 print(ref_trans)
+#                 print(dut_trans)
+#                 print(score['score'])
                 
                 self.scoreboard_results['results'].append(score)
                 
