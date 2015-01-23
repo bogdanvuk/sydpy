@@ -20,9 +20,11 @@ from .basic_rnd_seq import BasicRndSeq
 from .basic_seq import BasicSeq
 from .sequencer import Sequencer
 from .scoreboard import Scoreboard
+from .unittest import UnitTest
 
 __all__ = ["BasicRndSeq",
            "Sequencer",
            "BasicSeq",
-           "Scoreboard"
+           "Scoreboard",
+           "UnitTest"
            ]

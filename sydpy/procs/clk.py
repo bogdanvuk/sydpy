@@ -18,7 +18,7 @@
 
 """Module implements the clkinst decorator for automatic clock process instantiation."""
 
-from sydpy import architecture, Delay, always, Module
+from sydpy import arch_def, Delay, always, Module
 from sydpy.types import bit
 from sydpy.intfs import sig
 from sydpy._util.decorator import decorator
@@ -34,9 +34,9 @@ def clkinst(period=100, name='clk'): #period=100
     return wrapper
         
 class Clocking(Module):
-    @architecture
+    @arch_def
     def rtl(self, 
-            clk_o   : sig(bit), 
+            clk_o   : sig(bit).master, 
             period  = 100):
         
         clk_o.next = 0

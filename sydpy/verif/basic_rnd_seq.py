@@ -16,14 +16,17 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from sydpy import Module, architecture, always, rnd, simwait, Delay
+from sydpy import Module, arch_def, always, rnd, simwait, Delay
 from .basic_seq import BasicSeq
 
 class BasicRndSeq(BasicSeq):
     '''
     classdocs
     '''
-    def rnd_gen(self, dtype, delay=None, seed=None):
+    def rnd_gen(self, dtype, delay=None, seed=None, init=None):
+        if init is not None:
+            yield (init, 0)
+        
         self.rnd_var = rnd(dtype, seed)
         
         while(1):
@@ -36,6 +39,6 @@ class BasicRndSeq(BasicSeq):
             
             yield (next_seq, next_delay)
     
-    @architecture
-    def tlm(self, seq_o, delay=None, seed=None, flow_ctrl=None):
-        BasicSeq.tlm(self, seq_o, self.rnd_gen(seq_o._get_dtype(), delay, seed), flow_ctrl)
+    @arch_def
+    def tlm(self, seq_o, delay=None, seed=None, flow_ctrl=True, init=None):
+        BasicSeq.tlm(self, seq_o, self.rnd_gen(seq_o, delay, seed, init), flow_ctrl)

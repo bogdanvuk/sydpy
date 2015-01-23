@@ -42,6 +42,13 @@ class EventSet(object):
     
     def __contains__(self, e):
         return e in self.events
+    
+    def update(self, other):
+        for e_name in other.events:
+            if e_name in self.events:
+                self.events[e_name].update(other.events[e_name])
+            else:
+                self.events[e_name] = other.events[e_name]
       
     def add(self, *args, **kwargs):
         self.events.update(*args, **kwargs)
@@ -77,6 +84,15 @@ class Event(object):
         
     def trigger(self):
         simtrig(self)
+    
+    def update(self, other):
+        self.pool |= other.pool
+        
+        for e_name in other.subevents:
+            if e_name in self.subevents:
+                self.subevents[e_name].update(other.subevents[e_name])
+            else:
+                self.subevents[e_name] = other.subevents[e_name]
         
     def resolve(self, pool):
 #         print(str(self))
@@ -85,7 +101,7 @@ class Event(object):
             try:
                 s.resolve(pool)
             except AttributeError:
-                pool.append(s)
+                pool.add(s)
     
     def _hdl_gen_ref(self, conv):
         return self.name + ' ' + conv._hdl_gen_ref(self.parent)
@@ -100,7 +116,10 @@ class Event(object):
         return subevent
     
     def __str__(self):
-        return  self.parent.qualified_name + "." + self.name 
+        if self.parent is not None:
+            return  self.parent.qualified_name + "." + self.name
+        else:
+            return self.name
         
     def __repr__(self):
         return  self.parent.qualified_name + "." + self.name

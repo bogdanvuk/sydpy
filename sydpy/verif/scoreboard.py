@@ -19,7 +19,7 @@
 from sydpy.intfs import tlm
 from sydpy.types._type_base import TypeBase
 from sydpy._util._util import fannotate 
-from sydpy import Module, architecture, always
+from sydpy import Module, arch_def, always
 
 class Scoreboard(Module):
     '''
@@ -29,14 +29,14 @@ class Scoreboard(Module):
     def compare(self, ref_trans, dut_trans):
         return (ref_trans == dut_trans)
 
-    @architecture
-    def dflt(self, dut_i, ref_i, dut_name=None, ref_name=None, dut_active=True, ref_active=True):
+    @arch_def
+    def dflt(self, dut_i, ref_i, dut_name=None, ref_name=None, dut_active=True, ref_active=True, verbose=False):
         
         self.scoreboard_results = {
                             'ref_name': ref_name,
                             'dut_name': dut_name,
-                            'ref_s': ref_i._fullname,
-                            'dut_s': dut_i._fullname,
+                            'ref_s': ref_i.qualified_name,
+                            'dut_s': dut_i.qualified_name,
                             'fail': [],
                             'results' : []
                            }
@@ -63,9 +63,10 @@ class Scoreboard(Module):
                 if score['score'] == False:
                     self.scoreboard_results['fail'].append(len(self.scoreboard_results['results']))
                 
-#                 print(ref_trans)
-#                 print(dut_trans)
-#                 print(score['score'])
+                if verbose:
+                    print(ref_trans)
+                    print(dut_trans)
+                    print(score['score'])
                 
                 self.scoreboard_results['results'].append(score)
                 

@@ -15,7 +15,8 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
-from sydpy.intfs import sig
+from sydpy.intfs import sig, csig
+
 
 """Module that implements the Channel Proxy and related classes."""
 
@@ -192,30 +193,21 @@ def get_relative_keys(p1, p2):
     
             return slice_or_index(high - low1, low - low1), slice_or_index(high - low2, low - low2)
 
-class ChIntfState(Enum):
-    free=1
-    bounded=2
-    driven=3
-    sourced=4
-    drv_con_wait=5
-
 class ChProxy(object):
 #     __slots__ = ['subintfs', 'subproxies', 'keys', 'channel', 'intf', 'parent', 
 #                  'drv', 'src', 'e', 'qualified_name', 'channel', 'next']
         
-    __state = ChIntfState.free
     __channel = None
-    __intf = None
-    _subintfs = {}
-    _sliced_intfs = {}
     _keys = None
     _init = None
-    _src = []
+    
     _parent = None
     _intf = None
     _cur_val = None
     _parent_module = None
     e = None
+    _subintfs = None
+    _sliced_intfs = None
     
     """Channel proxy provides access to the same Channel information using
     different interfaces (protocols)"""
@@ -227,22 +219,20 @@ class ChProxy(object):
         intf       - Interface by which to access the Channel 
         keys       - Keys for accessing the parts of Channel data
         """
+        self._subintfs = {}
+        self._sliced_intfs = {}
+    
         self._cur_val = init
         self._init = init
         self._keys = keys
         self._parent = parent
         self._parent_module = parent_module
                 
-        if channel is not None:
-            self._channel = channel
+        self._channel = channel
         
         self.e = EventSet(missing_event_handle=self.missing_event)
         
-        self._intf = intf
-        
-        if self._channel is not None:
-            self._state = ChIntfState.bounded
-        
+        self.set_intf(intf)
 #         self.init = init
         
 #         self.qualified_name = self._parent.qualified_name + "/" + self._channel.name #+ '_' + self.drv_sig_name
@@ -254,108 +244,87 @@ class ChProxy(object):
 #             
 #             self._channel.connect_to_sources(self)
     
-    def _intf_eq(self, other):
-        if self._intf is None:
-            return True
-        else:
-            return self._intf._intf_eq(other._intf)
-    
-    def conv_path(self, other):
-        if self._intf is None:
-            raise ConversionError
-        else:
-            return self._intf.conv_path(other._intf)    
-    
-    @property
-    def qualified_name(self):
-        return self._channel.qualified_name #+ '_' + self.drv_sig_name
-    
-    @property
-    def sourced(self):
-#         if self._intf.def_subintf is not None:
-#             def_proxy_sourced = getattr(self, self._intf.def_subintf).sourced
-#         else:
-#             def_proxy_sourced = False
-        
-#         return self._src or (self.drv is not None) or self._sourced #or def_proxy_sourced# or (self._parent_proxy is not None) #or self.is_driver
-        return self.__state in (ChIntfState.driven, ChIntfState.drv_con_wait, ChIntfState.sourced)
-    
-    def add_source(self, src):
-        if self._intf is None:
-            self._intf = src._intf
-        
-        if not self._src:
-            self._state = ChIntfState.sourced
-            
-        self._src = [src]
-        
-        for e_name in self.e:
-            event = getattr(src.e, e_name)
-            event.subscribe(self.e[e_name])
-    
-    @property
-    def _state(self):
-        return self.__state
-    
-    @_state.setter
-    def _state(self, val):
-        if val != self.__state:
-            old_state = self.__state
-            
-            self.__state = val
-            if ('_state_' + val.name) in dir(self):
-                getattr(self, '_state_' + val.name)()
-            
-            if self._parent is not None:
-                if hasattr(self._parent, '_child_state_changed'):
-                    self._parent._child_state_changed(self)
-            else:
-                self._channel.proxy_state_changed(self, old_state)
-    
-    def _is_bounded(self):
-        return self._channel is not None
-    
-    def _is_sourced(self):
-#         return self.__state in (ChIntfState.driven, ChIntfState.drv_con_wait, ChIntfState.sourced)
-        return 
-        
-    def _is_driven(self):
-        if self._intf is None:
-            return False
-        else:
-            return self._intf.driven
-        
-    def _get_dtype(self):
-        try:
-            return self._intf._get_dtype()
-        except TypeError:
-            return None
-    
-    @property
-    def _intf(self):
-        return self.__intf
-    
-    @_intf.setter
-    def _intf(self, val):
-        if val is not None:
-            self.__intf = val.copy()
-            self.__intf.set_proxy(self)
-        else:
-            self.__intf = None
-    
+
     @property
     def _channel(self):
-        if self._parent is not None:
-            return self._parent._channel
+        if self._intf is not None:
+            return self._intf._channel
         else:
             return self.__channel
     
     @_channel.setter
     def _channel(self, val):
-        self.__channel = val
-        self._state = ChIntfState.bounded
-        self.__channel.register_proxy(self)
+        if self._intf is not None:
+            self._intf._channel = val
+        else:
+            self.__channel = val
+
+    def init(self, val):
+        self._init = val
+
+    def get_intf(self):
+        if self._intf is None:
+            try:
+                self.set_intf(self._channel.request_interface())
+            except:
+                pass
+            
+        return self._intf
+
     
+    def set_intf(self, intf):
+        
+        try:
+            intf = intf._intf
+        except AttributeError:
+            pass
+        
+        if intf is not None:
+            intf.set_proxy(self)
+            
+            self.e = intf.e
+            self.read = intf.read
+            self.write = intf.write
+            self._get_dtype = intf._get_dtype
+            self.blk_pop = intf.blk_pop
+            self.blk_write = intf.blk_write
+            self.subscribe = intf.subscribe
+            self.unsubscribe = intf.unsubscribe
+#             from operator import attrgetter
+#             self._channel = intf.__class__._channel #property(intf.__class._channel.fget(self), intf._channel.fset(self))
+#             self._channel = attrgetter('_intf._channel')
+            self.init = intf.init
+        
+        self._intf = intf
+    
+    def _has_intf(self):
+        return self._intf is not None 
+        
+    @property
+    def qualified_name(self):
+        if self._intf is not None:
+            return self._intf.qualified_name
+        elif self._channel is not None:
+            return self._channel.qualified_name #+ '_' + self.drv_sig_name
+        else:
+            return "Proxy"
+    
+    def _get_dtype(self):
+        return None
+    
+#     @property
+#     def _channel(self):
+#         if self._parent is not None:
+#             return self._parent._channel
+#         else:
+#             return self.__channel
+#     
+#     @_channel.setter
+#     def _channel(self, val):
+#         self.__channel = val
+#         self._state = ChIntfState.bounded
+#         self.__channel.register_proxy(self)
+#     
     def _convgen(self, val, remain):
         return self._intf._convgen(val, remain)
     
@@ -395,7 +364,18 @@ class ChProxy(object):
         else:
             par_str = ''
 
-        return 'to ' + self._channel.qualified_name + par_str + ' with ' + str(self._intf) + key_str + ' intf'
+        if self._channel is not None:
+            ch_str = ' to ' + self._channel.qualified_name 
+        else:
+            ch_str = ''
+            
+        if self._intf is not None:
+            intf_str = ' with ' + str(self._intf) + key_str + ' intf'
+        else:
+            intf_str = ' no interface'
+            
+        return par_str + ch_str + intf_str
+        
 
     def __iter__(self):
         val = self.read()
@@ -442,15 +422,9 @@ class ChProxy(object):
         return e
         
     def missing_event(self, event_set, event):
+        self.get_intf()
+        
         e = self.create_event(event)
-        
-        if not self._is_sourced():
-            self._connect_to_sources()
-        
-        for s in self._src:
-            s_event = getattr(s.e, event)
-            s_event.subscribe(e)
-        
         return e
     
     def _connect_to_sources(self):
@@ -461,17 +435,16 @@ class ChProxy(object):
                 self._channel.connect_to_sources(self)
     
     def __getitem__(self, key):
-        if repr(key) not in self.sliced_intfs:
-            sliced_intf = self.deref(key)
-            sliced_intf.parent = self
-            self.sliced_intfs[repr(key)] = sliced_intf
+        if repr(key) not in self._sliced_intfs:
+            sliced_intf = ChProxy(self, intf = self._intf.deref(key), parent_module=self._parent_module)
+            self._sliced_intfs[repr(key)] = sliced_intf
         else:
-            sliced_intf = self.sliced_intfs[repr(key)]
+            sliced_intf = self._sliced_intfs[repr(key)]
         return sliced_intf
     
     def __getattr__(self, name):
         if name not in self._subintfs:
-            subproxy = ChProxy(self, intf = getattr(self.__intf, name), parent_module=self._parent)
+            subproxy = ChProxy(self, intf = getattr(self._intf, name), parent_module=self._parent_module)
             self._subintfs[name] = subproxy
         else:
             subproxy = self._subintfs[name]
@@ -493,12 +466,12 @@ class ChProxy(object):
         if name in dir(self):
             object.__setattr__(self, name, val)
         else:
-            subproxy = getattr(self, name)
-            subproxy._channel = val._channel
-            subproxy.add_source(val)
-
-    def _register_traces(self, traces):
-        self._channel.register_traces(traces)
+#             setattr(self._intf, name, val.get_intf())
+            self._intf.assign_subintf(getattr(self, name), name, val.get_intf())
+            
+# 
+#     def _register_traces(self, traces):
+#         self._channel.register_traces(traces)
 
 #     def read(self, def_val=None):
 #         if self._keys is not None:
@@ -510,21 +483,17 @@ class ChProxy(object):
         if self._keys is not None:
             getattr(self._parent, func)(val, keys=self._keys)
         else:
-            if self.__state == ChIntfState.free:
-                raise Exception
-            else:    
-                if self._intf is None:
-                    try:
-                        self._intf = val._intf
-                    except AttributeError:
-                        self._intf = sig(val.__class__)
-                        
-                getattr(self._intf, func)(val)
+            if self.get_intf() is not None:
+                self.cur_val = getattr(self, func)(val, keys)
+            else:
+
+                try:
+                    self.set_intf(val.get_intf().copy())
+                    return getattr(self, func)(val, keys)
+                except:
+                    pass
                 
-                if self._is_driven():
-                    self._state = ChIntfState.driven
-                else:
-                    raise Exception
+                self._cur_val = val
         
     def write(self, val, keys=None):
         self._write(val, 'write', keys=keys)
@@ -603,8 +572,6 @@ class ChProxy(object):
                     
         return self._cur_val
 
-    eval = read
-
     @property
     def drv_sig_name(self):
         if self._parent is not None:
@@ -666,7 +633,15 @@ class ChProxy(object):
         if self._keys is not None:
             self._parent._channel.assign(other, self)
         else:
-            self._channel.assign(other, self)
+            if self._intf is not None:
+                try:
+                    self._intf.assign(other.get_intf())
+                except AttributeError:
+                    intf = csig()
+                    other_proxy = ChProxy(channel=None, parent_module=self, intf=intf, init=other)
+                    self._intf.assign(other_proxy.get_intf())
+            else:
+                raise Exception
             
         return self
     

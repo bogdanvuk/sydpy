@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -40,19 +40,14 @@ class SignalQueueEmpty(Exception):
 
 class Signal(object):
     """Signal is smallest unit that provides evaluate-update mechanism for data."""
-    def __init__(self, val=None, stype=SignalType.signal, event_set=None, trace=False): 
+    def __init__(self, val=None, event_set=None, trace=False): 
         """"Create a new Signal.
         
         val       - Initialize signal with a value.
-        stype     - Type of the signal: Signal or Queue.
         event_set - The set of events the signal trggers.
         trace     - Should signal register for tracing or not.
         """
         
-#         Component.__init__(self, name, parent)
-        
-#         self._name = name
-        self.stype = stype
         self._tracing = trace
         self.traces = None
         self.mem = []
@@ -61,17 +56,10 @@ class Signal(object):
             
         self.e = event_set
         
-#         if self._tracing:
-#                  
-#             self.trace_val_updated = True
-#              
-#             if val is not None:
-#                 val_str = str(self._init)
-#             else:
-#                 val_str = None
-#             self.traces = VCDTrace(self.name, self, init=val_str)
-        
     def blk_pop(self):
+        """Pop the value from the signal queue. If the queue is empty, wait 
+        for the value to become available."""
+        
         if not self.mem:
             simwait(self.e.enqueued)
         
@@ -81,6 +69,9 @@ class Signal(object):
         return self._val
     
     def pop(self):
+        """Pop the value from the signal queue. If the queue is empty, trigger 
+        SignalQueueEmpty exception. """
+        
         if self.mem:
             simupdate(self)
                         
@@ -89,12 +80,17 @@ class Signal(object):
             raise SignalQueueEmpty
 
     def blk_push(self, val):
+        """Push value to signal queue only if the queue is empty. Do not 
+        trigger the update."""
+        
         while self.mem:
             simwait(self.e.updated)
         
         self.push(val)
            
     def push(self, val):
+        """Push value to signal queue without triggering the update."""
+        
         self.mem.append(val)
         if 'enqueued' in self.e:
             self.e.enqueued.trigger()
@@ -125,22 +121,20 @@ class Signal(object):
         
         if 'updated' in self.e:
             self.e.updated.trigger()
-            
+        
         if val != next_val:
-            self.trace_val_updated = True
             
             if 'changed' in self.e:
                 self.e.changed.trigger()
                 
-            if self.stype == SignalType.signal:
-                if 'event_def' in self.e:
-                    self.e.event_def.trigger()
+            if 'event_def' in self.e:
+                self.e.event_def.trigger()
+                
+                for _, sube in self.e.event_def.subevents.items():
+                    key = sube.key
                     
-                    for _, sube in self.e.event_def.subevents.items():
-                        key = sube.key
-                        
-                        if val.__getitem__(key) != next_val.__getitem__(key):
-                            sube.trigger()
+                    if val.__getitem__(key) != next_val.__getitem__(key):
+                        sube.trigger()
 
             if not val and next_val and (val is not None):
                 if 'posedge' in self.e:
@@ -150,15 +144,4 @@ class Signal(object):
                     self.e.negedge.trigger()
 
             self._val = next_val
-        
-    def trace_val(self, name):
-        if self.trace_val_updated:
-            if self._val is not None:
-                self.trace_val_old = self._val
-            else:
-                self.trace_val_old = None
-                
-            self.trace_val_updated = False
-        
-        return self.trace_val_old
     

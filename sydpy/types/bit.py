@@ -237,7 +237,7 @@ class bit(TypeBase):
         hexstr = ''
         for i in range(-(int(-self.w//4))):
             if vld & 0xf:
-                hexstr += '{0:1x}'.format(val & 0xf)
+                hexstr += '{0:1x}'.format(int(val & 0xf))
             else:
                 if (vld & 0xf) == 0:
                     hexstr += 'U'

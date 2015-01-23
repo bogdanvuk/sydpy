@@ -19,19 +19,19 @@
 from copy import copy
 from sydpy._process import always
 from sydpy._signal import SignalQueueEmpty
-from ._intf import Intf
+from ._intf import _Intf
 from .sig import sig
 from sydpy.types import ConversionError, convgen, bit 
 from sydpy._simulator import simwait
-from sydpy._util._util import architecture
+from sydpy._util._util import arch
 
-@architecture
+@arch
 def _sig_to_seq_arch(self, data_i, data_o):
     @always(self, data_o.clk.e.posedge)
     def proc():
         data_o.next = data_i
 
-@architecture
+@arch
 def _seq_to_tlm_arch(self, data_i, data_o):
 
     data_i.ready.next = True
@@ -60,11 +60,11 @@ def _seq_to_tlm_arch(self, data_i, data_o):
                     remain[0] = None
 
 
-class strm(Intf):
+class strm(_Intf):
     
     def __init__(self, dtype=None, parent=None, name=''):
 
-        Intf.__init__(self, parent=parent, name=name)
+        _Intf.__init__(self, parent=parent, name=name)
 
         self.subintfs['data'] = sig(dtype, parent=self, name='data')
         self.subintfs['last'] = sig(bit, parent=self, name='last')

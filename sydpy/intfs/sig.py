@@ -17,10 +17,16 @@
 #  <http://www.gnu.org/licenses/>.
 
 from copy import copy
-from sydpy._process import always
-from ._intf import Intf#, ChIntfState
+from ._intf import _Intf, IntfDir#, ChIntfState
 from sydpy._signal import Signal
-from sydpy.extens.tracing import VCDTrace
+from sydpy._process import always
+from sydpy.extens.tracing import VCDTrace, VCDTraceMirror
+from sydpy._util._symexp import SymNodeVisitor
+from sydpy._util._util import arch
+from sydpy import ConversionError
+from sydpy._delay import Delay
+from sydpy._simulator import simwait
+from sydpy.intfs._intf import SubIntf
 # from sydpy._ch_proxy import ChIntfState
 
 def _sig_to_seq_arch(self, clk, data_i, data_o):
@@ -28,137 +34,353 @@ def _sig_to_seq_arch(self, clk, data_i, data_o):
     def proc():
         data_o.next = data_i
 
-class sig(Intf):
-    _subintfs = ('data', )
+@arch
+def _sig_to_sig_arch(self, data_i, data_o):
+    @always(self, data_i)
+    def proc():
+        data_o.next = data_i
+
+def m_sig(*args, **kwargs):
+    return sig(*args, direction=IntfDir.master, **kwargs)
+
+def s_sig(*args, **kwargs):
+    return sig(*args, direction=IntfDir.slave, **kwargs)
+
+def slice_or_index(high, low):
+    if high == low:
+        return high
+    else:
+        return slice(high, low)
+
+def get_relative_keys(p1, p2):
+    if isinstance( p1._keys, slice ) :
+        high1 = max(p1._keys.start, p1._keys.stop)
+        low1 = min(p1._keys.start, p1._keys.stop)
+    elif isinstance( p1._keys, int ) :
+        high1 = low1 = int(p1._keys)
+    else:
+        high1 = low1 = None
     
-    def __init__(self, dtype=None, parent=None, name=''):
-        self.def_subintf = dtype
-        self.data = dtype
-        self.drv = None
+    if isinstance( p2._keys, slice ) :
+        high2 = max(p2._keys.start, p2._keys.stop)
+        low2 = min(p2._keys.start, p2._keys.stop)
+    elif isinstance( p2._keys, int ) :
+        high2 = low2 = int(p2._keys)
+    else:
+        high2 = low2 = None
+
+    if (high1, low1) == (None, None):
+        if (high2, low2) == (None, None):
+            return None, None
+        else:
+            return slice_or_index(high2, low2), None
+    else:
+        if (high2, low2) == (None, None):
+            return None, slice_or_index(high1, low1)
+        else:
+            high = min(high1, high2)
+            low = max(low1, low2)
+    
+            return slice_or_index(high - low1, low - low1), slice_or_index(high - low2, low - low2)
+
+class sig(_Intf):
+    _intf_type_name = 'sig'
+   
+    def __init__(self, dtype=None, parent=None, name=None, keys=None, init=None, module=None, dflt=None):
+        _Intf.__init__(self, parent=parent, name=name, keys=keys, module=module)
         
-        Intf.__init__(self, parent=parent, name=name)
-#         self.subintfs['data'] = dtype
+        self._dtype = dtype
+        self._drv = None
+        self._dflt = dflt
+        
+        self.init(init)
     
-    @property
-    def qualified_name(self):
-        try:
-            return self.def_subintf.qualified_name
-        except AttributeError:
-            if self.def_subintf is not None:
-                try:
-                    dtype_name = '(' + self.def_subintf.__name__ + ')'
-                except AttributeError:
-                    dtype_name = '(' + str(self.def_subintf) + ')'
+    def _get_dtype(self):
+        return self._dtype
+    
+    def _rnd(self, rnd_var):
+        return rnd_var._rnd(self._get_dtype())
+    
+    def init(self, val):
+        if val is not None:
+            self._write('write', val)
             
-            if self.proxy._channel is not None:
-                return self.proxy._channel.name + '.' + self.qualif_intf_name + dtype_name
-            else:
-                return self.qualif_intf_name + dtype_name
+        self._init = val
+    
+    def _convgen(self, other, remain=None):
+        return self._get_dtype()._convgen(other, remain)
+    
+    def _apply_subvalue(self, val, keys, old_val):
+        """Update only part of composite data type's value."""
+        if keys is not None:
+            try:
+                old_val = old_val._replace(keys, val)
+            except AttributeError:
+                old_val = self.conv(None)
+                old_val = old_val._replace(keys, val)
+                
+            val = old_val
+                    
+        return val
+    
+    def _get_qualified_name(self):
+        if self._get_dtype() is not None:
+            try:
+                dtype_name = '(' + self._get_dtype().__name__ + ')'
+            except AttributeError:
+                dtype_name = '(' + str(self._get_dtype()) + ')'
+        else:
+            dtype_name = ''
+        
+        return _Intf._get_qualified_name(self) + dtype_name
+    
+    def conv(self, other):
+        try:
+            _Intf.conv(self, other)
+        except ConversionError:
+            return self._get_dtype().conv(other)
+    
+#     def intf_eq(self, other):
+#         if isinstance(other, (sig, csig)):
+#             return True
+#         else:
+#             return _Intf.intf_eq(self, other)
+    
+    def intf_eq(self, other):
+        if _Intf.intf_eq(self, other):
+            if self._get_dtype().cls_eq(other._get_dtype()):
+                return True
+
+        return False
     
     def copy(self):
-        return sig(self.def_subintf, self.parent, self.name)
+        return sig(self.def_subintf, self._parent, self.name)
     
     def trace_val(self, name=None):
         return self.read(None)
     
-    def __seq__(self, val):
-        return _sig_to_seq_arch
+    def _to_sig(self, val):
+        return _sig_to_sig_arch, {}
     
-    def _fullname(self):
-        name = ''
-        if self.parent is not None:
-            name = self.parent._fullname() + '_'
-        
-        if self._channel is not None:
-            name += self._channel.name + '_'
-        
-        if name:
-            name += self.name + '_'
-        
-        try:
-            name += self.def_subintf.__name__
-        except AttributeError:
-            name += str(self.def_subintf)
-        
-        return name
-    
-    def __str__(self):
-        if self.def_subintf is not None:
-            try:
-                name = self.def_subintf.__name__
-            except AttributeError:
-                name = str(self.def_subintf)
-        else:
-            name = self.name
-            
-#         if self.clk is not None:
-#             name += ',' + str(self.clk) 
+    def _from_csig(self, other):
+        for intf in other.intfs():
+            new_intf = sig(intf.elem._get_dtype(), module=self.get_module())
+            new_intf <<= intf.elem
 
-        return name
-    
-    def _rnd(self, rnd_gen):
-        try:
-            return rnd_gen._rnd(self.def_subintf)
-        except TypeError:
-            return None
+            intf.parent._replace(new_intf, intf.key)
+                
+        return _sig_to_sig_arch, {}
+   
+#     def _rnd(self, rnd_gen):
+#         try:
+#             return rnd_gen._rnd(self.def_subintf)
+#         except TypeError:
+#             return None
             
     def _hdl_gen_decl(self):
-        if self.dtype is not None:
-            return self.dtype._hdl_gen_decl()
+        if self._get_dtype() is not None:
+            return self._get_dtype()._hdl_gen_decl()
         else:
             return ''
     
     def deref(self, key):
-        return sig(self.def_subintf.deref(key), keys=key)
+#         return sig(self._get_dtype().deref(key), parent=self, keys=key)
+        return SubIntf(self, key)
     
 #     __repr__ = __str__
-     
-    def __getattr__(self, name):
-        return getattr(self.def_subintf, name)
-    
-    def setdrv(self, drv):
-        self.drv = drv
-    
-    def blk_pop(self, def_val=None):
-        try:
-            return self.def_subintf.blk_pop(def_val)
-        except AttributeError:
-            if self.drv is None:
-                return def_val
-            else:
-                return self.drv.blk_pop()
-            
-    def read(self, def_val=None):
-        try:
-            self.def_subintf.read(def_val)
-        except AttributeError:
-            if self.drv is None:
-                return def_val
-            else:
-                return self.drv.read()
-            
-    
-    def write(self, val, keys=None):
-        try:
-            self.def_subintf.write(val)
-        except AttributeError:
-            Intf.write(self, val, keys)
         
-#     def read(self, def_val=None):
-#         if self.drv is not None:
-#             return self.drv.read()
-#         else:
-#             if self.parent is None:
-#                 return self.channel.read(proxy=self, def_val=def_val)
-#             else:
-#                 return def_val
+    def setdrv(self, drv):
+        self._drv = drv
+       
+#     def add_source(self, src):
+#         _Intf.add_source(self, src)
+#         
+#         chnl = self.get_base_channel()
+#         if chnl is not None:
+#             if src.get_base_channel() is not None:
+#                 if chnl.name != src.get_base_channel().name:
+#                     chnl.register_traces([VCDTrace(self.qualified_name, src, init=self.conv(src._init))])
     
-#     def __eq__(self, other):
-#         if isinstance(other, sig):
-#             if self.name == other.name:
-#                 if (self.dtype is None) or (other.dtype is None):
-#                     return True
+    def add_source(self, src):
+        _Intf.add_source(self, src)
+        if self.get_base_channel() is not None:
+            if self.get_base_channel() != src.get_base_channel():
+                self._trace = VCDTraceMirror(self.qualified_name, self) 
+                self.get_base_channel().register_traces([self._trace])
+    
+    def _get_base_trace(self):
+        if self.is_driven():
+            return self._trace
+        elif self.is_sourced():
+            return self._src[0]._get_base_trace()
+        else:
+            return None 
+    
+#     def set_channel(self, chnl, side=IntfDir.master):
+#         _Intf.set_channel(self, chnl, side=side)
+#         if self.is_driven():
+#             self._trace = VCDTrace(self.qualified_name, self, init=self._drv.val) 
+#             self.get_base_channel().register_traces([self._trace])
+    
+    def setup_driver(self):
+        if self._drv is None:
+            
+#             if str(self) == 'crc_state.seq.valid(bit)':
+#                 pass
+#             
+            try:
+                val = self.conv(self._dflt)
+            except (ConversionError, AttributeError):
+                val = None
+                
+            self._drv = Signal(val=val, event_set = self.e)
+            self._trace = VCDTrace(self.qualified_name, self, init=val)
+            
+            if self.get_base_channel() is not None:
+                self.get_base_channel().register_traces([self._trace])
+                
+            self.e.connected.trigger()
+            
+#             self._state = ChIntfState.driven
+    
+    def _write_prep(self, val, keys=None):
+        if self._drv is None:
+            self.setup_driver()
+        
+        try:
+            val = val.read()
+        except AttributeError:
+            pass
+        
+        try:
+            if keys is None:
+                val = self.conv(val)
+            else:
+                val = self._apply_subvalue(val, self.intf, keys, self._drv._next)
+        except AttributeError:
+            pass
+            
+        return val
+    
+    def _write(self, func, val, keys=None):
+        if self._drv is None:
+            self.setup_driver()
+        
+        try:
+            val = val.read()
+        except AttributeError:
+            pass
+        
+        try:
+            if keys is None:
+                val = self.conv(val)
+            else:
+                val = self._apply_subvalue(val, keys, self._drv._next)
+        except AttributeError as e:
+            pass
+            
+        getattr(self._drv, func)(val)
+                    
+    def write(self, val, keys=None):
+        self._write('write', val, keys)
+            
+    def blk_write(self, val, keys=None):
+        self._write('blk_write', val, keys)
+
+    def write_after(self, val, delay):
+        try:
+            val = val.read()
+        except AttributeError:
+            pass
+        
+        self._drv.write_after(val, delay)
+    
+    def acquire(self):
+        self._cur_val = self._channel.acquire(proxy=self)
+        return self._cur_val
+
+    def _drv_write(self, val, func, keys=None):
+        try:
+            val = val.read()
+        except AttributeError:
+            pass
+        
+        if keys is None:
+            val = self.conv(val)
+        else:
+            val = self._apply_subvalue(val, self.intf, keys, self._drv._next)
+            
+        getattr(self._drv, func)(val)
+
+    def pop(self):
+        if self._drv is not None:
+            self._cur_val = self._drv.pop()
+        else:
+            self._cur_val = self._channel.pop(proxy=self)
+            
+        if self._cur_val is None:
+            if self.init is not None:
+                self._cur_val = self.init
+            else:
+                self._cur_val = self.intf()
+            
+        return self._cur_val
+
+    def _src_read(self, func):
+        conv_val = self._cur_val
+        
+        for proxy in self._src:
+            val = getattr(proxy, func)()
+            
+            dest_keys, src_keys = get_relative_keys(self, proxy)
+                    
+            if src_keys is not None:
+                val = val.__getitem__(src_keys)
+                
+            if dest_keys is not None:
+                conv_val = self._apply_value(val, dest_keys, conv_val)
+            else:
+                conv_val = val
+                
+        return conv_val
+
+    def _read(self, func, def_val=None, keys=None):
+        if self._keys is not None:
+            self._cur_val = self._parent._read(func, def_val).__getitem__(self._keys)
+        else:
+#             if self.__state == ChIntfState.free:
+#             if not self.is_bounded():
+#                 if self._cur_val is not None:
+#                     return self._cur_val
 #                 else:
-#                     return (self.dtype == other.dtype)
-# 
-#         return False
+#                     return def_val
+#             
+#             
+#             
+#             if self._parent is None:
+#                 if self.__state == ChIntfState.bounded:
+#                     self._connect_to_sources()
+#             
+#             if func.startswith('blk_'):    
+#                 if self.__state in (ChIntfState.drv_con_wait, ChIntfState.bounded):
+#                     simwait(self.e.connected)
+                
+            if func.startswith('blk_'):   
+                if not self.is_driven() and not self.is_sourced(): 
+                    simwait(self.e.connected)            
+                
+            if self.is_driven():
+                self._cur_val = getattr(self._drv, func)()
+            elif self.is_sourced():
+                self._cur_val = self._src_read(func)
+            elif self._dflt is not None:
+                self._cur_val = self.conv(self._dflt)
+            else:
+                self._cur_val = def_val
+                    
+        return self._cur_val
+    
+#   @property
+#     def driven(self):
+#         return self._drv is not None
+            

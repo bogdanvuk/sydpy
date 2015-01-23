@@ -56,27 +56,36 @@ class SymNode(object, metaclass=SymNodeMeta):
         self.oper = oper
         self.elem = elem
 
-    def eval(self):
+    def read(self):
         
         args = []
         
         for a in self.args:
             try:
-                args.append(a.eval())
+                args.append(a.read())
             except AttributeError:
-                args.append(a)
+                try:
+                    args.append(a.eval())
+                except AttributeError:
+                    args.append(a)
                 
         kwargs = {}
         
         for k,v in self.kwargs.items():
             try:
-                kwargs[k] = v.eval()
+                kwargs[k] = v.read()
             except AttributeError:
-                kwargs[k] = v
+                try:
+                    kwargs[k] = v.eval()
+                except AttributeError:
+                    kwargs[k] = v
                 
         try:
-            elem = self.elem.eval()
+            elem = self.elem.read()
         except AttributeError:
-            elem = self.elem
+            try:
+                elem = self.elem.eval()
+            except AttributeError:
+                elem = self.elem
         
         return getattr(elem, self.oper)(*args, **kwargs)

@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -48,27 +48,39 @@ def simtrig(event):
     sim.trig_pool.add(event)
     
 def simdelay_add(proc, time):
+    """Register process to be scheduled for execution after given time."""
     sim = RequiredVariable('Simulator')
     sim.delay_pool[proc] = time + sim.time
     
 def simdelay_pop(proc):
+    """Remove process from the delay schedule."""
     sim = RequiredVariable('Simulator')
     sim.delay_pool.pop(proc, None)
     
 def simproc_reg(proc):
+    """Register a process with the simulator."""
     sim = RequiredVariable('Simulator')
     sim.proc_reg(proc)
     
 def simarch_inst_start():
+    """Mark globaly that the simulator is instantiating an architecture at the moment.
+    
+    This flag is removed by calling simarch_inst_stop() function.
+    """
     sim = RequiredVariable('Simulator')
     sim.arch_inst += 1
     
 def simarch_inst_stop():
+    """Remove the flag set by simarch_inst_start() function."""
+    
     sim = RequiredVariable('Simulator')
     if sim.arch_inst > 0:
         sim.arch_inst -= 1
     
 def simarch_inst():
+    """Return 0 if no architectures are instantiated right now. Return anything
+     else otherwise"""
+    
     sim = RequiredVariable('Simulator')
     return (sim.arch_inst > 0)
    
@@ -162,7 +174,7 @@ class Simulator(object):
     
     def proc_reg(self, proc):
         """Register a process with simulator kernel."""
-        self._ready_pool.append(proc)
+        self._ready_pool.add(proc)
         self._proc_pool.append(proc)
             
     def __init__(self, config={}):
@@ -194,15 +206,21 @@ class Simulator(object):
 
         self.duration = self._configurator['sys.sim', 'duration', 1000]
         self.max_delta_count = self._configurator['sys.sim', 'max_delta_count', 1000]
-            
+
+        # Retreive the top module class. If it is given by string, load the module dynamically           
         self.top_module_cls = class_load(self._configurator['sys', 'top', None]) 
         
+        # Either get the project path from the configuration or deduce it by top module file location
         try:
             self._prj_path = self._configurator['sys', 'project_path']
         except KeyError:
             self._prj_path = os.path.dirname(inspect.getfile(self.top_module_cls))
             self._configurator['sys', 'project_path'] = self._prj_path
-            
+
+        # Change to project_path dir in order for other paths that are specified relatively to work
+        self._saved_path = os.getcwd()        
+        os.chdir(self._prj_path)
+          
         # Instantiate extension classes        
         self.extension_names = self._configurator['sys', 'extensions', []]
         self.extensions = []
@@ -213,6 +231,9 @@ class Simulator(object):
         self.top_module_name = 'top'
         self.sched = Scheduler(self)
         self.events['init_start'](self)
+
+    def __del__(self):
+        os.chdir(self._saved_path)
 
     def wait(self, events = None):
         """Delay process execution by waiting for events."""
@@ -259,6 +280,8 @@ class Simulator(object):
                     self._finished = True
                     raise Exception("Maximum number of delta cycles reached: {0}".format(self.max_delta_count))
                 
+#                 print('-----------------------------------------')
+                
             self.events['timestep_end'](self.time, self)
             
             # All events have settled, let's advance time
@@ -274,12 +297,14 @@ class Simulator(object):
         self.delay_pool = {}
         self.trig_pool = set()
         self.update_pool = set()     
-        self._ready_pool = []
+        self._ready_pool = set()
         self._proc_pool = []
 
         self.top_module = self.top_module_cls('top', None)
 
     def _unsubscribe(self, proc):
+        """Unsubscribe the process from all events from  its sensitivity list."""
+        
         events = getattr(proc, 'events', None)
         if events:
             for e in unif_enum(events):
@@ -289,15 +314,20 @@ class Simulator(object):
                     e.event_def.unsubscribe(proc)
     
     def _subscribe(self, proc, events):
+        """Subscribe the process to all events from  its sensitivity list."""
+        
         proc.events = events
         
         for e in unif_enum(events):
             try:
                 e.subscribe(proc)
             except AttributeError:
+                e.subscribe(proc)
                 e.event_def.subscribe(proc)
    
     def _evaluate(self):
+        """Run all processes scheduled for execution. Resolve all triggered events afterwards."""
+         
         # Run the ready processes
         while self._ready_pool:
             proc = self._ready_pool.pop()
@@ -317,14 +347,17 @@ class Simulator(object):
             trig.resolve(self._ready_pool)
 
     def _update(self):
-
-        #Ask all signals to _update their values, and trigger new events
+        """Ask all signals to _update their values, and trigger new events. """
+        
         for s in self.update_pool:
             s._update()
             
         self.update_pool.clear()
         
     def _advance_time(self):
+        """Advanced time to the earliest scheduled process in delay pool and 
+        return True, or return False if there are no more scheduled processes"""
+        
         if self.delay_pool:
             t_new = None
             
@@ -336,7 +369,7 @@ class Simulator(object):
                     break
                     
                 self.delay_pool.pop(w)
-                self._ready_pool.append(w)
+                self._ready_pool.add(w)
 
             self.time = t_new
             self.delta_count = 0
@@ -349,7 +382,8 @@ class Simulator(object):
             return False
         
     def _finalize(self):
-            
+        """Call the exit functions of all processes."""
+        
         for p in self._proc_pool:
             p.exit_func()
             

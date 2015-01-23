@@ -1,9 +1,13 @@
 from sydpy import *
-from sydpy.extens import VCDTracer, SimtimeProgress
 
 class Dff(Module):
-    @architecture
-    def rtl(self, clk, din: sig(bit), dout):
+    @arch_def
+    def rtl(self, 
+            
+            clk: sig(bit), 
+            din: sig(bit), 
+            dout: sig(bit).master
+            ):
         
         @always(self, clk.e.posedge)
         def reg():
@@ -11,14 +15,13 @@ class Dff(Module):
             
             
 class TestDff(Module):
-    @architecture
+    @arch_def
     def dflt(self):
         self.inst(Clocking, clk_o='clk', period=10)
         
-        self.inst(Dff, clk='clk', din='din_seq', dout='dout')
+        self.inst(Dff, clk='clk', din='data', dout='dout')
         
-        self.inst(BasicRndSeq, seq_o='din_seq', delay=30, intfs={'seq_o' : tlm(bit)})
-        
+        self.inst(BasicRndSeq, seq_o='data', delay=30, intfs={'seq_o' : tlm(bit).master})
 
 conf = {
         'sys.top'           : TestDff,

@@ -16,7 +16,7 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-__version__ = "0.1.0a1"
+__version__ = "0.0.1"
 
 from enum import Enum
 
@@ -31,18 +31,20 @@ class ConversionError(Exception):
 
 from sydpy._simulator import Simulator, simwait
 from sydpy._process import always, always_acquire, always_comb
+from sydpy.intfs import *
 from sydpy._module import Module
-from sydpy._util._util import architecture
+from sydpy._util._util import arch, arch_def
 from sydpy._delay import Delay
 from sydpy.procs import Clocking
 from sydpy.rnd import rnd
 from sydpy.verif import *
-from sydpy.intfs import *
 from sydpy.types import *
+from sydpy.extens import *
     
 __all__ = ["Simulator",
            "Module",
-           "architecture",
+           "arch",
+           "arch_def",
            "always",
            "always_acquire",
            "always_comb",
@@ -52,12 +54,22 @@ __all__ = ["Simulator",
            "BasicSeq", 
            "Sequencer",
            "Scoreboard",
+           "UnitTest",
            "sig",
            "seq",
            "tlm",
+           "Bit",
            "bit",
            "bit8",
            "bit16",
            "bit32",
-           "bit64"
+           "bit64",
+           "Array",
+           "Enum",
+           "Struct",
+           "Vector",
+           "convgen",
+           "conv",
+           "VCDTracer",
+           "SimtimeProgress"
            ]

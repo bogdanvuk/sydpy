@@ -16,24 +16,35 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from copy import copy
-from sydpy._process import always
-from sydpy._signal import SignalQueueEmpty, Signal
-from ._intf import Intf
+from ._intf import _Intf
 from .sig import sig
 from sydpy.types import ConversionError, convgen, bit 
 from sydpy._simulator import simwait
-from sydpy._util._util import architecture
+from sydpy._util._util import arch
+from sydpy._process import always
 import types
 from sydpy._event import Event
+from sydpy.intfs._intf import IntfDir, ChIntfState, csig, IntfChildSide,\
+    CsigIntf, Intf, subintfs, SubIntf
 
-@architecture
+@arch
 def _sig_to_seq_arch(self, data_i, data_o):
+    data_o.valid.next = True
+    data_o.last.next = True
+    
     @always(self, data_o.clk.e.posedge)
     def proc():
-        data_o.next = data_i
+        if data_o.ready:
+            data_o.data.next = data_i
+            
+@arch
+def _seq_to_sig_arch(self, data_i, data_o):
+    @always(self, data_i.clk.e.posedge)
+    def proc():
+        if data_i.ready and data_i.valid:
+            data_o.next = data_i.data
         
-@architecture
+@arch
 def _seq_arch(self, proxy):
     @always(self, proxy.clk.e.posedge)
     def proc():
@@ -45,7 +56,7 @@ def _seq_arch(self, proxy):
         except:
             raise
 
-@architecture
+@arch
 def _seq_to_tlm_arch(self, data_i, data_o):
 
     data_i.ready.next = True
@@ -56,7 +67,7 @@ def _seq_to_tlm_arch(self, data_i, data_o):
         nonlocal remain
         
         if data_i.valid:
-            data_recv = data_i.read()
+            data_recv = data_i.data.read()
             data_prep = None
             
             data_conv_gen = convgen(data_recv, data_o, remain[0])
@@ -77,7 +88,7 @@ def _seq_to_tlm_arch(self, data_i, data_o):
             
             
         
-# @architecture
+# @arch
 # def _tlm_to_seq_arch(self, data_i, data_o):
 #     data_fifo = []
 #     last_fifo = []
@@ -89,7 +100,7 @@ def _seq_to_tlm_arch(self, data_i, data_o):
 #         while(1):
 #             data_recv = data_i.blk_pop()
 # 
-#             data_conv_gen = convgen(data_recv, data_o.intf.dtype)
+#             data_conv_gen = convgen(data_recv, data_o.intf._get_dtype())
 # 
 #             try:
 #                 while True:
@@ -99,7 +110,7 @@ def _seq_to_tlm_arch(self, data_i, data_o):
 #             except StopIteration as e:
 #                 remain = e.value
 #                 if remain is not None:
-#                     data_fifo.append(data_o.intf.dtype(remain))
+#                     data_fifo.append(data_o.intf._get_dtype()(remain))
 #                     last_fifo.append(True)
 #                     remain = None
 #                 else:
@@ -124,13 +135,14 @@ def _seq_to_tlm_arch(self, data_i, data_o):
 #             data_o.valid.next = False
 #             data_o.last.next = False
 
-@architecture
+@arch
 def _tlm_to_seq_arch(self, data_i, data_o):
     data_fifo = []
     last_fifo = []
     
-    last_data_event = Event(data_o.parent)
-    cur_val = [None, None]
+    last_data_event = Event()
+    data_o.last.init(0)
+    data_o.valid.init(0)
     
     @always(self)
     def acquire():
@@ -149,28 +161,21 @@ def _tlm_to_seq_arch(self, data_i, data_o):
             except StopIteration as e:
                 remain = e.value
                 if remain is not None:
-                    data_fifo.append(data_o.intf.dtype(remain))
+                    data_fifo.append(data_o.intf._get_dtype()(remain))
                     last_fifo.append(True)
                     remain = None
                 else:
-                    last_fifo[-1] = True
+                    try:
+                        last_fifo[-1] = True
+                    except:
+                        pass
                 
                 
                 if not data_o.valid.read(False):
-#                     cur_val = [data_fifo.pop(0), last_fifo.pop(0)]
-                
                     data_o.data.next = data_fifo[0]
                     data_o.last.next = last_fifo[0]
                     data_o.valid.next = True
-            
-#             for d in zip(data_fifo, last_fifo):
-#                 data_o.blk_write(d)
-            
-#             if not data_o.valid:
-#                 data_o.next = data_fifo[0]
-#                 data_o.last.next = last_fifo[0]
-#                 data_o.valid.next = True
-            
+
                 simwait(last_data_event)
 
     @always(self, data_o.clk.e.posedge)
@@ -194,6 +199,41 @@ def _tlm_to_seq_arch(self, data_i, data_o):
             data_o.last.next = False
             data_o.valid.next = False
 
+@arch
+def _combine_seqs(self, data_i, data_o):
+    
+    valids = [elem.valid for elem in data_i]
+    readys = [elem.ready for elem in data_i]
+    lasts = [elem.last for elem in data_i]
+    
+    @always(self, data_o.ready, *valids)
+    def valid_proc():
+        if data_o.ready:
+            all_ready = True
+            
+            for v in valids:
+                if not v:
+                    all_ready = False
+                    break
+        else:
+            all_ready = False
+                
+        for r in readys:
+            r.next = all_ready
+            
+        data_o.valid.next = all_ready
+        
+    @always(self, *lasts)
+    def last_proc():
+        any_last = False
+        
+        for l in lasts:
+            if l:
+                any_last = True
+                break
+            
+        data_o.last.next = any_last
+
 class mirror(sig):
 
     @property
@@ -201,26 +241,99 @@ class mirror(sig):
         return self.parent.qualified_name()
        
     def write(self, val, keys=None):
-        self.parent.write(val, keys=None)
+        self._parent.write(val, keys=None)
         
     def read(self, def_val=None):
-        return self.parent.read(def_val) 
+        return self._parent.read(def_val) 
 
-class seq(Intf):
+def m_seq(*args, **kwargs):
+    return seq(*args, direction=IntfDir.master, **kwargs)
+
+def s_seq(*args, **kwargs):
+    return seq(*args, direction=IntfDir.slave, **kwargs)
+
+class seq(_Intf):
     
     _subintfs = ('clk', 'data', 'last', 'valid', 'ready')
-    def_subintf = None
+    _intf_type_name = 'seq'
+    _child_side_dict = {
+                        IntfDir.slave: dict(clk=IntfDir.master, 
+                                            data=IntfDir.slave,
+                                            valid=IntfDir.slave,
+                                            last=IntfDir.slave,
+                                            ready=IntfDir.master
+                                            ),
+                        
+                        IntfDir.master: dict(clk=IntfDir.master, 
+                                            data=IntfDir.master,
+                                            valid=IntfDir.master,
+                                            last=IntfDir.master,
+                                            ready=IntfDir.slave
+                                            )
+                        }
     
-    def __init__(self, dtype=None, parent=None, name=None, proxy=None):
-        Intf.__init__(self, parent=parent, name=name, proxy=proxy)
+    def_subintf = None
+    _dtype = None
+    _sig = None
+    
+    def __init__(self, dtype=None, parent=None, name=None, init=None, module=None):
+        _Intf.__init__(self, parent=parent, name=name, module=module)
         
         self.clk  = sig(bit, parent=self, name='clk')
-        self.data = mirror(dtype, parent=self, name='data')
-        self.last = sig(bit, parent=self, name='last')
-        self.valid = sig(bit, parent=self, name='valid')
-        self.ready = sig(bit, parent=self, name='ready')
+        self.data = sig(dtype, parent=self, name='data', init=init)
+#         self.data.e = self.e
+        self.valid = sig(bit, parent=self, name='valid', dflt=1)
+        self.ready = sig(bit, parent=self, name='ready', dflt=1)
+        self.last = sig(bit, parent=self, name='last', dflt=1)
+        self.last.add_source(self.valid)
        
         self.def_subintf = self.data # self.subintfs['data']
+        self._dtype = dtype
+#         self._sig = None
+        
+        self.__create_sigout()
+        
+#         self._child_side_dict = dict(clk=IntfChildSide.slave, 
+#                                      data=IntfChildSide.same,
+#                                      valid=IntfChildSide.same,
+#                                      last=IntfChildSide.same,
+#                                      ready=IntfChildSide.flip
+#                                      )
+    
+    def set_module(self, module):
+        _Intf.set_module(self, module)
+        self.__create_sigout()
+    
+    def __create_sigout(self):
+        if (self._sig is None) and (self._get_dtype() is not None) and (self.get_module() is not None):
+            self._sig = sig(self._get_dtype(), module=self.get_module())
+            self._sig.e = self.e
+            self._sig.connect(self, side=IntfDir.slave)
+            self._sig.init(self.data._init)
+               
+    def _get_dtype(self):
+        return self._dtype
+    
+#     def connect(self, other, side=IntfDir.slave, **subs):
+#         _Intf.connect(self, other, side, **subs)
+#         if (self.get_channel() is not None):
+#             self.__create_sigout()
+                  
+               
+    def add_source(self, src):
+        self.s_con(**subintfs(src, ['valid', 'last', 'ready', 'data']))
+                    
+#         self.clk <<= src.clk
+#         self.data <<= src.data
+#         self.valid <<= src.valid
+#         self.ready >>= src.ready
+#         self.last <<= src.last
+        
+        self._src = [src]
+        
+        for e_name in self.e:
+            event = getattr(src.e, e_name)
+            event.subscribe(self.e[e_name])
 
 #         self.subintfs['clk'] = sig(bit, parent=self, name='clk')
 #         self.subintfs['data'] = sig(dtype, parent=self, name='data')
@@ -228,24 +341,127 @@ class seq(Intf):
 #         self.subintfs['valid'] = sig(bit, parent=self, name='valid')
 #         self.subintfs['ready'] = sig(bit, parent=self, name='ready')
     
-    @property
-    def drv(self):
-        return self.def_subintf.drv
+#     def assign_intf(self, other, side=IntfDir.slave):
+#         if (side == IntfDir.slave) and self.intf_eq(other):
+#             self.add_source(other)
+#             return
+#         
+#         if isinstance(other, csig):
+#             seq_intf_inputs = [];
+#             
+#             for s in other._senslist:
+#                 if isinstance(s._intf, seq):
+#                     seq_intf_inputs.append(s)
+#                     
+#             if len(seq_intf_inputs) == 1:
+#                 seq_in = seq_intf_inputs[0]._intf
+#                 self.valid.assign(seq_in.valid)
+#                 self.last.assign(seq_in.last)
+#                 self.clk.assign(seq_in.clk)
+#                 seq_in.ready.assign(self.ready)
+#                 self.data.assign(other)
+#                 return
+#             else:
+#                 
+#         else:
+#             arch, cfg = self.conv_path(other)
+#     #         self._state = ChIntfState.drv_con_wait
+#             arch = types.MethodType(arch,self._module)
+#             self.get_module().arch_inst(arch, data_i=other, data_o=self, **cfg)
     
-    def copy(self):
-        return seq(self.def_subintf._get_dtype(), self.parent, self.name)
+    def init(self, val):
+        self.data.init(val)
+        self._sig.init(self.data._init)
+    
+#     def set_proxy(self, proxy):
+#         _Intf.set_proxy(self, proxy)
+#         
+#         if self.last._state == ChIntfState.free:
+#             self.last.assign(self.valid)
+    
+    def _child_state_changed(self, child):
+        if child.name == 'data':
+            self._state = child._state
+    
+    def is_driven(self):
+        return self.data.is_driven()
+    
+#     def copy(self):
+#         return seq(self.def_subintf._get_dtype(), self.parent, self.name)
 
-    def _to_sig(self, val):
-        pass
+    def _to_sig(self, val, keys=None):
+        if (keys is None) and (not val is self._sig):
+#             self.__create_sigout()
+                
+            val <<= self._sig
+            return None, {}
+        else:
+            return _seq_to_sig_arch, {}
+#             if (self._sig is None):
+#                 self.__create_sigout()
+            
+#             if (not val is self._sig):
+                
+        
+        
     
-    def _from_sig(self, val):
+    def _from_sig(self, other):
         return _sig_to_seq_arch, {}
     
-    def _to_tlm(self, val):
+    def _to_tlm(self, other):
         return _seq_to_tlm_arch, {}
        
-    def _from_tlm(self, val):
+    def _from_tlm(self, other):
         return _tlm_to_seq_arch, {}
+    
+    def _from_csig(self, other):
+        intf_list = []
+        
+        for intf in other.intfs():
+            new_intf = seq(intf.elem._get_dtype(), module=self.get_module())
+            new_intf.clk <<= self.clk
+            try:
+                new_intf <<= intf.elem
+            except Exception as e:
+                print(e)
+            
+            intf_list.append(new_intf)
+            intf.parent._replace(new_intf.data, intf.key)
+
+        self.data <<= other
+                
+        arch = types.MethodType(_combine_seqs,self.get_module())
+        self.get_module().arch_inst(arch, data_i=Intf(*intf_list), data_o=self.slave)
+        
+        return None, {}
+                        
+#         seq_intf_inputs = [];
+#             
+#         for s in other.senslist:
+#             if not s is self:
+#                 if self.intf_eq(s):
+#                     seq_intf_inputs.append(s)
+#                 
+#         if len(seq_intf_inputs) == 1:
+#             seq_in = seq_intf_inputs[0]
+#             
+#             for intf_name in self._subintfs:
+#                 if intf_name != 'data':
+#                     getattr(self, intf_name).assign(getattr(seq_in, intf_name), self.get_child_side(intf_name, IntfDir.slave))
+#             
+# #             self.add_source(seq_in)
+#             self.data <<= other
+#             return None, {}
+#         else:
+#             return _sig_to_seq_arch, {}    
+#             self.valid.assign(seq_in.valid)
+#             self.last.assign(seq_in.last)
+#             self.clk.assign(seq_in.clk)
+#             seq_in.ready.assign(self.ready)
+#             self.data.assign(other)
+    
+    def _from_generic(self, val):
+        return _sig_to_seq_arch, {}
     
 #     @property
 #     def dtype(self):
@@ -255,11 +471,11 @@ class seq(Intf):
         if name in self._subintfs:
             return self._subintfs[name]
         else:
-            return getattr(self.def_subintf, name)
+            return getattr(self._sig, name)
     
     def _hdl_gen_decl(self):
-        if self.data.dtype is not None:
-            return self.data.dtype._hdl_gen_decl()
+        if self.data._get_dtype() is not None:
+            return self.data._get_dtype()._hdl_gen_decl()
         else:
             return ''
     
@@ -270,13 +486,13 @@ class seq(Intf):
                     event = getattr(child.proxy.e, e_name)
                     event.subscribe(self.proxy.e[e_name])
                     
-    def set_proxy(self, proxy):
-        Intf.set_proxy(self, proxy)
-        
-        if self.def_subintf.proxy is not None:
-            for e_name in self.proxy.e:
-                event = getattr(self.def_subintf.proxy.e, e_name)
-                event.subscribe(self.proxy.e[e_name])
+#     def set_proxy(self, proxy):
+#         _Intf.set_proxy(self, proxy)
+#         
+#         if self.def_subintf.proxy is not None:
+#             for e_name in self.proxy.e:
+#                 event = getattr(self.def_subintf.proxy.e, e_name)
+#                 event.subscribe(self.proxy.e[e_name])
         
             
 #             if self.sourced:
@@ -291,15 +507,18 @@ class seq(Intf):
 #     _state_drv_con_wait = _state_sourced
             
     
-#     def write(self, val, keys=None):
-#         Intf.write(val, keys=None)
-#         
-#     def read(self, def_val=None):
-#         return self.def_subintf.read(def_val)
+    def write(self, val, keys=None):
+        self.def_subintf.write(val, keys=keys)
+#         _Intf.write(self, val, keys=None)
+         
+    def read(self, def_val=None):
+        return self._sig.read(def_val)
     
     def deref(self, key):
-        asp_copy = copy(self)
-        asp_copy.data.dtype = self.data.dtype.deref(key)
+        subintf = SubIntf(self, key)
         
-        return asp_copy
+        setattr(subintf, 'data', self.data.deref(key))
+        
+        return subintf
+        
 

@@ -37,6 +37,10 @@ def convgen(val, to_type, remain=None):
 class TypeBase(object):
     
     @classmethod
+    def cls_eq(cls, other):
+        return object.__eq__(cls, other)
+    
+    @classmethod
     def _conv_direct(cls, other):
         try:
             return getattr(cls, '_from_' + other.__class__.__name__)(other)

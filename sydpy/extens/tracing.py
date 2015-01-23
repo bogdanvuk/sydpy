@@ -20,13 +20,11 @@
 
 import time
 import os
-from sydpy._util._injector import RequiredFeature, features  # @UnresolvedImport
+from sydpy._util._injector import RequiredVariable, features  # @UnresolvedImport
 from sydpy import __version__ #, EnumItemType
 from sydpy._component import component_visitor, Component
 
 class VCDTracer(object):
-    
-    configurator = RequiredFeature('Configurator')
     
     def writeVcdHeader(self, sim):
         self.vcdfile.close()
@@ -39,8 +37,8 @@ class VCDTracer(object):
         self.writeVcdHeaderEnd()
         self.writeVcdInitValuesStart()
         
-#         for t in self.trace_list:
-#             t.print_init_val()
+        for t in self.trace_list:
+            t.print_init_val()
         
         self.writeVcdInitValuesEnd()
         
@@ -138,7 +136,7 @@ class VCDTracer(object):
     
     def writeComponentHeaderVisitorBegin(self, c, tracer=None):
         
-        if c.components:
+        if (c.components) or (self.channel_hrchy and hasattr(c, "traces")):
             self.writeComponentHeaderStart(c)
         
         if hasattr(c, "traces"):
@@ -152,20 +150,23 @@ class VCDTracer(object):
                         c.traces.print_var_declaration()
         
     def writeComponentHeaderVisitorEnd(self, c, tracer=None):
-        if c.components:
+        if (c.components) or (self.channel_hrchy and hasattr(c, "traces")):
             self.writeComponentHeaderEnd()   
     
     def __init__(self, sim_events):
-        self.vcd_filename = self.configurator['VCDTracer', 'filename', 'fpyga.vcd']
+        self.configurator = RequiredVariable('Configurator')
+        self.vcd_filename = self.configurator['VCDTracer', 'filename', 'sydpy.vcd']
+        self.channel_hrchy = self.configurator['VCDTracer', 'channel_hrchy', True]
         self.vcd_out_path = self.configurator['VCDTracer', 'path', self.configurator['sys', 'output_path', self.configurator['sys', 'project_path'] + "/out"]]
         self.timescale = self.configurator['sys', 'timescale', '100ps']
         self.trace_deltas = self.configurator['VCDTracer', 'trace_deltas', False]
         self.max_delta_count = self.configurator['sys.sim', 'max_delta_count', 1000]
         
         if (not os.path.isdir(self.vcd_out_path)):
-            os.mkdir(self.vcd_out_path)
+            os.makedirs(self.vcd_out_path, exist_ok=True)
         
         self.vcdfile = open(self.vcd_out_path + "/" + self.vcd_filename + ".tmp", 'w')
+        
         self.trace_list = []
         self.last_code = ['a', 'a', 'a']
 #         sim_events['run_start'].append(self.writeVcdHeader)
@@ -179,10 +180,8 @@ class VCDTracer(object):
 #         sim_events['run_end'].append(self.flush)
         
         features.Provide('VCDTracer', self)
-    
+  
 class VCDTrace():
-    _tracer = RequiredFeature('VCDTracer')
-    
     def changed(self):
 #         return self._producer.trace_val_updated
         val = self._producer.trace_val(self._name)
@@ -213,14 +212,14 @@ class VCDTrace():
     def print_var_declaration(self):
         name = self._name = self._name.replace(':','_').replace('[', '_').replace(']', '')
         if isinstance(self._val, bool):
-            s = "$var reg 1 {0} {1} $end\n".format(self._code, name)
+            s = "$var wire 1 {0} {1} $end\n".format(self._code, name)
         elif hasattr(self._val, 'bitstr'):
             str_val = self._val.bitstr()
             
             if len(str_val) == 3:
-                s = "$var reg 1 {0} {1} $end\n".format(self._code, name)
+                s = "$var wire 1 {0} {1} $end\n".format(self._code, name)
             else:
-                s = "$var reg {0} {1} {2} [{3}:0] $end\n".format(len(str_val) - 2, self._code, name , len(str_val) - 3)
+                s = "$var wire {0} {1} {2} $end\n".format(len(str_val) - 2, self._code, name)
             
 #         elif hasattr(self._val, '__int__'):
 #             s ="$var reg 1 {0} {1} $end\n".format(self._code, name)
@@ -230,8 +229,29 @@ class VCDTrace():
         self._tracer.vcdfile.write(s)
 
     def __init__(self, name, producer, init=None):
+        self._tracer = RequiredVariable('VCDTracer')
         self._name = name
         self._init = init
         self._code = self._tracer.add_trace(self)
         self._producer = producer
         self._val = None
+
+class VCDTraceMirror(VCDTrace):
+    
+    def _find_src_trace(self):
+        for t in self._src.traces:
+            if t._name == self._src_trace_name:
+                return t
+    
+    def print_var_declaration(self):
+        src_trace = self._producer._get_base_trace()
+        self._code = src_trace._code
+        self._val = src_trace._val
+        
+        VCDTrace.print_var_declaration(self)
+    
+    def __init__(self, name, producer):
+        self._name = name
+        self._producer = producer
+        self._tracer = RequiredVariable('VCDTracer')
+

@@ -7,7 +7,7 @@ Created on Oct 9, 2014
 from sydpy.intfs import tlm
 from sydpy.types._type_base import TypeBase
 from sydpy._util._util import fannotate 
-from sydpy import Module, architecture
+from sydpy import Module, arch_def
 
 class Sequencer(Module):
     '''
@@ -17,7 +17,7 @@ class Sequencer(Module):
     def set_seq(self, sequence, **config):
         self.inst(sequence, 'sequence', seq_o=self.seq_o,  **config)
 
-    @architecture
+    @arch_def
     def dflt(self, seq_o, seq_module=None):
         '''
         Constructor

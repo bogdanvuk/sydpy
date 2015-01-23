@@ -22,11 +22,11 @@ from ._type_base import TypeBase
 from sydpy import ConversionError
 from sydpy.types import convgen
 
-def Array(cls, max_size=((1 << 32) - 1)):
-    if cls not in __array_classes:
-        __array_classes[cls] = type('array', (array,), dict(dtype=cls,max_size=max_size))
+def Array(cls, max_size=((1 << 16) - 1)):
+    if (cls, max_size) not in __array_classes:
+        __array_classes[(cls, max_size)] = type('array', (array,), dict(dtype=cls,max_size=max_size))
         
-    return __array_classes[cls] 
+    return __array_classes[(cls, max_size)] 
 
 class array(TypeBase):
     
@@ -57,7 +57,7 @@ class array(TypeBase):
        
     @classmethod
     def _rnd(cls, rnd_gen):
-        size = rnd_gen.rnd_int(0, cls.max_size)
+        size = rnd_gen.rnd_int(1, cls.max_size)
         
         val = [rnd_gen._rnd(cls.dtype) for _ in range(size)] 
         
@@ -106,7 +106,10 @@ class array(TypeBase):
         return "[" + ",".join([str(e) for e in self._val]) + "]"
     
     __repr__ = __str__
-        
+    
+    @classmethod
+    def cls_eq(cls, other):
+        return cls.dtype == other.dtype
     
     def __iter__(self):
         return iter(self._val)

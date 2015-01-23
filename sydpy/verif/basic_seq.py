@@ -16,18 +16,24 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from sydpy import Module, architecture, always, rnd
+from sydpy import Module, arch_def, always, rnd
+from sydpy._simulator import simwait, simtime
+from sydpy._delay import Delay
 
 class BasicSeq(Module):
-    @architecture
-    def tlm(self, seq_o, gen=None, flow_ctrl=None):
+    @arch_def
+    def tlm(self, seq_o, gen=None, flow_ctrl=True):
+        
+#         seq_o.set_init(init)
         
         @always(self)
         def main():
             for next_seqi, next_delay in gen:
                 
                 if next_delay:
-                    seq_o.next_after = next_seqi, next_delay
-                else:
+                    simwait(Delay(next_delay))
+                
+                if flow_ctrl:
                     seq_o.blk_next = next_seqi
-                    
+                else:
+                    seq_o.next = next_seqi

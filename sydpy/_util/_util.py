@@ -117,8 +117,9 @@ class _SigNameVisitor(ast.NodeVisitor):
 #                 self.subproxy.pop(0)
             if self.subproxy[0] in ('next', 'next_after', 'write', 'blk_next'):
                 inp = False
+                self.subproxy.pop(0)
                  
-            for s in reversed(self.subproxy[1:]):
+            for s in reversed(self.subproxy):
                 try:
                     self.proxy = getattr(self.proxy, s)
                 except AttributeError:
@@ -187,11 +188,13 @@ def getio_vars(func):
     return list(v.inputs.values()), list(v.outputs.values())
 
 # @decorator
-def architecture(f):
-    f.arch = True
+def arch(f):
     f.inputs, f.outputs = getio_vars(f)
     return f
-    
+
+def arch_def(f):
+    f.arch_def = True
+    return arch(f)    
     
 def fannotate(f, **kwargs):
     if not hasattr(f, '__annotations__'):

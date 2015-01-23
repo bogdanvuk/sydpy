@@ -15,7 +15,7 @@ def test_bit():
     assert int(str(b_val), 16) == val & ((1 << size) - 1)
     
     # Test slicing and deref type
-    high = randint(0, size)
+    high = randint(0, size - 1)
     low = randint(0, high)
     slice_w = high - low + 1
     slice_val = b_val[low:high]
@@ -31,8 +31,8 @@ def test_bit():
     
     size2 = 16
     val2 = randint(0, (1<<size)*10)
-    b_val2 = Bit(size)(val)
-    assert int(b_val.__concat__(b_val2)) == ((val << size2) | val2)
+    b_val2 = Bit(size)(val2)
+    assert int(b_val.__concat__(b_val2)) == (((val & ((1 << size) - 1)) << size2) | (val2 & ((1 << size2) - 1)))
     
 def test_vector():
     pass

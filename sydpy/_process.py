@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -15,11 +15,11 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
-from sydpy._util._util import getio_vars
 
 """Module that implements various process decorators."""
 
 from greenlet import greenlet
+from sydpy._util._util import getio_vars
 from sydpy._simulator import simwait
 
 class Process(greenlet):
@@ -34,7 +34,13 @@ class Process(greenlet):
         self.arch = self.module.current_arch
         self.module.proc_reg(self)
         self.name = module.qualified_name + "." + func.__name__
-        self.senslist = args
+        senslist = []
+        
+        for a in args:
+            if hasattr(a, 'subscribe'):
+                senslist.append(a)
+        
+        self.senslist = senslist
         self._exit_func = exit_func
         
         # If the module is to be traslated to HDL, translate the process
@@ -65,7 +71,10 @@ class Process(greenlet):
 class AlwaysAcquire(Process):
     """Wrapper class for functions that implement processes in user modules.
     
-    Class turns function in the greenlet task.""" 
+    This wrapper is used for processes with single interface in sensitivity
+    list. The process is triggered when a new value can be popped via 
+    interface."""
+     
     def run(self):
         arch_active = self.module.architectures[self.arch]['active']
         while(1):
@@ -77,21 +86,10 @@ class AlwaysAcquire(Process):
                 
             self.func(val, **self.func_params)
          
-# class Always(Process):
-# #     hdl_gen = always_toVerilog
-#     
-#     def run(self):
-#         while(1):
-#             if self.senslist:
-# #                 self.simulator.sched.switch(self.senslist)
-#                 simwait(self.senslist)
-#             self.func(**self.func_params)
-            
-# class AlwaysComb(Always):
-#     hdl_gen = always_comb_toVerilog
-
-
 def always_comb(self):
+    """This process decorator automatically derives the sensitivity list for 
+    the process from the code."""
+
     def _always_decorator(func):
         (inputs, outputs) = getio_vars(func)
 
@@ -100,12 +98,16 @@ def always_comb(self):
     return _always_decorator
 
 def always_acquire(self, *args, **kwargs):
+    """This process decorator instantiates the AlwaysAcquire object for the process."""
+    
     def _always_decorator(func):
         AlwaysAcquire(self, func, args[0], **kwargs)
     
     return _always_decorator   
 
 def always(self, *args, **kwargs):
+    """This process decorator instantiates the Process wrapper object for the process."""
+    
     def _always_decorator(func):
         Process(self, func, *args, **kwargs)
     

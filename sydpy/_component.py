@@ -43,7 +43,7 @@ class GlobconfComponentMeta(type):
         if parent is not None:
             qualified_name = parent.qualified_name + '/' + name
         else:
-            qualified_name = name
+            qualified_name = '/' + name
 
         
         # Get the initialization arguments
@@ -137,10 +137,10 @@ class Component(object, metaclass=GlobconfComponentMeta):
                 return self.parent.find(qualified_name)
             else:
                 return self.find(qualified_name[1:])
-        elif qualified_name[0] == '.':
-            return self.find(qualified_name[1:])
-        elif qualified_name[0:1] == '..':
-            return self.parent.find(qualified_name[2:])
+        elif qualified_name[0:3] == '../':
+            return self.parent.find(qualified_name[3:])
+        elif qualified_name[0:2] == './':
+            return self.find(qualified_name[2:])
         else:
             slash_pos = qualified_name.find('/')
 
