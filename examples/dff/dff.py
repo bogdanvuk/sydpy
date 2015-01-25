@@ -28,6 +28,4 @@ conf = {
         'sys.extensions'    : [VCDTracer, SimtimeProgress],
         }
 
-sim = Simulator(conf)
-
-sim.run()
+Simulator(conf).run()

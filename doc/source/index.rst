@@ -21,7 +21,7 @@ SyDPy features:
  - Smart channels for information exchange between various interfaces
  - Global simulator configuration for test setup
  - Basic randomization, sequencing and scoreboarding supported
- - Automatic model checking of different module architectures
+ - Automatic model checking between different module architectures
  - Extendible simulator kernel
  
 Soon available (please visit the Roadmap page for detailed list):
@@ -45,6 +45,6 @@ Contents
 .. toctree::
    :maxdepth: 2
 
+   tutorial
    roadmap
 
-   - Signals are abstracted into channels. Information in the same channels can be accessed by different processes using different protocols (on various levels of abstraction) without the need of user conversion modules.
