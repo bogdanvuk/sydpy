@@ -1,6 +1,5 @@
 from sydpy import *
 import zlib
-from sydpy.intfs._intf import subintfs
 
 # Algorithm from: http://www.hackersdelight.org/hdcodetxt/crc.c.txt
 def setup_crc_table():
@@ -26,7 +25,6 @@ class Crc32(Module):
             crc = 0
             for b in val:
                 crc = zlib.crc32(bytes([int(b)]), crc)
-#                 print('CRC TLM: ' + hex(crc))
                   
             crc_out.blk_next = crc
     
@@ -63,8 +61,8 @@ class Crc32(Module):
         crc_out.s_con(valid = crc_calc.last, 
                       data  = ~crc_calc.data,
                       )
-        crc_out.clk <<= clk            
-
+        crc_out.clk <<= clk
+        
 if __name__ == "__main__":
 
     class TestCrc32(Module):
@@ -88,6 +86,4 @@ if __name__ == "__main__":
             'sys.extensions'    : [VCDTracer, SimtimeProgress],
             }
     
-    sim = Simulator(conf)
-    
-    sim.run()
+    Simulator(conf).run()

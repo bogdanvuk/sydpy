@@ -1,9 +1,15 @@
 from sydpy import *
-from sydpy.extens import VCDTracer, SimtimeProgress
 
 class Johnson(Module):
     @arch_def
-    def rtl(self, clk:sig(bit), dout: 'seq(Bit(N)).master', N=1):
+    def rtl(self, 
+    
+            clk:sig(bit), 
+            dout: 'seq(Bit(N)).master', 
+            
+            N=1
+            ):
+            
         dout.data.init(0)
         dout.clk <<= clk
         dout.data <<= dout[N-2:0] % (~dout[N-1]) 
@@ -23,10 +29,8 @@ class TestJohnson(Module):
 
 conf = {
         'sys.top'           : TestJohnson,
-        'sys.extensions'    : [VCDTracer, SimtimeProgress],
-        '/top.cnt_n'        : 10
+        'sys.extensions'    : [VCDTracer],
+        '/top.cnt_n'        : 4
         }
 
-sim = Simulator(conf)
-
-sim.run()
+Simulator(conf).run()

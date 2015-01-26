@@ -29,6 +29,4 @@ conf = {
 #         'Pr.include'  : ['./*']
         }
 
-sim = Simulator(conf)
-
-sim.run()
+Simulator(conf).run()
