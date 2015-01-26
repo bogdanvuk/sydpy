@@ -20,8 +20,10 @@ from .sig import sig
 from .seq import seq
 from .tlm import tlm
 from .strm import strm
+from ._intf import subintfs
 
 __all__ = ["sig",
            "seq",
-           "tlm"
+           "tlm",
+           "subintfs"
            ]
