@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -16,13 +16,11 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from copy import copy
-from sydpy import always, always_acquire
-from ._intf import _Intf#, ChIntfState
+"""Module implements the tlm interface."""
+
+from sydpy import always_acquire
 from sydpy._util._util import arch
 from sydpy.types import convgen
-from sydpy._signal import Signal
-from sydpy.extens.tracing import VCDTrace
 from sydpy.intfs._intf import IntfDir
 from sydpy.intfs import sig
 
@@ -64,17 +62,6 @@ class tlm(sig):
     def __init__(self, dtype=None, parent=None, name=None, module=None):
         sig.__init__(self, dtype=dtype, parent=parent, name=name, module=module)
     
-#         if self.proxy._channel is not None:
-#             return self.proxy._channel.name + '.' + self.qualif_intf_name + dtype_name
-#         else:
-#             return self.qualif_intf_name + dtype_name
-    
-    def copy(self):
-        return tlm(self.def_subintf, self.parent, self.name)
-    
-    def trace_val(self, name=None):
-        return self.read()
-    
     def _from_tlm(self, val):
         return _tlm_to_tlm_arch, {}
         
@@ -90,23 +77,8 @@ class tlm(sig):
     def write(self, val, keys=None):
         self._write('blk_push', val, keys)
 
-#        
-#     def _rnd(self, rnd_gen):
-#         try:
-#             return rnd_gen._rnd(self.def_subintf)
-#         except TypeError:
-#             return None
-            
     def _hdl_gen_decl(self):
         if self.def_subintf is not None:
             return self.def_subintf._hdl_gen_decl()
         else:
             return ''
-    
-    def deref(self, key):
-        asp_copy = copy(self)
-        asp_copy.dtype = self.def_subintf.deref(key)
-        
-        return asp_copy
-    
-#     __repr__ = __str__

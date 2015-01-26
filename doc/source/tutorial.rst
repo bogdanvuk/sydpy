@@ -1,27 +1,33 @@
 ..  _tutorial:
 
 SyDPy short tutorial
-==================================
+====================
 
-Designing the D Flip Flop (DFF):
-----------------------------------
+SyDPy 
 
-from sydpy import Module, architecture, always
-::
-    from sydpy import Module, architecture, always
-    
-    class DFF(Module):
-        @architecture
-        def rtl(self, clk, din, dout):
-            @always(self, clk.e.posedge)
-            def reg():
-                dout.next = din
+Designing the D Flip Flop (DFF) with sig interface only:
+--------------------------------------------------------
+
+from sydpy import *
+
+class Dff(Module):
+    @arch_def
+    def rtl(self, 
+
+            clk: sig(bit), 
+            din: sig(bit), 
+            dout: sig(bit).master
+            ):
+        
+        @always(self, clk.e.posedge)
+        def reg():
+            dout.next = din
 
 Verification environment for DFF
-----------------------------------
+--------------------------------
 
 In order to simulate the design, we need to supply some stimulus and examine the output. The testbench module might look like this:
-::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     from sydpy import Module, architecture, clkinst
     from dff import DFF
     
@@ -37,10 +43,10 @@ We achieved the following with our testbench:
 2.	We will have a sequence of random bits fed into our DFF module
 
 Simulating the design
------------------------------------
+---------------------
 
 We need to form a configuration dictionary to properly setup the simulator. The minimum we have to supply is:
-::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     config = {
         'sys.duration' : 1000,
         'sys.top'      : TestDFF
@@ -59,7 +65,7 @@ We won't see much what happened using this configuration. Easiest way to view th
 If we run the simulation again, the VCD file will now be generated, and we can inspect the signals to verify the DFF design.
 
 Channels, Proxies and Aspects
-----------------------------------
+-----------------------------
 
 Let's add the following member function to our DFF module::
 	@architecture
@@ -69,13 +75,13 @@ Let's add the following member function to our DFF module::
 
         dout <<= din    
         
-We declared a new architecture “seq” that performs identically to the previous one, but in fewer lines of code (OK, it's the same number of lines since I broke port list in three lines, but it's definitely less information supplied). The information that specified the FF process is now supplied in two places:
+We declared a new architecture ï¿½seqï¿½ that performs identically to the previous one, but in fewer lines of code (OK, it's the same number of lines since I broke port list in three lines, but it's definitely less information supplied). The information that specified the FF process is now supplied in two places:
 1.	din: seq(None, '.clk')
     In this way, using function annotation, we supplied the aspect (has the same purpose as the data type, but has a temporal dimension too) to the input port din. The seq (short for sequential) aspect forces the value of the variable din to be updated only at the rising edge of the clock (it does a bit more, but that's enough for now).
 2.	dout <<= din
     This statement forces dout copies the value from din, whenever din value changes. It is the equivalent of Verilog assign statement.
     
-In other words, output port dout will receive the value of the input din sampled at the rising edge of the clock – as any decent FF would do.
+In other words, output port dout will receive the value of the input din sampled at the rising edge of the clock ï¿½ as any decent FF would do.
 Since now we have two architectures for the DFF module, we need to specify which one should be used by the simulator (or it will pick one randomly). This can be done in two ways:
     1.	It can be supplied during module instantiation::
         self.inst(DFF, arch='seq', clk='.clk', din='.din', dout='.dout')
@@ -89,17 +95,17 @@ The two ways basically do the same thing: set the 'arch' initialization argument
 If we run the simulation again, we should get the same VCD waveform.
 
 Channels carry information
------------------------------------
+--------------------------
 In order to simulate our design, SyDPy simulator created three different channels: 'clk', 'din' and 'dout'. The channels are used to carry the information between the processing units. The same information from a channel can be read in different ways, which are defined by the aspects of the variables. The variables in our design have the following aspects:
     1.	The sequencer
-        1.1 seq_o – tlm(bit) , connected to the 'din' channel
+        1.1 seq_o ï¿½ tlm(bit) , connected to the 'din' channel
             The 'tlm' (Transaction Level Model) part of the aspect is not supplied to the sequencer, but is implied since all sequencers output. This means that the sequencer will write to the 'din' channel in form of the 1 bit transactions. Please refer to chapter X for differences between tlm, sig and seq. (The basic_rnd_sequence module has automatic flow control, and will not send new transaction until the previous one has been consumed.)
     2.	DFF
-        2.1	clk – sig(), connected to the 'clk' channel
+        2.1	clk ï¿½ sig(), connected to the 'clk' channel
             The 'sig' (short for signal) aspect is not explicitly supplied, but is implied whenever no aspect is given. When reading from channel with 'sig' aspect, one is always reading the current channel information (as opposed to 'seq' aspect, se below, and 'tlm aspect, see section X).
-        2.2 din – seq(None, '.clk')
+        2.2 din ï¿½ seq(None, '.clk')
             When reading from channel with 'seq' aspect, one will read the information on the channel sampled at the rising edge of the supplied clock.
-        2.3 dout – sig()
+        2.3 dout ï¿½ sig()
 
 So what happens is that sequencer is generating 1 bit transactions and is writing them to the channel 'din'. The din variable in the DFF module, reads the transactions from the channel at the rising edge of the clock. Whenever the read value changes, the 'dout' channel is written with it.
 

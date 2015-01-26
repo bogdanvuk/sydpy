@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -29,7 +29,7 @@ component_visitor      -- Generator for traversing hierarchy of components
 """
 
 import inspect
-from sydpy._util._injector import RequiredFeature, RequiredVariable
+from sydpy._util._injector import RequiredVariable
 from sydpy._util._util import factory
 
 class GlobconfComponentMeta(type):

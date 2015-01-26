@@ -24,8 +24,8 @@ SyDPy features:
  - Automatic model checking of different module architectures
  - Extendible simulator kernel
  
-Soon available (please visit the Roadmap page for detailed list):
------------------------------------------------------------------
+Soon available (please visit the :ref:`roadmap` page for detailed list):
+------------------------------------------------------------------------
  - Verilog cosimulation using `Verilator <http://www.veripool.org/wiki/verilator>`_
  - Python to Verilog conversion
  - Constrained-random verification using `SystemC Verification <http://www.accellera.org/downloads/standards/systemc>`_ library

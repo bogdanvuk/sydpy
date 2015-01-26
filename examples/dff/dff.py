@@ -3,7 +3,7 @@ from sydpy import *
 class Dff(Module):
     @arch_def
     def rtl(self, 
-            
+
             clk: sig(bit), 
             din: sig(bit), 
             dout: sig(bit).master
@@ -25,7 +25,8 @@ class TestDff(Module):
 
 conf = {
         'sys.top'           : TestDff,
-        'sys.extensions'    : [VCDTracer, SimtimeProgress],
+        'sys.extensions'    : [VCDTracer, SimtimeProgress, Profiler]
+#         'Pr.include'  : ['./*']
         }
 
 sim = Simulator(conf)

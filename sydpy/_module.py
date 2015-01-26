@@ -18,7 +18,7 @@
 
 """Module that implements the Module class."""
 
-from sydpy import seq, sig
+from sydpy import seq, sig, tlm
 from sydpy._util._util import get_arch_args
 from sydpy.intfs._intf import IntfDir
 from sydpy._component import Component
@@ -86,6 +86,15 @@ class Module(Component):
                             return
     
     def get_channel(self, ch, side=IntfDir.slave):
+        """Retreive the channel from the parameter ch.
+        
+        Parameter ch can be either:
+        1. a string: Channel is searched by qualified name within the 
+            hierarchy of components. If channel is not found, it is 
+            created and returned.
+        2. a Channel object
+         
+        """
         
         arch_active =self.architectures[self.current_arch]['active']
         
@@ -108,51 +117,75 @@ class Module(Component):
             except AttributeError:
                 return ch
     
-    def intf(self, chnl, intf=None, init=None):
-        proxy = self.proxy_from_conf(chnl, init=init, intf=intf)
-        
-        if proxy._intf is None:
-            proxy.get_intf()
-            
-        return proxy
+    def _intf_con(self, intf, master=None, slave=None, init=None):
+        """Connect the interface."""
     
-    def seq(self, dtype=None, master=None, slave=None, init=None, clk=None):
-        if dtype is not None:
-            intf = seq(dtype=dtype, module=self)
-        else:
-            intf = None
-        
         if slave is not None:
             intf <<= slave
             
         if master is not None:
             intf >>= master
             
+        intf.init(init)
+    
+    def seq(self, dtype, master=None, slave=None, init=None, clk=None):
+        """Create a new seq interface and connect it to other interfaces or channels.
+        
+        dtype      - Data type of the data signal
+        master     - Interface of channel to which to connect as the master
+        slave      - Interface of channel to which to connect as the slave
+        init       - Initial value to write to channel
+        clk        - Clk interface or channel to supply to clk signal
+        """ 
+        
+        intf = seq(dtype=dtype, module=self)
+
+        self._intf_con(intf, master, slave, init)
+        
         if clk is not None:
             intf.clk <<= clk
-            
-        intf.init(init)
 
         return intf
             
-    def sig(self, dtype=None, master=None, slave=None, init=None):
-        if dtype is not None:
-            intf = sig(dtype=dtype, module=self)
-        else:
-            intf = None
+    def sig(self, dtype, master=None, slave=None, init=None):
+        """Create a new sig interface and connect it to other interfaces or channels.
         
-        if slave is not None:
-            intf <<= slave
-            
-        if master is not None:
-            intf >>= master
-            
-        intf.init(init)
+        dtype      - Data type of the signal
+        master     - Interface of channel to which to connect as the master
+        slave      - Interface of channel to which to connect as the slave
+        init       - Initial value to write to channel
+        """
+        
+        intf = sig(dtype=dtype, module=self)
+        
+        self._intf_con(intf, master, slave, init)
+        
+        return intf
+    
+    def tlm(self, dtype, master=None, slave=None, init=None):
+        """Create a new tlm interface and connect it to other interfaces or channels.
+        
+        dtype      - Data type of the signal
+        master     - Interface of channel to which to connect as the master
+        slave      - Interface of channel to which to connect as the slave
+        init       - Initial value to write to channel
+        """
+        
+        intf = tlm(dtype=dtype, module=self)
+        
+        self._intf_con(intf, master, slave, init)
         
         return intf
                 
-    def arch_inst(self, arch_func, arch_active=True, proxy_copy=False, **config):
+    def arch_inst(self, arch_func, arch_active=True, **config):
+        """Instantiate a new module architecture, update the configuration and connect the proxies.
         
+        arch_func      - The function that implements the architecture
+        arch_active    - Is the architecture active
+        config         - Configuration that was passed within module instantiation.
+        """
+        
+        # If the function is supplied as a string, get the member function
         if isinstance(arch_func, str):
             arch_func = getattr(self, arch_func, None)
             
@@ -162,17 +195,15 @@ class Module(Component):
             self.architectures[arch_name] = dict(func=arch_func, active=arch_active)
             self.current_arch = arch_name
             
-            arch_config, port_list = self.create_arch_config(arch_func, arch_active, proxy_copy, **config)
+            arch_config, port_list = self.create_arch_config(arch_func, arch_active, **config)
             self.cur_arch_proc = []
             
             self.architectures[arch_name]['port_list'] = port_list
             self.architectures[arch_name]['arch_config'] = arch_config
             
-#             print("Start: " + arch_name)
             simarch_inst_start()
             arch_func(**arch_config)
             simarch_inst_stop()
-#             print("End: " + arch_name)
             
             self.architectures[arch_name]['proc'] = self.cur_arch_proc
                
@@ -180,157 +211,14 @@ class Module(Component):
 #                 module_toVerilog(self, arch_name)
     
     def proc_reg(self, proc):
+        """ Interface for a process to register itself within its module."""
         self.cur_arch_proc.append(proc)
         simproc_reg(proc)
     
-    def get_channel_struct(self, chnl, arch_name=None, arch_active=True, intf=intf):
-        if isinstance(chnl, str):
-            if (not arch_active) and (intf.direction == IntfDir.master):
-                chnl += "_" + arch_name
-                    
-            return self.get_channel(chnl)
-        elif isinstance(chnl, tuple):
-            channel = []
-            for c in chnl:
-                channel.append(self.get_channel_struct(c, arch_name=arch_name, arch_active=arch_active, intf=intf))
-                
-            return tuple(channel)
-        elif isinstance(chnl, dict):
-            channel = {}
-            for c in chnl:
-                try:
-                    channel[c] = self.get_channel_struct(chnl[c], arch_name=arch_name, arch_active=arch_active, intf=getattr(intf, c))
-                except AttributeError:
-                    pass
-                
-            return channel
-        else:
-            try:
-                #We have an Interface or Proxy for conf
-                channel = chnl._channel
-                
-                try:
-                    #Is it a proxy?
-                    intf = chnl._intf
-                except AttributeError:
-                    #No it's an Interface
-                    intf = chnl
-                
-                if (not arch_active) and (intf.direction == IntfDir.master):
-                    conf = channel.name + "_" + arch_name
-                    channel = self.parent.get_channel_struct(conf)
-                    
-            except AttributeError:
-                if (not arch_active) and (intf.direction == IntfDir.master):
-                    conf += "_" + arch_name
-                
-                channel = self.parent.get_channel_struct(conf)
-                
-            return channel
-    
-#     def proxy_from_conf(self, conf, intf=None, init=None, arch_name=None, arch_active=True):
-#         if not isinstance(conf, SymNode):
-#             if intf is None:
-#                 try:
-#                     try:
-#                         #Is it a proxy?
-#                         intf = conf._intf
-#                     except AttributeError:
-#                         #No it's an Interface
-#                         intf = conf
-#                 except AttributeError:
-#                     pass
-#                 
-#             channel = self.parent.get_channel_struct(conf, arch_name=arch_name, arch_active=arch_active, intf=intf)
-# 
-#             return ChProxy(channel=channel, parent_module=self, intf=intf, init=init)
-#         else:
-#             intf = csig()
-#             return ChProxy(channel=None, parent_module=self, intf=intf, init=conf)
-    
-    def assign_conf_to_intf(self, intf, chnl, arch_name=None, arch_active=True):
-        if isinstance(chnl, str):
-            if (not arch_active) and (intf._side == IntfDir.master):
-                chnl += "_" + arch_name
-                    
-            return self.get_channel(chnl)
-        elif isinstance(chnl, tuple):
-            channel = []
-            for c in chnl:
-                channel.append(self.get_channel_struct(c, arch_name=arch_name, arch_active=arch_active, intf=intf))
-                
-            return tuple(channel)
-        elif isinstance(chnl, dict):
-            channel = {}
-            for c in chnl:
-                try:
-                    channel[c] = self.get_channel_struct(chnl[c], arch_name=arch_name, arch_active=arch_active, intf=getattr(intf, c))
-                except AttributeError:
-                    pass
-                
-            return channel
-        else:
-            try:
-                #We have an Interface or Proxy for conf
-                channel = chnl._channel
-                
-                try:
-                    #Is it a proxy?
-                    intf = chnl._intf
-                except AttributeError:
-                    #No it's an Interface
-                    intf = chnl
-                
-                if (not arch_active) and (intf.direction == IntfDir.master):
-                    conf = channel.name + "_" + arch_name
-                    channel = self.parent.get_channel_struct(conf)
-                    
-            except AttributeError:
-                if (not arch_active) and (intf.direction == IntfDir.master):
-                    conf += "_" + arch_name
-                
-                channel = self.parent.get_channel_struct(conf)
-                
-            return channel
+    def connect_arch_intfs(self, arch_func, arch_config, arch_ports, arch_annot, arch_active):
+        """Connects the arch interfaces to the external channels and interfaces. """
         
-#         if not proxy._has_intf:
-#             if isinstance(conf, SymNode):
-#                 intf = csig()
-#             else:
-#                 try:
-#                     try:
-#                         #Is it a channel proxy or an interface side proxy?
-#                         proxy.set_intf(conf._intf)
-#                     except AttributeError:
-#                         #No it's an Interface
-#                         proxy.set_intf(conf)
-#                 except AttributeError:
-#                     pass
-    
-    def uplevel_channels(self, conf):
-        if isinstance(conf, str):
-            if not conf.startswith('/'):
-                return '../' + conf
-        elif isinstance(conf, tuple):
-            conf_up = []
-            for c in conf:
-                conf_up.append(self.uplevel_channels(c))
-                
-            return tuple(conf_up)
-        elif isinstance(conf, dict):
-            conf_up = {}
-            for c, val in conf.items():
-                try:
-                    conf_up[c] = self.uplevel_channels(val)
-                except AttributeError:
-                    pass
-                
-            return conf_up
-        else:
-            return conf
-    
-    def create_arch_proxies(self, arch_func, proxy_copy, arch_config, arch_ports, arch_annot, arch_active):
-        arch_proxies = {}
+        arch_intfs = {}
         for arg in arch_ports:
             intf = None
             conf = arch_config[arg]
@@ -367,25 +255,14 @@ class Module(Component):
                 except AttributeError:
                     intf_proxy = intf.slave
             
-            arch_proxies[arg] = intf_proxy
+            arch_intfs[arg] = intf_proxy
             arch_config[arg] = intf_proxy.intf
-                            
-#                 try:
-#                     if proxy_intf is not None:
-#                         if proxy_copy or ((proxy_intf != intf) and (intf is not None)):
-#                             
-#                             if intf is None:
-#                                 intf = proxy_intf
-#                             
-#                             arch_config[arg] = ChProxy(self, conf.channel, intf, proxy_copy=proxy_copy)
-#                     else:
-#                         arch_config[arg] = ChProxy(self, conf, intf)
-#                 except AttributeError:
-#                     arch_config[arg] = ChProxy(self, conf, intf)
         
-        return arch_config, arch_proxies
+        return arch_config, arch_intfs
     
     def update_arch_config(self, arch_args, arch_arg_defs, config, arch_ports, arch_func, arch_active):
+        """Updates the architecture configuration from the global configuration. """
+        
         arch_config = {}
         for arg in zip(arch_args, arch_arg_defs):
             if arg[0] in config:
@@ -397,32 +274,15 @@ class Module(Component):
             self._configurator.update_config(self.qualified_name, arch_config)
         except KeyError:
             pass
- 
-#         for arg in arch_ports:
-#             conf = arch_config[arg]
-# #             
-# #             try:
-# #                 #If we have an Interface or Proxy for conf
-# #                 ch_passive = conf._channel.name + "_" + arch_func.__name__
-# #                 
-# #                 if (arg in arch_func.outputs) and (arch_active == False):
-# #                     arch_config[arg] = self.parent.get_channel(ch_passive)
-# #                     
-# #             except AttributeError:
-# #                 # We have a Channel
-# #                 if (arg in arch_func.outputs) and (arch_active == False):
-# #                     conf = conf  + "_" + arch_func.__name__
-#                 
-#             arch_config[arg] = self.parent.get_channel(conf)
                             
         return arch_config
     
-    def create_arch_config(self, arch_func, arch_active, proxy_copy, **config):
+    def create_arch_config(self, arch_func, arch_active, **config):
         (arch_args, arch_ports, arch_confs, arch_arg_defs, arch_annot) = get_arch_args(arch_func)
         
         arch_config = self.update_arch_config(arch_args, arch_arg_defs, config, arch_ports, arch_func, arch_active)
         
-        arch_config, arch_proxies = self.create_arch_proxies(arch_func, proxy_copy, arch_config, arch_ports, arch_annot, arch_active)
+        arch_config, arch_intfs = self.connect_arch_intfs(arch_func, arch_config, arch_ports, arch_annot, arch_active)
        
-        return arch_config, arch_proxies
+        return arch_config, arch_intfs
         

@@ -16,6 +16,8 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
+"""Module that implements vector sydpy type."""
+
 __vector_classes = {}
 
 from ._type_base import TypeBase

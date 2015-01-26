@@ -1,7 +1,4 @@
 from sydpy import *
-from sydpy.intfs.seq import s_seq, m_seq 
-from sydpy.intfs.tlm import s_tlm, m_tlm
-from sydpy.extens import VCDTracer, SimtimeProgress
 import zlib
 from sydpy.intfs._intf import subintfs
 

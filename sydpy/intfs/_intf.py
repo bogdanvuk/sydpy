@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -16,15 +16,14 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
+"""Module implements the base classes for the interfaces."""
+
 from sydpy import ConversionError, simwait, Hdlang
 from enum import Enum
-from sydpy._signal import Signal
-from sydpy.extens.tracing import VCDTrace
 from sydpy._event import EventSet, Event
 import types
-from sydpy._util._util import key_repr, arch
+from sydpy._util._util import arch
 from sydpy._process import always
-from sydpy._util._symexp import SymNodeVisitor, SymNode
 from sydpy._simulator import simarch_inst
 from sydpy._delay import Delay
 from collections import namedtuple
@@ -53,91 +52,6 @@ class IntfDir(Enum):
             return IntfDir.slave
         else:
             return IntfDir.master
-
-class Proxy(object):
-    __slots__ = ["_obj", "__weakref__"]
-    def __init__(self, obj):
-        object.__setattr__(self, "_obj", obj)
-    
-    #
-    # proxying (special cases)
-    #
-#     def __getattribute__(self, name):
-#         return getattr(object.__getattribute__(self, "_obj"), name)
-
-    def __getattribute__(self, name):
-#         return getattr(object.__getattribute__(self, "_obj"), name)
-        try: 
-            return object.__getattribute__(self, name)
-        except AttributeError:
-            return getattr(object.__getattribute__(self, "_obj"), name)
-
-    def __delattr__(self, name):
-        delattr(object.__getattribute__(self, "_obj"), name)
-    def __setattr__(self, name, value):
-        setattr(object.__getattribute__(self, "_obj"), name, value)
-    
-    def __nonzero__(self):
-        return bool(object.__getattribute__(self, "_obj"))
-    def __str__(self):
-        return str(object.__getattribute__(self, "_obj"))
-    def __repr__(self):
-        return repr(object.__getattribute__(self, "_obj"))
-    
-    #
-    # factories
-    #
-    _special_names = [
-        '__abs__', '__add__', '__and__', '__call__', '__cmp__', '__coerce__', 
-        '__contains__', '__delitem__', '__delslice__', '__div__', '__divmod__', 
-        '__eq__', '__float__', '__floordiv__', '__ge__', '__getitem__', 
-        '__getslice__', '__gt__', '__hash__', '__hex__', '__iadd__', '__iand__',
-        '__idiv__', '__idivmod__', '__ifloordiv__', '__ilshift__', '__imod__', 
-        '__imul__', '__int__', '__invert__', '__ior__', '__ipow__', '__irshift__', 
-        '__isub__', '__iter__', '__itruediv__', '__ixor__', '__le__', '__len__', 
-        '__long__', '__lshift__', '__lt__', '__mod__', '__mul__', '__ne__', 
-        '__neg__', '__oct__', '__or__', '__pos__', '__pow__', '__radd__', 
-        '__rand__', '__rdiv__', '__rdivmod__', '__reduce__', '__reduce_ex__', 
-        '__repr__', '__reversed__', '__rfloorfiv__', '__rlshift__', '__rmod__', 
-        '__rmul__', '__ror__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__', 
-        '__rtruediv__', '__rxor__', '__setitem__', '__setslice__', '__sub__', 
-        '__truediv__', '__xor__', 'next',
-    ]
-    
-    @classmethod
-    def _create_class_proxy(cls, theclass):
-        """creates a proxy for the given class"""
-        
-        def make_method(name):
-            def method(self, *args, **kw):
-                return getattr(object.__getattribute__(self, "_obj"), name)(*args, **kw)
-            return method
-        
-        namespace = {}
-        for name in cls._special_names:
-            if hasattr(theclass, name):
-                namespace[name] = make_method(name)
-        return type("%s(%s)" % (cls.__name__, theclass.__name__), (cls,), namespace)
-    
-    def __new__(cls, obj, *args, **kwargs):
-        """
-        creates an proxy instance referencing `obj`. (obj, *args, **kwargs) are
-        passed to this class' __init__, so deriving classes can define an 
-        __init__ method of their own.
-        note: _class_proxy_cache is unique per deriving class (each deriving
-        class must hold its own cache)
-        """
-        try:
-            cache = cls.__dict__["_class_proxy_cache"]
-        except KeyError:
-            cls._class_proxy_cache = cache = {}
-        try:
-            theclass = cache[obj.__class__]
-        except KeyError:
-            cache[obj.__class__] = theclass = cls._create_class_proxy(obj.__class__)
-        ins = object.__new__(theclass)
-        theclass.__init__(ins, obj, *args, **kwargs)
-        return ins
 
 @arch
 def generic_arch(self, data_i, data_o):
@@ -168,7 +82,9 @@ def proxy_unoper(method):
     return wrapper  
 
 class IntfSide(object):
-    def __init__(self, intf, side,):
+    """Proxy class for one side of an interface."""
+    
+    def __init__(self, intf, side):
         self._side = side
         self._intf = intf
         
@@ -188,17 +104,6 @@ class IntfSide(object):
         
         self._intf.connect(other, side=self._side)
         
-#     def connect(self, other):
-#         try:
-#             other = other._intf
-#         except AttributeError:
-#             pass
-#         
-#         if self._side == IntfDir.slave:
-#             self._intf.connect(other)
-#         else:
-#             other.connect(self)
-    
     def conn_to_intf(self, other):
         try:
             other = other._intf
@@ -215,10 +120,7 @@ class IntfSide(object):
         
     def is_sourced(self):
         return self._intf.is_sourced()
-#     
-#     def __getattr__(self, val):
-#         return getattr(self._intf, val)
-    
+
     @property    
     def side(self):
         return self._side
@@ -228,6 +130,8 @@ class IntfSide(object):
         return self._intf
 
 def subintfs(intf, names):
+    """List all subinterfaces of an interface in a dictionary."""
+    
     if not names:
         names = intf._subintfs
         
@@ -238,6 +142,7 @@ def subintfs(intf, names):
     return subs
 
 class _IntfBase(object):
+    """Base class for all interfaces and sliced interfaces."""
     
     def __init__(self):
         self.slave = IntfSide(self, IntfDir.slave)
@@ -247,21 +152,12 @@ class _IntfBase(object):
         return getattr(self.read(), name)
     
     def __ilshift__(self, other):
-        if self._keys is not None:
-            self._parent.s_con(other)
-        else:
-            self.s_con(other)
-
+        self.s_con(other)
         return self
     
     def __irshift__(self, other):
-        if self._keys is not None:
-            self._parent.assign(other, side=IntfDir.master)
-        else:
-            self.connect(other, side=IntfDir.master)
-
+        self.connect(other, side=IntfDir.master)
         return self
-
     
     def __nonzero__(self):
         if self.read():
@@ -428,12 +324,10 @@ class _IntfBase(object):
     def __ge__(self, other):
         return self.read() >= other
 
-class SubIntf(_IntfBase):
-    
-    """Provides access to the parent proxy via a key."""
+class SlicedIntf(_IntfBase):
+    """Provides access to the parent interface via a key."""
     def __init__(self, intf, keys=None):
-        """"Create SubProxy of a parent with specific key."""
-#         self._intf = parent.deref(keys)
+        """"Create SlicedIntf of a parent with specific key."""
         _IntfBase.__init__(self)
         
         self.__dtype = intf._get_dtype().deref(keys)
@@ -492,6 +386,8 @@ class SubIntf(_IntfBase):
         return None
 
 class _Intf(_IntfBase):
+    """Base class for all non-sliced interfaces."""
+    
     _subintfs = ()
     _intf_type_name = '_Intf'
     _child_side_dict = None
@@ -501,7 +397,6 @@ class _Intf(_IntfBase):
     __module = None
     _parent = None
     __state = ChIntfState.free
-    _keys = None
     _src = None
     _drv = None
     _proxies = None
@@ -511,7 +406,7 @@ class _Intf(_IntfBase):
     slave = None
     master = None
 
-    def __init__(self, parent=None, name=None, keys=None, module=None):
+    def __init__(self, parent=None, name=None, module=None):
         
         _IntfBase.__init__(self)
         
@@ -519,7 +414,6 @@ class _Intf(_IntfBase):
         self._src = []
         self._parent = parent
         self.name = name
-        self._keys = keys
         self.set_module(module)
         self._sliced_intfs = {}
         
@@ -551,37 +445,7 @@ class _Intf(_IntfBase):
                 return self._parent.get_module()
             else:
                 return None
-    
-#     @property
-#     def _module(self):
-#         if self.__module is not None:
-#             return self.__module
-#         else:
-#             if self._parent is not None:
-#                 return self._parent._module
-#             else:
-#                 return None
-    
-#     @property
-#     def _master_channel(self):
-#         if self.__master_channel is not None:
-#             return self.__master_channel
-#         else:
-#             if self._parent is not None:
-#                 return self._parent.__master_channel
-#             else:
-#                 return None
-#             
-#     @property
-#     def _slave_channel(self):
-#         if self.__slave_channel is not None:
-#             return self.__slave_channel
-#         else:
-#             if self._parent is not None:
-#                 return self._parent.__slave_channel
-#             else:
-#                 return None
-    
+
     def set_parent(self, parent):
         self._parent = parent
     
@@ -604,33 +468,7 @@ class _Intf(_IntfBase):
     
     def get_child_side(self, child_name, side=IntfDir.master):
         return self._child_side_dict[side][child_name]
-#         child_side = self._child_side_dict[child_name]
-#         if child_side == IntfChildSide.master:
-#             return IntfDir.master
-#         elif child_side == IntfChildSide.slave:
-#             return IntfDir.slave
-#         elif child_side == IntfChildSide.same:
-#             return side
-#         elif child_side == IntfChildSide.flip:
-#             return side.reverse()
-    
-    def assign_subintf(self, proxy, name, other):
-        proxy.set_intf(other)
-        setattr(self, name, other)
-    
-#     def assign_intf(self, other, side=IntfDir.slave):
-#         if (side == IntfDir.slave):
-#             if self.intf_eq(other):
-#                 self.add_source(other)
-#             else:
-#                 arch, cfg = self.conv_path(other)
-# #                     self._state = ChIntfState.drv_con_wait
-#     #             arch = types.MethodType(arch,self._channel)
-#     #             self._channel.arch_inst(arch, data_i=other, data_o=self, **cfg)
-#                 arch = types.MethodType(arch,self._module)
-#                 self.get_module().arch_inst(arch, data_i=other, data_o=self, **cfg)
-#         else:
-#             other.assign(self, side.reverse())
+
     def conn_to_intf(self, other):
         if self.intf_eq(other):
             self.add_source(other)
@@ -667,44 +505,10 @@ class _Intf(_IntfBase):
             for name, intf in subs.items():
                 getattr(self, name).connect(intf, side=self.get_child_side(name, side))
     
-#     def assign(self, other, side=IntfDir.slave):
-#         if isinstance(other, tuple):
-#             if other[0] is not None:
-#                 self.assign(other[0], side)
-# 
-#             for c in other[1]:
-#                 try:
-#                     getattr(self, c).assign(other[1][c], side=self.get_child_side(c, side).reverse())
-#                 except AttributeError:
-#                     pass
-#         elif isinstance(other, str):
-#             self.set_channel(other, side)
-#         elif other.get_channel(side.reverse()) is not None:
-#             self.set_channel(other.get_channel(side.reverse()), side)
-#         else:
-#             if side == IntfDir.slave:
-#                 self.connect(other)
-#             else:
-#                 if other.is_driven():
-#                     if self._parent is not None:
-#                         self._parent.change_child_side(self.name, IntfChildSide.master)
-#                         self.connect(other)
-#                     else:
-#                         raise Exception
-#                 else:
-#                     other.connect(self)
-    
     def set_channel(self, chnl, side=IntfDir.master):
         if self.get_channel(side) is None:
             if isinstance(chnl, str):
                 chnl = self.get_module().get_channel(chnl, side)
-
-#             if (side == IntfDir.master) and (chnl.is_driven()):
-#                 if self._parent is not None:
-#                     self._parent.change_child_side(self.name, IntfChildSide.master)
-#                     side = IntfDir.slave
-#                 else:
-#                     raise Exception
             
             if side == IntfDir.master:
                 self._master_channel = chnl
@@ -713,71 +517,7 @@ class _Intf(_IntfBase):
             
             side_proxy = IntfSide(self, side)
             
-    #         chnl.connect_to_sources(side_proxy)
             chnl.register_proxy(side_proxy)
-        
-#         self._state = ChIntfState.bounded
-        
-        
-#     @_channel.setter
-#     def _channel(self, val, side=):
-#         if isinstance(val, tuple):
-#             self.__channel = val[0]
-# 
-#             for c in val[1]:
-#                 try:
-#                     getattr(self, c)._channel = val[1][c]
-#                 except AttributeError:
-#                     pass
-#         else:
-#             self.__channel = val    
-#         
-#         self._state = ChIntfState.bounded    
-#         self.__channel.connect_to_sources(self)
-#         self.__channel.register_proxy(self)
-    
-    @property
-    def _state(self):
-        return self.__state
-    
-    @_state.setter
-    def _state(self, val):
-        if val != self.__state:
-            old_state = self.__state
-            
-            self.__state = val
-            if ('_state_' + val.name) in dir(self):
-                getattr(self, '_state_' + val.name)()
-            
-            if self._parent is not None:
-                if hasattr(self._parent, '_child_state_changed'):
-                    self._parent._child_state_changed(self)
-            else:
-                if self._master_channel is not None:
-                    self._master_channel.proxy_state_changed(self, old_state)
-                
-                if self._slave_channel is not None:
-                    self._slave_channel.proxy_state_changed(self, old_state)
-    
-#     def set_proxy(self, proxy):
-# #         if self.is_bounded():
-# #             if proxy._channel is not None:
-# #                 if (self._channel != proxy._channel):
-# #                     raise Exception
-# #         else:
-# #         if proxy._channel is not None:
-# #             if self._channel != proxy._channel:
-# #                 self._channel = proxy._channel
-# #             
-# #         
-# #         self.__module = proxy._parent_module
-#         
-#         self.e.update(proxy.e)
-#         
-#         if proxy._init is not None:
-#             self.init(proxy._init)
-#             
-#         self._proxies.append(proxy)
     
     def create_event(self, event):
         if event not in self.e.events:
@@ -802,8 +542,6 @@ class _Intf(_IntfBase):
      
     
     def add_source(self, src):
-#         if not self._src:
-#             self._state = ChIntfState.sourced
             
         self._src = [src]
         
@@ -835,14 +573,6 @@ class _Intf(_IntfBase):
        
     def is_driven(self):
         return self._drv is not None
-#         return self.__state in (ChIntfState.driven, ChIntfState.drv_con_wait)
-    
-#     def set_proxy(self, proxy):
-#         self._proxy = proxy
-#         
-#         if self._parent is not None:
-#             if hasattr(self._parent, '_child_proxy_con'):
-#                 self._parent._child_proxy_con(self)
                        
     @property
     def qualified_name(self):
@@ -863,41 +593,10 @@ class _Intf(_IntfBase):
     def copy(self):
         return _Intf(self._parent, self.name, self._proxy)
 
-    def _child_state_changed(self, child=None):
-        if self._parent:
-            self._parent._child_state_changed(self)
-
-    def _state_driven(self):
-        if 'connected' in self.e:
-            self.e.connected.trigger()
-            
-    def _state_sourced(self):
-        if 'connected' in self.e:
-            self.e.connected.trigger()
-
-    def _intf_parents_eq(self, val):
-        parent = self._parent
-        val_parent = val._parent
-        
-        try:
-            while (parent is not None) or (val_parent is not None):
-                if parent != val_parent:
-                    return False
-            
-                parent = parent._parent
-                val_parent = val_parent._parent
-            
-        except AttributeError:
-            return False
-        
-        return True
-    
     def _from_generic(self, val):
         return generic_arch, {}
     
     def conv_path(self, other):
-        
-#         if self._intf_parents_eq(val) and (self.name == val.name):
         try:
             return getattr(self, '_from_' + other._intf_type())(other)
         except AttributeError:
@@ -909,8 +608,6 @@ class _Intf(_IntfBase):
             print(e)
         
         return self._from_generic(other)
-        
-#         raise ConversionError
     
     def intf_eq(self, other):
         try:
@@ -942,21 +639,6 @@ class _Intf(_IntfBase):
         else:
             sliced_intf = self._sliced_intfs[repr(key)]
         return sliced_intf
-      
-#     def __getattr__(self, name):
-#         if name in self.subintfs:
-#             return self.subintfs[name]
-#         else:
-#             raise AttributeError
-    
-    def _conv_gen_none(self, other, remain):
-        yield other
-        return remain
-    
-#         try:
-#             return self._get_dtype().convgen(other, remain)
-#         except AttributeError:
-#             return self._conv_gen_none(other, remain)
    
     def conv(self, other):
         try:
@@ -987,13 +669,7 @@ class _Intf(_IntfBase):
                 return self._get_dtype()()
             except TypeError:
                 return None
-            
-    def _connect_to_sources(self):
-        if self.__channel is not None:
-            self._channel.connect_to_sources(self)
-        elif self._parent is not None:
-            self._parent._connect_to_sources()
-   
+    
     @property
     def next(self):
         raise Exception("Next is write-only property!")
@@ -1031,57 +707,20 @@ class _Intf(_IntfBase):
             
     def _hdl_gen_ref(self, conv, lang=Hdlang.Verilog):
         if lang == Hdlang.Verilog:
-            return self._channel.name + key_repr(self._keys)
+            return self._channel.name
     
-    
-class CsigVisitor(object):
-    
-    def visit_node(self, node):
-        self.visit(node.elem)
-        for a in node.args:
-            self.visit(a)
-            
-    def visit_leaf(self, leaf):
-        pass
-    
-    def visit(self, node):
-        if isinstance(node, SymNode):
-            self.visit_node(node)
-        else:
-            self.visit_leaf(node)
-
 CsigIntf = namedtuple('CsigIntf', ['elem', 'parent', 'key'])
 
 class csig(_Intf):
     _intf_type_name = 'csig'
     
     def __init__(self, elem, oper, *args, **kwargs):
-        _Intf.__init__(self, parent=None, name=None, keys=None)
+        _Intf.__init__(self, parent=None, name=None)
         
         self.args = [elem] + list(args)
         self.kwargs = kwargs
         self.oper = oper
         self.senslist = set()
-#         self.create_intf_list()
-        
-#         self.add_to_senslist(elem)
-        
-#         for a in self.args:
-#             try:
-#                 self.add_to_senslist(a)
-#             except AttributeError:
-#                 pass
-#             
-#         for key, val in self.kwargs:
-#             try:
-#                 self.add_to_senslist(val)
-#             except AttributeError:
-#                 pass
-#             
-#         for s in self.senslist:
-#             for e_name in self.e:
-#                 event = getattr(s.e, e_name)
-#                 event.subscribe(self.e[e_name])
 
     def intfs(self):
         for i, a in enumerate(self.args):
@@ -1098,22 +737,6 @@ class csig(_Intf):
                 if isinstance(elem, _IntfBase):
                     yield CsigIntf(elem, self, key)
 
-#     def create_intf_list(self):
-#         self.intfs = []
-#         for i, a in enumerate(self.args):
-#             try:
-#                 self.extend(a.intfs)
-#             except AttributeError:
-#                 if isinstance(a, _Intf):
-#                     self.intfs.append(CsigIntf(a, self, i))
-#             
-#         for key, elem in self.kwargs.items():
-#             try:
-#                 self.extend(elem.intfs)
-#             except AttributeError:
-#                 if isinstance(elem, _Intf):
-#                     self.intfs.append(CsigIntf(elem, self, key))
-                    
     def _replace(self, elem, key):
         if isinstance(key, int):
             self.args[key] = elem
@@ -1170,8 +793,8 @@ class csig(_Intf):
 
 class Intf(_Intf):
     
-    def __init__(self, *args, parent=None, name=None, keys=None, init=None, module=None, **kwargs):
-        _Intf.__init__(self, parent=parent, name=name, keys=keys, init=init, module=module)
+    def __init__(self, *args, parent=None, name=None, init=None, module=None, **kwargs):
+        _Intf.__init__(self, parent=parent, name=name, init=init, module=module)
         self._args = args
         self._kwargs = kwargs
         
@@ -1183,13 +806,3 @@ class Intf(_Intf):
             return self._args[key]
         elif isinstance(key, str):
             return self._kwargs[key]
-        
-#     def __getattr__(self, name):
-#         try:
-#             return self._kwargs[name]
-#         except KeyError:
-#             raise AttributeError
-        
-        
-        
-

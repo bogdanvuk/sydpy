@@ -16,18 +16,21 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
+"""Module implements the base type for all sydpy types."""
+
 from sydpy import ConversionError
 
-# class ConvType(Enum):
-#     unknown     = 0 
-#     direct      = 1
-#     sequence    = 2
-#     concat      = 3
-
 def conv(val, to_type):
+    """Converts a value to specified type."""
     return to_type.conv(val)
 
 def convgen(val, to_type, remain=None):
+    """Generator conversion function. It can output multiple converted values 
+    from a single source value.
+    
+    For an example conversion of list of integers to integers.
+    """
+    
     _convgen = to_type._convgen(val, remain)
     while True:
         data, _remain = next(_convgen)
@@ -35,9 +38,11 @@ def convgen(val, to_type, remain=None):
         yield data
 
 class TypeBase(object):
+    """Base type for all sydpy typles."""
     
     @classmethod
     def cls_eq(cls, other):
+        """Check if the types are of the same class."""
         return object.__eq__(cls, other)
     
     @classmethod
@@ -54,6 +59,7 @@ class TypeBase(object):
         
     @classmethod
     def conv(cls, other=None):
+        """Try to perform a simple conversion: one source to one converted object."""
         try:
             return getattr(cls, '_from_' + other.__class__.__name__)(other)
         except AttributeError:
@@ -95,17 +101,13 @@ class TypeBase(object):
             raise ConversionError
     
     @classmethod        
-    def _conv_iter(cls, other):
-        try:
-            yield from getattr(cls, '_iter_from_' + other.__class__.__name__)(other)
-        except AttributeError:
-            try:
-                yield from getattr(other, '_iter_to_' + cls.__name__)(cls)
-            except AttributeError:
-                raise ConversionError
-    
-    @classmethod        
     def convgen(cls, other, remain=None):
+        """Generator conversion function. It can output multiple converted values 
+        from a single source value.
+        
+        For an example conversion of list of integers to integers.
+        """
+    
         _convgen = cls._convgen(other, remain)
         while True:
             data, _remain = next(_convgen)

@@ -7,3 +7,4 @@ sydpy.egg-info/
 .pydevproject
 *.pyc
 *.bak
+env_gen/

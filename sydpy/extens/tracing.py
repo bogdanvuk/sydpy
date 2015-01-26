@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -22,7 +22,7 @@ import time
 import os
 from sydpy._util._injector import RequiredVariable, features  # @UnresolvedImport
 from sydpy import __version__ #, EnumItemType
-from sydpy._component import component_visitor, Component
+from sydpy._component import component_visitor
 
 class VCDTracer(object):
     
@@ -204,8 +204,6 @@ class VCDTrace():
             self._tracer.vcdfile.write("b{0} {1}\n".format(int(self._val), self._code))
         elif hasattr(self._val, 'bitstr'):
             self._tracer.vcdfile.write("b{0} {1}\n".format(self._val.bitstr(), self._code))
-#         elif hasattr(self._val, '__int__'):
-#             self._tracer.vcdfile.write("{0}{1}\n".format(int(self._val), self._code))
         else: # default to 'string'
             self._tracer.vcdfile.write("s{0} {1}\n".format(str(self._val).replace(' ', '').replace("'", ""), self._code))
     
@@ -220,9 +218,6 @@ class VCDTrace():
                 s = "$var wire 1 {0} {1} $end\n".format(self._code, name)
             else:
                 s = "$var wire {0} {1} {2} $end\n".format(len(str_val) - 2, self._code, name)
-            
-#         elif hasattr(self._val, '__int__'):
-#             s ="$var reg 1 {0} {1} $end\n".format(self._code, name)
         else: # default to 'string'
             s ="$var real 1 {0} {1} $end\n".format(self._code, name)
         

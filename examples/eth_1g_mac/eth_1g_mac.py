@@ -265,7 +265,7 @@ if __name__ == "__main__":
     
     conf = {
             'sys.top'           : TestDFF,
-            'sys.extensions'    : [VCDTracer, SimtimeProgress],
+            'sys.extensions'    : [VCDTracer, SimtimeProgress, Profiler],
             'sys.sim.duration'  : 15000 
             }
     

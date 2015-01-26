@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -16,15 +16,13 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from sydpy.intfs import tlm
-from sydpy.types._type_base import TypeBase
-from sydpy._util._util import fannotate 
+"""Module implements the basic scoreboard module."""
+
 from sydpy import Module, arch_def, always
 
 class Scoreboard(Module):
-    '''
-    classdocs
-    '''
+    """Basic scoreboard class that listens with two TLM interfaces and compares 
+    the received transactions."""
 
     def compare(self, ref_trans, dut_trans):
         return (ref_trans == dut_trans)

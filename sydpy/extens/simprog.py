@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -19,9 +19,6 @@
 from sydpy._util._injector import RequiredFeature
 
 class SimtimeProgress(object):
-    '''
-    classdocs
-    '''
     
     configurator = RequiredFeature('Configurator')
 
@@ -33,9 +30,6 @@ class SimtimeProgress(object):
         return True
 
     def __init__(self, sim_events):
-        '''
-        Constructor
-        '''
         self.step = self.configurator['SimtimeProgress', 'step', 100]
         
         sim_events['timestep_start'].append(self.log_begin_timestep)

@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -16,16 +16,10 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-import hashlib
-from collections import namedtuple
-# from fpyga.peg_scv_declaration import *
-# from peg_parser import parse
+"""Module implements random generator for sydpy types."""
 
-import os
 import sys
 import random
-
-from copy import deepcopy 
 
 class rnd(object):
     '''

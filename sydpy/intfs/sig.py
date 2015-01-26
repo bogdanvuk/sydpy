@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -16,23 +16,16 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from copy import copy
-from ._intf import _Intf, IntfDir#, ChIntfState
+"""Module implements the sig interface."""
+
+from ._intf import _Intf
 from sydpy._signal import Signal
 from sydpy._process import always
 from sydpy.extens.tracing import VCDTrace, VCDTraceMirror
-from sydpy._util._symexp import SymNodeVisitor
 from sydpy._util._util import arch
 from sydpy import ConversionError
-from sydpy._delay import Delay
 from sydpy._simulator import simwait
-from sydpy.intfs._intf import SubIntf
-# from sydpy._ch_proxy import ChIntfState
-
-def _sig_to_seq_arch(self, clk, data_i, data_o):
-    @always(self, clk.e.posedge)
-    def proc():
-        data_o.next = data_i
+from sydpy.intfs._intf import SlicedIntf
 
 @arch
 def _sig_to_sig_arch(self, data_i, data_o):
@@ -40,54 +33,11 @@ def _sig_to_sig_arch(self, data_i, data_o):
     def proc():
         data_o.next = data_i
 
-def m_sig(*args, **kwargs):
-    return sig(*args, direction=IntfDir.master, **kwargs)
-
-def s_sig(*args, **kwargs):
-    return sig(*args, direction=IntfDir.slave, **kwargs)
-
-def slice_or_index(high, low):
-    if high == low:
-        return high
-    else:
-        return slice(high, low)
-
-def get_relative_keys(p1, p2):
-    if isinstance( p1._keys, slice ) :
-        high1 = max(p1._keys.start, p1._keys.stop)
-        low1 = min(p1._keys.start, p1._keys.stop)
-    elif isinstance( p1._keys, int ) :
-        high1 = low1 = int(p1._keys)
-    else:
-        high1 = low1 = None
-    
-    if isinstance( p2._keys, slice ) :
-        high2 = max(p2._keys.start, p2._keys.stop)
-        low2 = min(p2._keys.start, p2._keys.stop)
-    elif isinstance( p2._keys, int ) :
-        high2 = low2 = int(p2._keys)
-    else:
-        high2 = low2 = None
-
-    if (high1, low1) == (None, None):
-        if (high2, low2) == (None, None):
-            return None, None
-        else:
-            return slice_or_index(high2, low2), None
-    else:
-        if (high2, low2) == (None, None):
-            return None, slice_or_index(high1, low1)
-        else:
-            high = min(high1, high2)
-            low = max(low1, low2)
-    
-            return slice_or_index(high - low1, low - low1), slice_or_index(high - low2, low - low2)
-
 class sig(_Intf):
     _intf_type_name = 'sig'
    
-    def __init__(self, dtype=None, parent=None, name=None, keys=None, init=None, module=None, dflt=None):
-        _Intf.__init__(self, parent=parent, name=name, keys=keys, module=module)
+    def __init__(self, dtype=None, parent=None, name=None, init=None, module=None, dflt=None):
+        _Intf.__init__(self, parent=parent, name=name, module=module)
         
         self._dtype = dtype
         self._drv = None
@@ -139,22 +89,13 @@ class sig(_Intf):
             _Intf.conv(self, other)
         except ConversionError:
             return self._get_dtype().conv(other)
-    
-#     def intf_eq(self, other):
-#         if isinstance(other, (sig, csig)):
-#             return True
-#         else:
-#             return _Intf.intf_eq(self, other)
-    
+
     def intf_eq(self, other):
         if _Intf.intf_eq(self, other):
             if self._get_dtype().cls_eq(other._get_dtype()):
                 return True
 
         return False
-    
-    def copy(self):
-        return sig(self.def_subintf, self._parent, self.name)
     
     def trace_val(self, name=None):
         return self.read(None)
@@ -170,13 +111,7 @@ class sig(_Intf):
             intf.parent._replace(new_intf, intf.key)
                 
         return _sig_to_sig_arch, {}
-   
-#     def _rnd(self, rnd_gen):
-#         try:
-#             return rnd_gen._rnd(self.def_subintf)
-#         except TypeError:
-#             return None
-            
+
     def _hdl_gen_decl(self):
         if self._get_dtype() is not None:
             return self._get_dtype()._hdl_gen_decl()
@@ -184,29 +119,21 @@ class sig(_Intf):
             return ''
     
     def deref(self, key):
-#         return sig(self._get_dtype().deref(key), parent=self, keys=key)
-        return SubIntf(self, key)
+        return SlicedIntf(self, key)
     
 #     __repr__ = __str__
         
-    def setdrv(self, drv):
-        self._drv = drv
-       
-#     def add_source(self, src):
-#         _Intf.add_source(self, src)
-#         
-#         chnl = self.get_base_channel()
-#         if chnl is not None:
-#             if src.get_base_channel() is not None:
-#                 if chnl.name != src.get_base_channel().name:
-#                     chnl.register_traces([VCDTrace(self.qualified_name, src, init=self.conv(src._init))])
-    
     def add_source(self, src):
         _Intf.add_source(self, src)
-        if self.get_base_channel() is not None:
-            if self.get_base_channel() != src.get_base_channel():
-                self._trace = VCDTraceMirror(self.qualified_name, self) 
-                self.get_base_channel().register_traces([self._trace])
+
+        # If tracing is enabled
+        try:
+            if self.get_base_channel() is not None:
+                if self.get_base_channel() != src.get_base_channel():
+                    self._trace = VCDTraceMirror(self.qualified_name, self) 
+                    self.get_base_channel().register_traces([self._trace])
+        except KeyError:
+            pass
     
     def _get_base_trace(self):
         if self.is_driven():
@@ -216,33 +143,26 @@ class sig(_Intf):
         else:
             return None 
     
-#     def set_channel(self, chnl, side=IntfDir.master):
-#         _Intf.set_channel(self, chnl, side=side)
-#         if self.is_driven():
-#             self._trace = VCDTrace(self.qualified_name, self, init=self._drv.val) 
-#             self.get_base_channel().register_traces([self._trace])
-    
     def setup_driver(self):
         if self._drv is None:
-            
-#             if str(self) == 'crc_state.seq.valid(bit)':
-#                 pass
-#             
             try:
                 val = self.conv(self._dflt)
             except (ConversionError, AttributeError):
                 val = None
                 
             self._drv = Signal(val=val, event_set = self.e)
-            self._trace = VCDTrace(self.qualified_name, self, init=val)
             
-            if self.get_base_channel() is not None:
-                self.get_base_channel().register_traces([self._trace])
+            # If tracing is enabled
+            try:
+                self._trace = VCDTrace(self.qualified_name, self, init=val)
+                
+                if self.get_base_channel() is not None:
+                    self.get_base_channel().register_traces([self._trace])
+            except KeyError:
+                pass
                 
             self.e.connected.trigger()
-            
-#             self._state = ChIntfState.driven
-    
+  
     def _write_prep(self, val, keys=None):
         if self._drv is None:
             self.setup_driver()
@@ -276,7 +196,7 @@ class sig(_Intf):
                 val = self.conv(val)
             else:
                 val = self._apply_subvalue(val, keys, self._drv._next)
-        except AttributeError as e:
+        except AttributeError:
             pass
             
         getattr(self._drv, func)(val)
@@ -326,61 +246,32 @@ class sig(_Intf):
             
         return self._cur_val
 
-    def _src_read(self, func):
+    def _src_read(self, func, keys=None):
         conv_val = self._cur_val
         
         for proxy in self._src:
             val = getattr(proxy, func)()
             
-            dest_keys, src_keys = get_relative_keys(self, proxy)
-                    
-            if src_keys is not None:
-                val = val.__getitem__(src_keys)
-                
-            if dest_keys is not None:
-                conv_val = self._apply_value(val, dest_keys, conv_val)
+            if keys is not None:
+                conv_val = self._apply_value(val, keys, conv_val)
             else:
                 conv_val = val
                 
         return conv_val
 
     def _read(self, func, def_val=None, keys=None):
-        if self._keys is not None:
-            self._cur_val = self._parent._read(func, def_val).__getitem__(self._keys)
+        if func.startswith('blk_'):
+            if not self.is_driven() and not self.is_sourced(): 
+                simwait(self.e.connected)            
+            
+        if self.is_driven():
+            self._cur_val = getattr(self._drv, func)()
+        elif self.is_sourced():
+            self._cur_val = self._src_read(func)
+        elif self._dflt is not None:
+            self._cur_val = self.conv(self._dflt)
         else:
-#             if self.__state == ChIntfState.free:
-#             if not self.is_bounded():
-#                 if self._cur_val is not None:
-#                     return self._cur_val
-#                 else:
-#                     return def_val
-#             
-#             
-#             
-#             if self._parent is None:
-#                 if self.__state == ChIntfState.bounded:
-#                     self._connect_to_sources()
-#             
-#             if func.startswith('blk_'):    
-#                 if self.__state in (ChIntfState.drv_con_wait, ChIntfState.bounded):
-#                     simwait(self.e.connected)
-                
-            if func.startswith('blk_'):   
-                if not self.is_driven() and not self.is_sourced(): 
-                    simwait(self.e.connected)            
-                
-            if self.is_driven():
-                self._cur_val = getattr(self._drv, func)()
-            elif self.is_sourced():
-                self._cur_val = self._src_read(func)
-            elif self._dflt is not None:
-                self._cur_val = self.conv(self._dflt)
-            else:
-                self._cur_val = def_val
+            self._cur_val = def_val
                     
         return self._cur_val
-    
-#   @property
-#     def driven(self):
-#         return self._drv is not None
-            
+

@@ -1,6 +1,6 @@
 #  This file is part of sydpy.
 # 
-#  Copyright (C) 2014 Bogdan Vukobratovic
+#  Copyright (C) 2014-2015 Bogdan Vukobratovic
 #
 #  sydpy is free software: you can redistribute it and/or modify 
 #  it under the terms of the GNU Lesser General Public License as 
@@ -16,14 +16,36 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from sydpy import Module, arch_def, always, rnd, simwait, Delay
+"""Module implements the basic random sequencer module."""
+
+from sydpy import arch_def, rnd
 from .basic_seq import BasicSeq
 
 class BasicRndSeq(BasicSeq):
-    '''
-    classdocs
-    '''
+    """Basic random sequence module that sends the transactions created by the 
+    random generator.
+    
+    Example instantiation:
+        self.inst(BasicRndSeq, seq_o, delay=None, seed=None, init=None, intfs={'seq_o' : tlm(bit).master})
+        
+    seq_o      - The output interface
+
+    delay      - Delay can be either:
+            Tuple    - Then it specifies the range from which a random delay is generated
+            Integer  - Then it specifies a fixed delay between the transactions
+            
+    seed       - The seed from random number generation 
+    
+    init       - Initial value to output, before the first random value is outputted.
+            
+    intfs      - Declares the interface type of the output. Interface has to be a subclass
+            of tlm and it has to be master.
+    """
+    
     def rnd_gen(self, dtype, delay=None, seed=None, init=None):
+        """The generator function to be supplied to BasicSeq to generate the 
+        transactions."""
+    
         if init is not None:
             yield (init, 0)
         
