@@ -52,6 +52,11 @@ Read the documentation
 
 Read the `SyDPy documentation <http://sydpy.readthedocs.org/en/latest/>`_
 
+Checkout the examples
+---------------------
+
+Examples are located in the `examples <https://github.com/bogdanvuk/sydpy/tree/master/examples>`_ repository folder.
+
 Get involved
 ------------
 

@@ -103,7 +103,7 @@ In order to simulate the design, we need to supply some stimuli and examine the 
 
 The default architecture of the testbench module instantiates 3 submodules:
 
-- Clocking module that outputs a clock with desired period. Clocking is a helper module contained with SyDPy, yet it is a standard SyDPy module and the code can be viewed in *sydpy\procs\clk.py*.
+- Clocking module that outputs a clock with desired period. Clocking is a helper module contained with SyDPy, yet it is a standard SyDPy module and the code can be viewed in *sydpy/procs/clk.py*.
 - Dff module that we declared above
 - BasicRndSeq module for random data generation.
 
