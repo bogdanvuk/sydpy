@@ -32,13 +32,13 @@ class ConversionError(Exception):
 from sydpy._simulator import Simulator, simwait
 from sydpy._process import always, always_acquire, always_comb
 from sydpy.intfs import *
+from sydpy._delay import Delay
+from sydpy.rnd import rnd
+from sydpy.types import *
 from sydpy._module import Module
 from sydpy._util._util import arch, arch_def
-from sydpy._delay import Delay
 from sydpy.procs import Clocking
-from sydpy.rnd import rnd
 from sydpy.verif import *
-from sydpy.types import *
 from sydpy.extens import *
     
 __all__ = ["Simulator",
@@ -72,7 +72,5 @@ __all__ = ["Simulator",
            "convgen",
            "conv",
            "VCDTracer",
-           "SimtimeProgress",
-           "Coverage",
-           "Profiler"
+           "SimtimeProgress"
            ]

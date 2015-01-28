@@ -258,14 +258,13 @@ if __name__ == "__main__":
                       pkt_in='usr_pkt', 
                       pkt_out='gmii_pkt', 
                             
-#                       arch='rtl'
                       arch=['rtl', 'tlm'],
                       scrbrd=(Scoreboard, {'intfs': {'dut_i': tlm(Array(bit8)), 'ref_i': tlm(Array(bit8))}})
                       )
     
     conf = {
             'sys.top'           : TestDFF,
-            'sys.extensions'    : [VCDTracer, SimtimeProgress, Profiler],
+            'sys.extensions'    : [VCDTracer, SimtimeProgress],
             'sys.sim.duration'  : 15000 
             }
     

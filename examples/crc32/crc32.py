@@ -64,7 +64,7 @@ class Crc32(Module):
         crc_out.clk <<= clk
         
 if __name__ == "__main__":
-
+    
     class TestCrc32(Module):
         @arch_def
         def dflt(self):
@@ -86,4 +86,5 @@ if __name__ == "__main__":
             'sys.extensions'    : [VCDTracer, SimtimeProgress],
             }
     
-    Simulator(conf).run()
+    for t in UnitTest([(conf, 'crc32')], verbose=True):
+        assert bool(t) == True

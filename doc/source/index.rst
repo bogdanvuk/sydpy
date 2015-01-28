@@ -35,7 +35,28 @@ SyDPy project started in an attempt to customize the `MyHDL <http://www.myhdl.or
 Where to start?
 ===============
 
-Download the latest `source <https://github.com/bogdanvuk/sydpy>`_ from github.
+Installation
+------------
+
+Install SyDPy using pip::
+
+  pip install sydpy
+
+Install SyDPy using easy_install::
+
+  easy_install sydpy
+  
+Install SyDPy from source::
+
+  python setup.py install
+
+Get involved
+------------
+
+Pull your copy from `github repository <https://github.com/bogdanvuk/sydpy>`_
+
+Read the documentation
+----------------------
 
 Start with the short tutorial :ref:`tutorial`
 

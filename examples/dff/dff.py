@@ -19,14 +19,13 @@ class TestDff(Module):
     def dflt(self):
         self.inst(Clocking, clk_o='clk', period=10)
         
-        self.inst(Dff, clk='clk', din='data', dout='dout')
+        self.inst(Dff, clk='clk', din='din', dout='dout')
         
-        self.inst(BasicRndSeq, seq_o='data', delay=30, intfs={'seq_o' : tlm(bit).master})
+        self.inst(BasicRndSeq, seq_o='din', delay=30, intfs={'seq_o' : tlm(bit).master})
 
 conf = {
         'sys.top'           : TestDff,
-        'sys.extensions'    : [VCDTracer, SimtimeProgress, Profiler]
-#         'Pr.include'  : ['./*']
+        'sys.extensions'    : [VCDTracer]
         }
 
 Simulator(conf).run()

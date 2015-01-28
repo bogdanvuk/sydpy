@@ -19,11 +19,11 @@
 
 from .tracing import VCDTracer
 from .simprog import SimtimeProgress
-from .coverage import Coverage
-from .profiler import Profiler
+#from .coverage import Coverage
+#from .profiler import Profiler
 
 __all__ = ["VCDTracer",
-           "SimtimeProgress",
-           "Coverage",
-           "Profiler"
+           "SimtimeProgress"
+#           "Coverage",
+#           "Profiler"
            ]

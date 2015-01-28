@@ -18,12 +18,12 @@
 
 """Module that implements the Module class."""
 
-from sydpy import seq, sig, tlm
 from sydpy._util._util import get_arch_args
 from sydpy.intfs._intf import IntfDir
 from sydpy._component import Component
 from sydpy._simulator import simproc_reg, simarch_inst_start, simarch_inst_stop
 from sydpy._util._injector import RequiredFeature
+from sydpy import *
 
 class Module(Component):
     """Module class that all user modules should subclass."""

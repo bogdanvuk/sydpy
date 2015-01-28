@@ -5,6 +5,12 @@ SyDPy Roadmap
 
 Some of many features that will be included into the SyDPy soon:
 
+- Speed optimization
+
+- Full manual
+
+- Manual for developers
+
 - Conversion to Verilog
     Proof of concept already done. Some testing and wrapping up left.
     

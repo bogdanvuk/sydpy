@@ -96,9 +96,9 @@ In order to simulate the design, we need to supply some stimuli and examine the 
         def dflt(self):
             self.inst(Clocking, clk_o='clk', period=10)
             
-            self.inst(Dff, clk='clk', din='data', dout='dout')
+            self.inst(Dff, clk='clk', din='din', dout='dout')
             
-            self.inst(BasicRndSeq, seq_o='data', delay=30, intfs={'seq_o' : tlm(bit).master})
+            self.inst(BasicRndSeq, seq_o='din', delay=30, intfs={'seq_o' : tlm(bit).master})
 
 The default architecture of the testbench module instantiates 3 submodules:
 
@@ -120,12 +120,12 @@ The module interfaces (ports) are connected via channels. Channels are reference
     
     The dataflow of DFF testbench.
 
-Notice how the channel **data** is written to using the transaction level interface (**tlm**), and read from using the signal interface (**sig**). This is a powerful feature of SyDPy channels which allows better decoupling between the modules. The information can be written to channel using one interface and read out using multiple other interfaces. SyDPy channels do all the conversions internally.
+Notice how the channel **din** is written to using the transaction level interface (**tlm**), and read from using the signal interface (**sig**). This is a powerful feature of SyDPy channels which allows better decoupling between the modules. The information can be written to channel using one interface and read out using multiple other interfaces. SyDPy channels do all the conversions internally.
     
 **We acheived the following:**
 
 1.	We will have a steady clock with 10 ticks period fed into our DFF module via **clk** channel.
-2.	We will have a sequence of random bits fed into our DFF module via **data** channel.
+2.	We will have a sequence of random bits fed into our DFF module via **din** channel.
 
 Simulating the design
 ---------------------
@@ -147,7 +147,12 @@ We can now run the simulation using::
 
     Simulator(conf).run()
 
-The *out* folder will be created in the folder where the TestDFF python module is located. Within the folder, the *sydpy.vcd* file contains the waveform which can be viewed by any VCD viewer (`GTKWave <http://gtkwave.sourceforge.net/>`_.
+The *out* folder will be created in the folder where the TestDFF python module is located. Within the folder, the *sydpy.vcd* file contains the waveform which can be viewed by any VCD viewer (`GTKWave <http://gtkwave.sourceforge.net/>`_ for an example):
+
+.. figure:: /images/dff_vcd.png
+    :align: center
+    
+    The VCD waveform of DFF testbench viewed by GTKWave.
 
 DFF using seq interface
 =======================
@@ -183,7 +188,7 @@ We internally connected **din** to **dout**. Since these interfaces are of diffe
 Verification environment for new DFF
 ------------------------------------
 
-Here we see the true power of SyDPY channels and interfaces. There is no need to change anything in our testbench. We will only be reading from the **data** channel via different interface, and SyDPy will handle the conversion process. The dataflow remains similar:
+Here we see the true power of SyDPY channels and interfaces. There is no need to change anything in our testbench. We will only be reading from the **din** channel via different interface, and SyDPy will handle the conversion process. The dataflow remains similar:
 
 .. figure:: /images/tutorial_dff1_dataflow.png
     :width: 300px
@@ -194,7 +199,13 @@ Here we see the true power of SyDPY channels and interfaces. There is no need to
 Simulating the design
 ---------------------  
 
-Upon running the simulation we see that the resulting waveform is same as before.
+Upon running the simulation we see that the resulting waveform of the **dout** channel reveals the same functionality. However, we see that the **din** interface is no longer simple, but consists of several subinterfaces: **clk**, **data** and handshaking subinterfaces **valid** and **last**.
+
+.. figure:: /images/dff1_vcd.png
+    :align: center
+    
+    The VCD waveform of DFF testbench viewed by GTKWave.
+
 
 Johnson counter example
 =======================
@@ -271,7 +282,7 @@ The following code can be used to simulate the Johnson module we implemented:
 The dataflow of the testbench is given in figure below:
 
 .. figure:: /images/tutorial_johnson_dataflow.png
-    :width: 200px
+    :width: 300px
     :align: center
     
     The dataflow of Johnson counter testbench, without subinterfaces shown.
@@ -302,12 +313,17 @@ We also wanted to be able to pause the timer, and for that purpose we used the *
 Figure below shows how **ready** and **data** subinterfaces are connected:
        
 .. figure:: /images/tutorial_johnson_detailed_dataflow.png
-    :width: 300px
+    :width: 400px
     :align: center
     
     The dataflow of Johnson counter testbench, with **ready** and **data** subinterfaces.
         
 This results in BasicRndSeq module output randomly starting and stopping our counter module. The VCD waveform is given below:
+
+.. figure:: /images/johnson_vcd.png
+    :align: center
+    
+    The VCD waveform of Johnson counter testbench viewed by GTKWave.
 
 Please note also how the parameter **cnt_n** is set using the configuration dictionary. The parameters of arbitrary modules can be set via hierarchical paths using the following pattern:
 
@@ -422,7 +438,8 @@ The following code can be used to simulate the CRC32 generator module we impleme
             'sys.extensions'    : [VCDTracer],
             }
     
-    Simulator(conf).run()
+    for t in UnitTest([(conf, 'crc32')], verbose=True):
+        assert bool(t) == True
 
 Let's notice several new things:
 
@@ -431,5 +448,18 @@ Let's notice several new things:
 - The BasicRndSeq generates whole transaction at the time. It is assigned Array(bit8, 10) data type, meaning that it should generate an array at most 10 bytes long.
 - The **rtl** architecture reads data from the channel written by BasicRndSeq one byte per clock cycle. The serialization of the byte array is performed automatically by SyDPy.
 
+**Notice also how same testbench can simultaneously drive two architectures at different levels of abstraction, which have different interfaces to the same channel.**
 
+In order to check the scoreboarding results, the UnitTest class can be used. UnitTest is passed a list of configuration to run a simulation on. After each simulation run, UnitTest searches for all scoreboard results within the design and creates the result objects. The result objects of the UnitTest can be accessed by iterating over UnitTest object (as shown in code above). When tested with the bool function, the result object returns True if all tests of the scoreboard passed and False otherwise. In our example, the scoreboard will check every transaction generated by Crc32 module's two architectures and compare them. So the assertion in the code above will only be satisfied if both architectures (rtl and tlm) always yield equal transactions.
+
+An example of simulation run VCD output is given below:
+
+.. figure:: /images/crc32_vcd.png
+    :align: center
+    
+    The VCD waveform of CRC32 testbench viewed by GTKWave.
+
+The **crc_tlm** channel was created ad-hoc by the Scoreboard to receive the transactions generated by **tlm** architecture (since we cannot have both **rtl** and **tlm** outputting to the same **crc** channel). 
+
+We can check on the waveform too that **rtl** and **tlm** output the same values. The **tlm** architectures operation is not affected by the clock and yields the result to **crc_tlm.tlm** signal as soon as new data arrive from **crc_data.tlm** signal (for example at 18ns, 22.5ns, 31.5ns...). However, the **rtl** architecture is implemented at RTL level, and operates sequentialy synchronous to the clock. One clock cycle is needed for every byte in the **crc_data.tlm** array. The **rtl** architecture announces the result is ready by setting the **crc.seq.valid** signal to high and outputting the result to  **crc.seq.data** (for example at 21.5ns, 24.5ns, 38.5ns...).
     

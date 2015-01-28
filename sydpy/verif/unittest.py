@@ -37,7 +37,7 @@ class UnitTestResult(object):
         
         for s in self.scoreboard_results:
             if self.verbose:
-                print(s['description'])
+                print(self.test_name + ":")
                 
             for r in s['results']:
                 if not r['score']:

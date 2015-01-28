@@ -11,16 +11,14 @@ with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
 setup(
     name='sydpy',
 
-    # Versions should comply with PEP440.  For a discussion on single-sourcing
-    # the version across setup.py and the project code, see
-    # https://packaging.python.org/en/latest/development.html#single-sourcing-the-version
-    version='0.1.0a1',
+    version='0.0.1',
 
     description='System Design in Python',
     long_description=long_description,
 
     # The project's main homepage.
-    url='http://sydpy.readthedocs.org/en/latest/',
+    url='https://github.com/bogdanvuk/sydpy',
+    download_url = 'https://github.com/bogdanvuk/sydpy/tarball/0.0.1',
 
     # Author details
     author='Bogdan Vukobratovic',
@@ -43,8 +41,8 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
 
-    keywords='HDL ASIC FPGA verification TLM',
-    packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
+    keywords='System Design Python Simulator HDL ASIC FPGA verification TLM',
+    packages=find_packages(exclude=['examples*', 'doc']),
 
     install_requires=['greenlet'],
 

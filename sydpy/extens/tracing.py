@@ -30,20 +30,27 @@ class VCDTracer(object):
         self.vcdfile.close()
         self.vcdfile = open(self.vcd_out_path + "/" + self.vcd_filename, 'w')
         
-        print(self.vcdfile)
+        self.used_codes = set()
         
         self.writeVcdHeaderStart()
         self.writeComponentHeader(sim.top_module)
         self.writeVcdHeaderEnd()
         self.writeVcdInitValuesStart()
         
-        for t in self.trace_list:
-            t.print_init_val()
+#         for t in self.trace_list:
+#             if t._code in self.used_codes:
+#                 t.print_init_val()
         
         self.writeVcdInitValuesEnd()
         
         with open(self.vcd_out_path + "/" + self.vcd_filename + ".tmp", 'r+') as vcdfile_tmp:
-            self.vcdfile.write(vcdfile_tmp.read())
+            for line in vcdfile_tmp:
+                if line[0] == '#':
+                    self.vcdfile.write(line)
+                else:
+                    code = line.split(' ')[1].strip()
+                    if code in self.used_codes:
+                        self.vcdfile.write(line)
         
         self.vcdfile.close()
     
@@ -145,9 +152,11 @@ class VCDTracer(object):
                 if isinstance(c.traces, (tuple, list)):
                     for t in c.traces:
                         t.print_var_declaration()
+                        self.used_codes.add(t._code)
                 else:
                     if c.traces is not None:
                         c.traces.print_var_declaration()
+                        self.used_codes.add(c.traces._code)
         
     def writeComponentHeaderVisitorEnd(self, c, tracer=None):
         if (c.components) or (self.channel_hrchy and hasattr(c, "traces")):
@@ -237,7 +246,7 @@ class VCDTraceMirror(VCDTrace):
         for t in self._src.traces:
             if t._name == self._src_trace_name:
                 return t
-    
+        
     def print_var_declaration(self):
         src_trace = self._producer._get_base_trace()
         self._code = src_trace._code

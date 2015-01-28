@@ -215,6 +215,9 @@ class Simulator(object):
             self._prj_path = self._configurator['sys', 'project_path']
         except KeyError:
             self._prj_path = os.path.dirname(inspect.getfile(self.top_module_cls))
+            if not self._prj_path:
+                self._prj_path = '.'
+                
             self._configurator['sys', 'project_path'] = self._prj_path
 
         # Change to project_path dir in order for other paths that are specified relatively to work

@@ -8,3 +8,4 @@ sydpy.egg-info/
 *.pyc
 *.bak
 env_gen/
+dist/
