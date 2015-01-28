@@ -3,7 +3,7 @@ Welcome to SyDPy
 ================
 
 SyDPy (**System Design in Python**) aims to become an alternative to SystemVerilog and 
-`SystemC <http://www.accellera.org/downloads/standards/systemc>`_ by providing the necessary tools to cover tasks of 
+[SystemC]: <http://www.accellera.org/downloads/standards/systemc> by providing the necessary tools to cover tasks of 
 HDL design from system architecture design to HDL synthesis.
 
 SyDPy comprises an event based simulator and various classes for describing and simulating a system, all written in Python. 
@@ -25,9 +25,9 @@ SyDPy features:
  
 Soon available:
 ===============
- - Verilog cosimulation using `Verilator <http://www.veripool.org/wiki/verilator>`_
+ - Verilog cosimulation using [Verilator]: <http://www.veripool.org/wiki/verilator>
  - Python to Verilog conversion
- - Constrained-random verification using `SystemC Verification <http://www.accellera.org/downloads/standards/systemc>`_ library
+ - Constrained-random verification using [SystemC Verification]: <http://www.accellera.org/downloads/standards/systemc> library
  
 Getting started
 ===============
@@ -50,12 +50,17 @@ Install SyDPy from source::
 Read the documentation
 ----------------------
 
-Read the `SyDPy documentation <http://sydpy.readthedocs.org/en/latest/>`_
+Read the [SyDPy documentation]: <http://sydpy.readthedocs.org/en/latest/>
+
+Checkout the examples
+---------------------
+
+Examples are located in the [examples]: <https://github.com/bogdanvuk/sydpy/tree/master/examples> repository folder.
 
 Get involved
 ------------
 
-Pull your copy from `github repository <https://github.com/bogdanvuk/sydpy>`_
+Pull your copy from [github repository]: <https://github.com/bogdanvuk/sydpy>
 
 
  

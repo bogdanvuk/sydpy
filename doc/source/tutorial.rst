@@ -9,6 +9,7 @@ This tutorial comprises several examples written for SyDPy with explanations:
  - `Designing the D Flip Flop (DFF)`_
  - `DFF using seq interface`_
  - `Johnson counter example`_
+ - `CRC-32 generator example`_ 
 
 Designing the D Flip Flop (DFF)
 ===============================
@@ -345,8 +346,8 @@ Wildcards * and ? can also be used in configurations. So, if we had multiple cou
 
     '*/Counter?.N' : value
     
-CRC32 generator example
-=======================
+CRC-32 generator example
+========================
 
 A more complex example shows how to implement `CRC-32 <http://en.wikipedia.org/wiki/Cyclic_redundancy_check>`_ (32-bit Cyclic Redundancy Check) generator, that is used in Ethernet protocol for an example. Whole example can be found in the *examples/crc32/crc32.py*.
 

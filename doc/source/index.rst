@@ -50,15 +50,20 @@ Install SyDPy from source::
 
   python setup.py install
 
-Get involved
-------------
-
-Pull your copy from `github repository <https://github.com/bogdanvuk/sydpy>`_
-
 Read the documentation
 ----------------------
 
 Start with the short tutorial :ref:`tutorial`
+
+Checkout the examples
+---------------------
+
+Examples are located in the `examples <https://github.com/bogdanvuk/sydpy/tree/master/examples>`_ repository folder.
+
+Get involved
+------------
+
+Pull your copy from `github repository <https://github.com/bogdanvuk/sydpy>`_
 
 Contents
 ========
