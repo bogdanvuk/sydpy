@@ -3,7 +3,7 @@ Welcome to SyDPy
 ================
 
 SyDPy (**System Design in Python**) aims to become an alternative to SystemVerilog and 
-[SystemC]: <http://www.accellera.org/downloads/standards/systemc> by providing the necessary tools to cover tasks of 
+[SystemC](<http://www.accellera.org/downloads/standards/systemc>) by providing the necessary tools to cover tasks of 
 HDL design from system architecture design to HDL synthesis.
 
 SyDPy comprises an event based simulator and various classes for describing and simulating a system, all written in Python. 
@@ -18,16 +18,16 @@ SyDPy features:
 ===============
  - RTL and TLM cosimulation
  - Smart channels for information exchange between various interfaces
- - Global simulator configuration for test setup
+ - Global simulatsor configuration for test setup
  - Basic randomization, sequencing and scoreboarding supported
  - Automatic model checking between different module architectures
  - Extendible simulator kernel
  
 Soon available:
 ===============
- - Verilog cosimulation using [Verilator]: <http://www.veripool.org/wiki/verilator>
+ - Verilog cosimulation using [Verilator](<http://www.veripool.org/wiki/verilator>)
  - Python to Verilog conversion
- - Constrained-random verification using [SystemC Verification]: <http://www.accellera.org/downloads/standards/systemc> library
+ - Constrained-random verification using [SystemC Verification]( <http://www.accellera.org/downloads/standards/systemc>) library
  
 Getting started
 ===============
@@ -37,30 +37,30 @@ Installation
 
 Install SyDPy using pip::
 
-  pip install sydpy
+  `pip install sydpy`
 
 Install SyDPy using easy_install::
 
-  easy_install sydpy
+  `easy_install sydpy`
   
 Install SyDPy from source::
 
-  python setup.py install
+  `python setup.py install`
 
 Read the documentation
 ----------------------
 
-Read the [SyDPy documentation]: <http://sydpy.readthedocs.org/en/latest/>
+Read the [SyDPy documentation](<http://sydpy.readthedocs.org/en/latest/>)
 
 Checkout the examples
 ---------------------
 
-Examples are located in the [examples]: <https://github.com/bogdanvuk/sydpy/tree/master/examples> repository folder.
+Examples are located in the [examples](<https://github.com/bogdanvuk/sydpy/tree/master/examples>) repository folder.
 
 Get involved
 ------------
 
-Pull your copy from [github repository]: <https://github.com/bogdanvuk/sydpy>
+Pull your copy from [github repository](<https://github.com/bogdanvuk/sydpy>)
 
 
  
