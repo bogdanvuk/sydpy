@@ -15,33 +15,29 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
+from sydpy.unit import Unit
 
 """Module that implements the Channel class."""
 
 from sydpy._component import Component
 
-class Channel(Component):
+class Channel(Unit):
     """Instances of this class allow the information they carry to be read
     and written in various interfaces (by various protocols)"""
     
-    def __init__(self, name, parent, trace = True):
+    def __init__(self, parent, name):
         self.slaves = []
         self.master = None
-        Component.__init__(self, name, parent)
+        Unit.__init__(self, parent, name)
     
-    def attach(self, intf, master=False):
-        if master:
-            if self.master is not None:
-                raise Exception("Can only have one master per channel!")
-            
-            self.master = intf
-            self.master.gen_driver()
-            
-            for slave in self.slaves:
-                slave.con_driver(self.master)
-        else:
-            self.slaves.append(intf)
-            
-            if self.master is not None:
-                intf.con_driver(self.master)
+    def drive(self, intf):
+        if self.master is not None:
+            raise Exception("Can only have one master per channel!")
+        
+        self.master = intf
+        intf._mch = self
+        
+    def sink(self, intf):
+        self.slaves.append(intf)
+        intf._sch = self
 

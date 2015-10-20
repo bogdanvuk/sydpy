@@ -13,7 +13,7 @@ def create_component_tree(index_tree):
                 current = tree
             elif not current:
                 if s != tree.name:
-                    raise Exception('Multi-child0 tree.')
+                    raise Exception('Multi-root tree.')
                 else:
                     current = tree
             else:

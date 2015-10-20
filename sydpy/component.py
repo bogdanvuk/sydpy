@@ -28,14 +28,14 @@ class Component(object):
     def qualified_name(self):
         if self.parent:
             parent_qualified_name = self.parent.qualified_name
-        else:
-            parent_qualified_name = ''
-        
-        if parent_qualified_name == '/':
-            parent_qualified_name = '' 
             
-        return parent_qualified_name + '/' + self.name
-    
+            if parent_qualified_name == '/':
+                parent_qualified_name = '' 
+        
+            return parent_qualified_name + '/' + self.name        
+        else:
+            return '/'
+
     def find(self, qualified_name):
         """Retreive the component from the hierarchy by its qualified name
         
@@ -88,6 +88,12 @@ class Component(object):
             
         return index
     
+    def __getattr__(self, name):
+        if name in self.components:
+            return self.components[name]
+        else:
+            raise AttributeError
+   
     __iadd__ = add
 
 # class Counter(Component):
