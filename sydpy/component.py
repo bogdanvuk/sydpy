@@ -89,3 +89,15 @@ class Component(object):
         return index
     
     __iadd__ = add
+
+# class Counter(Component):
+# 
+#     def init(self, cin, cout):
+#         self.add("cin", iseq(bit8))
+#         cin.add(self.cin.slv)
+#         
+#         self.add("cout", isig(bit8))
+#         cout.add(self.cout.mst)
+# 
+#     def process(self):
+#         self.cout <<= self.cin + 1

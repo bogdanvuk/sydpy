@@ -16,25 +16,28 @@ module m();
     end
 
    always begin
-      automatic string       strexp = "INIT";
+      automatic integer vals_read;
+      automatic string   strimp;
 
       delay = xsimintf_wait();
       #delay;
       $display("Finished waiting: %d", delay);
-      strexp = xsimintf_import();
-      $display("IMPORTED: %s", strexp);
-      $sscanf(strexp, "%d", clk);
+      strimp = xsimintf_import();
+      $display("IMPORTED: %s", strimp);
+      vals_read = $sscanf(strimp, "%x", clk);
    end
 
    always_comb begin
-      automatic string       strexp = "INIT";
+      automatic string       strexp;
+      automatic string       strimp;
+      automatic integer vals_read;
 
       $sformat(strexp, "Data: %h, Data_bus: %h",data, data_bus);
       xsimintf_export(strexp);
       $display("EXPORTED: %s", strexp);
-      strexp = xsimintf_import();
-      $display("IMPORTED: %s", strexp);
-      $sscanf(strexp, "%d", clk);
+      strimp = xsimintf_import();
+      $display("IMPORTED: %s", strimp);
+      vals_read = $sscanf(strimp, "%x", clk);
    end
 
    always @ (posedge clk) begin
