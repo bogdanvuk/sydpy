@@ -11,7 +11,7 @@ class Component(object):
         name    -- The name of the component
         """
 
-        self.parent = None
+        self._parent = None
         self.name = name
         
         self.components = {}
@@ -21,13 +21,13 @@ class Component(object):
 
     def add(self, comp):
         self.components[comp.name] = comp
-        comp.parent = self
+        comp._parent = self
         return self
     
     @property
     def qualified_name(self):
-        if self.parent:
-            parent_qualified_name = self.parent.qualified_name
+        if self._parent:
+            parent_qualified_name = self._parent.qualified_name
             
             if parent_qualified_name == '/':
                 parent_qualified_name = '' 
@@ -50,12 +50,12 @@ class Component(object):
         if not qualified_name:
             return self
         elif qualified_name[0] == '/':
-            if self.parent is not None:
-                return self.parent.find(qualified_name)
+            if self._parent is not None:
+                return self._parent.find(qualified_name)
             else:
                 return self.find(qualified_name[1:])
         elif qualified_name[0:3] == '../':
-            return self.parent.find(qualified_name[3:])
+            return self._parent.find(qualified_name[3:])
         elif qualified_name[0:2] == './':
             return self.find(qualified_name[2:])
         else:
@@ -67,8 +67,14 @@ class Component(object):
             else:
                 return component
             
-    def findall(self, pattern):
-        return {k: self.find(k) for k in fnmatch.filter(self.index().keys(), pattern)}
+    def findall(self, pattern='*', of_type=None):
+        comps = {}
+        for k in fnmatch.filter(self.index().keys(), pattern):
+            comp = self.find(k)
+            if (of_type is None) or (isinstance(comp, of_type)):
+                comps[k] = comp
+                
+        return comps
     
     def __getitem__(self, key):
         return self.find(key)

@@ -14,13 +14,13 @@ class Configurator(Unit):
        
     def build(self):
         for unit in self.units:
-            class_load(unit)(self.parent)
+            class_load(unit)(self._parent)
     
     def _reload_cfg_index(self):
         self.reload_index()
     
     def reload_index(self):
-        self.root_index = self.parent.index()
+        self.root_index = self._parent.index()
 
     def apply_cfg_filt(self, filt):
         for pat in fnmatch.filter(self.conf.keys(), filt):
