@@ -1,11 +1,14 @@
 from sydpy.unit import Unit
 from sydpy.process import Process
+from sydpy.intfs.intf import Intf
 
 class Module(Unit):
     
     def __init__(self, parent, name, **kwargs):
         Unit.__init__(self, parent, name, **kwargs)
         self.sim = self.find('/sim')
+        
+        self._intfs = self.findall(of_type=Intf)
         
         for attr in dir(self):
             if not attr.startswith('_'):

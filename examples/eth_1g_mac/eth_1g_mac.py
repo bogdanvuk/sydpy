@@ -52,7 +52,7 @@ len_type_first_pos = src_last_pos + 1
 len_type_second_pos = len_type_first_pos + 1 
 
 class Eth1GMac(Module):
-    @arch
+    #@arch
     def tlm(self, 
             pkt_in : tlm(eth_usr_pkt),
             pkt_out: tlm(eth_gmii_pkt).master
@@ -101,7 +101,7 @@ class Eth1GMac(Module):
 #             print(s)
 #             
 
-    @arch_def
+    #@arch_def
     def rtl(self, 
             clk     : sig(bit), 
             pkt_in  : seq(bit8), 
@@ -245,7 +245,7 @@ class Eth1GMac(Module):
 if __name__ == "__main__":
     
     class TestDFF(Module):
-        @arch_def
+        #@arch_def
         def test1(self):
             
             self.inst(Clocking, clk_o='clk', period=10)

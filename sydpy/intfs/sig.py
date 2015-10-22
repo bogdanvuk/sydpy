@@ -27,7 +27,7 @@ from sydpy import ConversionError
 from sydpy._simulator import simwait
 from sydpy.intfs._intf import SlicedIntf
 
-@arch
+#@arch
 def _sig_to_sig_arch(self, data_i, data_o):
     @always(self, data_i)
     def proc():

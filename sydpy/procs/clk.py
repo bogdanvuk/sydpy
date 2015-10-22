@@ -34,7 +34,7 @@ def clkinst(period=100, name='clk'): #period=100
     return wrapper
         
 class Clocking(Module):
-    @arch_def
+    #@arch_def
     def rtl(self, 
             clk_o   : sig(bit).master, 
             period  = 100):

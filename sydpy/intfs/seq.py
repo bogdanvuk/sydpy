@@ -28,7 +28,7 @@ import types
 from sydpy._event import Event
 from sydpy.intfs._intf import IntfDir, Intf, subintfs, SlicedIntf
 
-@arch
+#@arch
 def _sig_to_seq_arch(self, data_i, data_o):
     data_o.valid.next = True
     data_o.last.next = True
@@ -38,14 +38,14 @@ def _sig_to_seq_arch(self, data_i, data_o):
         if data_o.ready:
             data_o.data.next = data_i
             
-@arch
+#@arch
 def _seq_to_sig_arch(self, data_i, data_o):
     @always(self, data_i.clk.e.posedge)
     def proc():
         if data_i.ready and data_i.valid:
             data_o.next = data_i.data
         
-@arch
+#@arch
 def _seq_to_tlm_arch(self, data_i, data_o):
 
     data_i.ready.next = True
@@ -75,7 +75,7 @@ def _seq_to_tlm_arch(self, data_i, data_o):
                     remain[0] = None
                     pass
 
-@arch
+#@arch
 def _tlm_to_seq_arch(self, data_i, data_o):
     data_fifo = []
     last_fifo = []
@@ -139,7 +139,7 @@ def _tlm_to_seq_arch(self, data_i, data_o):
             data_o.last.next = False
             data_o.valid.next = False
 
-@arch
+#@arch
 def _combine_seqs(self, data_i, data_o):
     
     valids = [elem.valid for elem in data_i]

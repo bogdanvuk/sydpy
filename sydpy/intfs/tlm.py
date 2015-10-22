@@ -24,7 +24,7 @@ from sydpy.types import convgen
 from sydpy.intfs._intf import IntfDir
 from sydpy.intfs import sig
 
-@arch
+#@arch
 def _tlm_to_tlm_arch(self, data_i, data_o):
 
     remain = [None]
@@ -43,7 +43,7 @@ def _tlm_to_tlm_arch(self, data_i, data_o):
             remain[0] = None
 
 
-@arch
+#@arch
 def _tlm_to_sig_arch(self, data_i, data_o):
     
     @always_acquire(self, data_i)

@@ -1,5 +1,6 @@
 from greenlet import greenlet
 from sydpy.unit import Unit
+from sydpy._util._util import getio_vars
 
 class Process(Unit, greenlet):
     """Wrapper class for functions that implement processes in user modules.
@@ -14,14 +15,9 @@ class Process(Unit, greenlet):
         Unit.__init__(self, parent, func.__name__)
         self.sim = self.find('/sim')
 #         self.sim.proc_reg(self) 
-        senslist = []
-        
-#         for a in args:
-#             if hasattr(a, 'subscribe'):
-#                 senslist.append(a)
-        
-        self.senslist = senslist
-#         self._exit_func = exit_func
+       
+        (self.senslist, outputs) = getio_vars(func, intfs=self._parent._intfs)
+
         self._exit_func = None 
         
 #         # If the module is to be traslated to HDL, translate the process
@@ -33,11 +29,11 @@ class Process(Unit, greenlet):
     def run(self):
         if self.senslist:
             while(1):
-                self.sim(self.senslist)
-                self.func(**self.func_params)
+                self.sim.wait(self.senslist)
+                self.func()
         else:
-            self.func(**self.func_params)
-            self.sim()
+            self.func()
+            self.sim.wait()
             
     def exit_func(self):
         if self._exit_func:

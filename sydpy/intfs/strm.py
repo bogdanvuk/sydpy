@@ -25,13 +25,13 @@ from sydpy.types import ConversionError, convgen, bit
 from sydpy._simulator import simwait
 from sydpy._util._util import arch
 
-@arch
+#@arch
 def _sig_to_seq_arch(self, data_i, data_o):
     @always(self, data_o.clk.e.posedge)
     def proc():
         data_o.next = data_i
 
-@arch
+#@arch
 def _seq_to_tlm_arch(self, data_i, data_o):
 
     data_i.ready.next = True

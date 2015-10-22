@@ -4,6 +4,57 @@ from sydpy._util._util import class_load, unif_enum
 
 from greenlet import greenlet
 from sydpy.process import Process
+from sydpy._util._injector import features
+
+class SimEvent(list):
+    """Simulator Event that can trigger list of callbacks.
+
+    Event is implemented as a list of callable objects - callbacks. 
+    Calling an instance of this will cause a call to each item in 
+    the list in ascending order by index.
+    
+    Callback function should return a boolean value. If it returns:
+    
+    True    -- Callback is re-registered by the _event
+    False   -- Callback is deleted from the list     
+    
+    Callback can be registered with or without arguments. Callback
+    without arguments is registered by adding function reference
+    to the list. Callback with arguments is registered by adding
+    a tuple to the list. The first tuple item contains function 
+    reference. The rest of the items will be passed to the
+    callback once the _event is triggered.
+    """
+    def __call__(self, *args, **kwargs):
+        """Trigger the _event and call the callbacks.
+        
+        The arguments passed to this function will be passed to 
+        all the callbacks.
+        """
+        
+        expired = []
+        
+        for i, f in enumerate(self):
+            # If additional callback arguments are passed
+            if isinstance(f, tuple):
+                func = f[0]
+                fargs = f[1:]
+                
+                ret = func(*(fargs + args), **kwargs)
+            else:
+                ret = f(*args, **kwargs)
+            
+            # If callback should not be re-registered
+            if not ret:
+                expired.append(i)
+    
+        # Delete from the list all callback that returned false
+        for e in reversed(expired):
+            del self[e]
+        
+
+    def __repr__(self):
+        return "Event(%s)" % list.__repr__(self)
 
 class Scheduler(Unit, greenlet):
     """Simulator scheduler kernel greenlet wrapper"""
@@ -38,6 +89,7 @@ class Simulator(Unit):
     '''Simulator kernel.'''
 
     def __init__(self, parent):
+        self.max_delta_count = 1000
         Unit.__init__(self, parent, "sim")
 
     def build(self):
@@ -45,11 +97,33 @@ class Simulator(Unit):
             self.top = class_load(self.top)(self._parent, 'top')
         
         self.add(Scheduler(self))
+        features.Provide('Simulator', self)
+                # Create events for Simulator extensions to hook to.
+        self.events = {
+                       'init_start'     : SimEvent(),
+                       'run_start'      : SimEvent(),
+                       'run_end'        : SimEvent(),
+                       'delta_start'    : SimEvent(),
+                       'post_evaluate'  : SimEvent(),
+                       'delta_end'      : SimEvent(),
+                       'timestep_start' : SimEvent(),
+                       'timestep_end'   : SimEvent(),
+                       }
     
     def gen_drivers(self):
         for _, comp in self.top.index().items():
             if hasattr(comp, '_gen_drivers'):
                 comp._gen_drivers()
+
+    def find_sources(self):
+        finished_all = True
+        for _, comp in self.top.index().items():
+            if hasattr(comp, '_find_sources'):
+                finished = comp._find_sources()
+                if not finished:
+                    finished_all = False
+                    
+        return finished_all
     
     def run(self):
         self.sched.switch(self.duration)
@@ -63,49 +137,50 @@ class Simulator(Unit):
         if duration:
             self.duration = duration
         
-#         self.max_time = self.time + self.duration
-# 
-#         self.events['run_start'](self)
-#         self.running = True
-#         
-#         while 1:
-#             self.delta_count = 0
-#             self.events['timestep_start'](self.time, self)
-#             # Perform delta cycle loop as long as the events are triggering
-#             while self._ready_pool or self.trig_pool:
-#                 #Perform one delta cycle
-#                 self.events['delta_start'](self.time, self.delta_count, self)
-#                 
-#                 self._evaluate()
-#                 
-#                 self.events['post_evaluate'](self.time, self.delta_count, self)
-#                 
-#                 self._update()
-#                 
-#                 self.events['delta_end'](self.time, self.delta_count, self)
-#                 
-#                 self.delta_count += 1
-#                 
-#                 if self.delta_count > self.max_delta_count:
-#                     self._finalize()
-#                     self.events['run_end'](self)
-#                     self._finished = True
-#                     raise Exception("Maximum number of delta cycles reached: {0}".format(self.max_delta_count))
-#                 
-# #                 print('-----------------------------------------')
-#                 
-#             self.events['timestep_end'](self.time, self)
-#             
-#             # All events have settled, let's advance time
-#             if not self._advance_time():
-#                 self._finalize()
-#                 self.events['run_end'](self)
-#                 self._finished = True
-#                 raise greenlet.GreenletExit 
+        self.max_time = self.time + self.duration
+ 
+        self.events['run_start'](self)
+        self.running = True
+         
+        while 1:
+            self.delta_count = 0
+            self.events['timestep_start'](self.time, self)
+            # Perform delta cycle loop as long as the events are triggering
+            while self._ready_pool or self.trig_pool:
+                #Perform one delta cycle
+                self.events['delta_start'](self.time, self.delta_count, self)
+                 
+                self._evaluate()
+                 
+                self.events['post_evaluate'](self.time, self.delta_count, self)
+                 
+                self._update()
+                 
+                self.events['delta_end'](self.time, self.delta_count, self)
+                 
+                self.delta_count += 1
+                 
+                if self.delta_count > self.max_delta_count:
+                    self._finalize()
+                    self.events['run_end'](self)
+                    self._finished = True
+                    raise Exception("Maximum number of delta cycles reached: {0}".format(self.max_delta_count))
+                 
+#                 print('-----------------------------------------')
+                 
+            self.events['timestep_end'](self.time, self)
+             
+            # All events have settled, let's advance time
+            if not self._advance_time():
+                self._finalize()
+                self.events['run_end'](self)
+                self._finished = True
+                raise greenlet.GreenletExit 
     
     def _initialize(self):
         
         self.max_time = None
+        self.time = 0
         self.delay_pool = {}
         self.trig_pool = set()
         self.update_pool = set()     
@@ -117,6 +192,10 @@ class Simulator(Unit):
             self.proc_reg(proc)
         
         self.gen_drivers()
+        
+        while (not self.find_sources()):
+            pass
+        
 #         self.top_module = self.top_module_cls('top', None)
 
     def _unsubscribe(self, proc):
@@ -214,5 +293,18 @@ class Simulator(Unit):
     def wait(self, events = None):
         """Delay process execution by waiting for events."""
         self.sched.switch(events)
+    
+    def delay_add(self, proc, time):
+        """Register process to be scheduled for execution after given time."""
+        self.delay_pool[proc] = time + self.time
+    
+    def delay_pop(self,proc):
+        """Remove process from the delay schedule."""
+        self.delay_pool.pop(proc, None)
+
+    def trigger(self, event):
+        """Register event to trigger pool."""
+        self.trig_pool.add(event)
+
     
 #     def apply_

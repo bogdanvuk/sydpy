@@ -11,7 +11,7 @@ from examples.eth_1g_mac.eth_1g_mac import eth_usr_pkt, Eth1GMac
 def test_crc32():
     
     class TestCrc32(Module):
-        @arch_def
+        #@arch_def
         def dflt(self):
             self.inst(Clocking, clk_o='clk', period=10)
             
@@ -39,7 +39,7 @@ def test_crc32():
 def test_eth_1g_mac():
     
     class TestDFF(Module):
-        @arch_def
+        #@arch_def
         def test1(self):
             
             self.inst(Clocking, clk_o='clk', period=10)

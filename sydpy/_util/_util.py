@@ -92,48 +92,46 @@ def _dedent(s):
 
 class _SigNameVisitor(ast.NodeVisitor):
     def __init__(self, symdict):
-        self.inputs = {}
-        self.outputs = {}
-        self.toplevel = 1
+        self.inputs = []
+        self.outputs = []
         self.symdict = symdict
-        self.keys = None
-        self.proxy = None
-        self.context = False
-        self.subproxy = []
+        self.ref_path = []
+        self.store = False
 
+    def visit_Store(self, node):
+        if not self.ref_path:
+            self.store = True
+        
+    def visit_Load(self, node):
+        if not self.ref_path:
+            self.store = False
+    
     def visit_Name(self, node):
-        id = node.id
-        if id not in self.symdict:
-            self.subproxy = []
-            return
-        
-        self.proxy = self.symdict[id]
-        
-        inp = True
-        if self.subproxy:
-#             if self.subproxy[0] == 'next':
-#                 inp = True
-#                 self.subproxy.pop(0)
-            if self.subproxy[0] in ('next', 'next_after', 'write', 'blk_next'):
-                inp = False
-                self.subproxy.pop(0)
-                 
-            for s in reversed(self.subproxy):
-                try:
-                    self.proxy = getattr(self.proxy, s)
-                except AttributeError:
-                    self.subproxy = []
-                    break
-                
-            self.subproxy = []
+        if node.id == 'self':
+            self.ref_path = list(reversed(self.ref_path))
             
-        if inp:
-            self.inputs[repr(self.proxy)] = self.proxy
-        else:
-            self.outputs[repr(self.proxy)] = self.proxy
+            if self.ref_path[0] in self.symdict:
+                intf = self.symdict[self.ref_path[0]]
+                
+                for p in self.ref_path[1:]:
+                    if p in intf:
+                        intf = intf[p]
+                    else:
+                        if p in ['write', 'push']:
+                            self.store = True
+
+                        break
+                           
+                if self.store:
+                    self.outputs.append(intf)
+                else:
+                    self.inputs.append(intf)
+        
+        self.ref_path = []                    
 
     def visit_Attribute(self, node):
-        self.subproxy.append(node.attr)
+        self.visit(node.ctx)
+        self.ref_path.append(node.attr)
         self.visit(node.value)
         
 def get_arch_args(arch_func):
@@ -156,20 +154,20 @@ def get_arch_args(arch_func):
 
     return arch_args, arch_ports, arch_confs, arch_arg_defs, p.annotations
 
-def getio_vars(func):
+def getio_vars(func, intfs):
         
 #     varnames = func.__code__.co_varnames
-    symdict = {}
+    symdict = {intf.name: intf for _,intf in intfs.items()}
 
-    try:    
-        if func.arch == True:
-            (arch_args, arch_ports, arch_confs, arch_arg_defs, arch_annot) = get_arch_args(func)
-        
-            for p in arch_ports:
-                symdict[p] = p
-                
-    except AttributeError:
-        pass
+#     try:    
+#         if func.arch == True:
+#             (arch_args, arch_ports, arch_confs, arch_arg_defs, arch_annot) = get_arch_args(func)
+#         
+#             for p in arch_ports:
+#                 symdict[p] = p
+#                 
+#     except AttributeError:
+#         pass
 
     if func.__code__.co_freevars:
         for n, c in zip(func.__code__.co_freevars, func.__closure__):
@@ -181,10 +179,19 @@ def getio_vars(func):
     
     s = inspect.getsource(func)
     tree = ast.parse(_dedent(s))
+
+    from astmonkey import visitors, transformers
+    
+    node = transformers.ParentNodeTransformer().visit(tree)
+    visitor = visitors.GraphNodeVisitor()
+    visitor.visit(node)
+    
+    visitor.graph.write_png('graph.png')
+
     v = _SigNameVisitor(symdict)
     v.visit(tree)
     
-    return list(v.inputs.values()), list(v.outputs.values())
+    return v.inputs, v.outputs
 
 # @decorator
 def arch(f):

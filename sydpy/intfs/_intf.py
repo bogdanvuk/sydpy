@@ -53,7 +53,7 @@ class IntfDir(Enum):
         else:
             return IntfDir.master
 
-@arch
+##@arch
 def generic_arch(self, data_i, data_o):
     
     @always(self, data_i)

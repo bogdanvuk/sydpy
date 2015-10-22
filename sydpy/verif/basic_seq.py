@@ -44,7 +44,7 @@ class BasicSeq(Module):
             of tlm and it has to be master.
     """
     
-    @arch_def
+    #@arch_def
     def tlm(self, seq_o, gen=None, flow_ctrl=True):
 
         @always(self)

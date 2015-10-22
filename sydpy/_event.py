@@ -15,10 +15,10 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
+from sydpy._util._injector import RequiredFeature
 
 """Module implements Event and EventSet classes"""
 
-from sydpy._simulator import simtrig 
 from sydpy._util._util import key_repr
 
 class EventSet(object):
@@ -60,6 +60,8 @@ class EventSet(object):
         return self.events[key]
 
 class Event(object):
+    sim = RequiredFeature('Simulator')
+
     """Class that allows processes to register to it. When the Event is 
     triggered, it activates all processes that registered to it."""
     def __init__(self, parent=None, name="", key=None):
@@ -83,7 +85,7 @@ class Event(object):
         self.pool.add(obj)
         
     def trigger(self):
-        simtrig(self)
+        self.sim.trigger(self)
     
     def update(self, other):
         self.pool |= other.pool

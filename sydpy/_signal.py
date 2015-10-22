@@ -15,6 +15,7 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
+from sydpy._event import EventSet, Event
 
 """Module implements Signal class"""
 
@@ -54,7 +55,7 @@ class Signal(object):
         self._val = val
         self._init = val
             
-        self.e = event_set
+        self.e = EventSet(missing_event_handle=self._missing_event)
         
     def blk_pop(self):
         """Pop the value from the signal queue. If the queue is empty, wait 
@@ -145,3 +146,15 @@ class Signal(object):
 
             self._val = next_val
     
+    def _create_event(self, event):
+        if event not in self.e.events:
+            e = Event(self, event)
+            self.e.add({event:e})
+        else:
+            e = self.e.events[event]
+        
+        return e
+
+    def _missing_event(self, event_set, event):
+        e = self._create_event(event)
+        return e

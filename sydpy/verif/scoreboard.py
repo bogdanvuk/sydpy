@@ -27,7 +27,7 @@ class Scoreboard(Module):
     def compare(self, ref_trans, dut_trans):
         return (ref_trans == dut_trans)
 
-    @arch_def
+    #@arch_def
     def dflt(self, dut_i, ref_i, dut_name=None, ref_name=None, dut_active=True, ref_active=True, verbose=False):
         
         self.scoreboard_results = {

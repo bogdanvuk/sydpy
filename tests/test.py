@@ -14,9 +14,11 @@ class Generator(Module):
 
     @proc
     def gen(self):
+        val = 0
         while(1):
-            self.sout.next = self.sout.read() + 1
-            self.sim.wait(Delay(10))
+            val += 1
+            self.sout.write(val)
+            self.sim.wait(Delay(20))
     
 class Sink(Module):
     def build(self):
@@ -24,7 +26,7 @@ class Sink(Module):
         
     @proc
     def psink(self):
-        print(self.sin.read())
+        print(self.find('/sim').time, ': ', self.sin.read())
     
 class TestDff(Module):
     def build (self):

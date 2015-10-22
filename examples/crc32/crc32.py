@@ -18,7 +18,7 @@ def setup_crc_table():
     return crc_table
 
 class Crc32(Module):
-    @arch
+    #@arch
     def tlm(self, crc_in: tlm(Array(bit8)).slave, crc_out: tlm(bit32).master):
         @always_acquire(self, crc_in)
         def proc(val):
@@ -30,7 +30,7 @@ class Crc32(Module):
     
         
     # Algorithm from: http://www.hackersdelight.org/hdcodetxt/crc.c.txt
-    @arch_def
+    #@arch_def
     def rtl(self, clk: sig(bit), crc_in: seq(bit8), crc_out: seq(bit32).master):
         
         crc_table = setup_crc_table()
@@ -66,7 +66,7 @@ class Crc32(Module):
 if __name__ == "__main__":
     
     class TestCrc32(Module):
-        @arch_def
+        #@arch_def
         def dflt(self):
             self.inst(Clocking, clk_o='clk', period=10)
             

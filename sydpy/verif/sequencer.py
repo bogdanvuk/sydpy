@@ -25,7 +25,7 @@ class Sequencer(Module):
     def set_seq(self, sequence, **config):
         self.inst(sequence, 'sequence', seq_o=self.seq_o,  **config)
 
-    @arch_def
+    #@arch_def
     def dflt(self, seq_o, seq_module=None):
         
         self.seq_o = seq_o

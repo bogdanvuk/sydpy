@@ -61,6 +61,6 @@ class BasicRndSeq(BasicSeq):
             
             yield (next_seq, next_delay)
     
-    @arch_def
+    #@arch_def
     def tlm(self, seq_o, delay=None, seed=None, flow_ctrl=True, init=None):
         BasicSeq.tlm(self, seq_o, self.rnd_gen(seq_o, delay, seed, init), flow_ctrl)
