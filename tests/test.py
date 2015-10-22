@@ -11,20 +11,18 @@ from sydpy.module import proc, Module
 class Generator(Module):
     def build(self):
         self.chout.drive(isig(self, "sout", dtype=bit8, dflt=0))
-
-    @proc
+        self.val = 0
+        
+    @proc(Delay(20))
     def gen(self):
-        val = 0
-        while(1):
-            val += 1
-            self.sout.write(val)
-            self.sim.wait(Delay(20))
+        self.val += 1
+        self.sout.write(self.val)
     
 class Sink(Module):
     def build(self):
         self.chin.sink(isig(self, "sin", dtype=bit8, dflt=0))
         
-    @proc
+    @proc()
     def psink(self):
         print(self.find('/sim').time, ': ', self.sin.read())
     
