@@ -7,7 +7,7 @@ class Process(Unit, greenlet):
     
     Class turns function in the greenlet task.""" 
    
-    def __init__(self, parent, func, senslist):
+    def __init__(self, parent, func, senslist=None):
         self.func = func
 #         self.func_params = kwargs
 #         self.arch = self.module.current_arch
@@ -18,7 +18,7 @@ class Process(Unit, greenlet):
 
         self.senslist = senslist
         if not self.senslist:
-            (self.senslist, outputs) = getio_vars(func, intfs=self._parent._intfs)
+            (self.senslist, outputs) = getio_vars(func, intfs=self._parent._get_intfs())
 
         self._exit_func = None 
         

@@ -8,15 +8,15 @@ class Module(Unit):
         Unit.__init__(self, parent, name, **kwargs)
         self.sim = self.find('/sim')
         
-        self._intfs = self.findall(of_type=Intf)
-        
-        for attr in dir(self):
-            if not attr.startswith('_'):
-                func = getattr(self, attr)
-                if callable(func):
-                    if hasattr(func, "_senslist"):
-                        self.add(Process(self, func, func._senslist))
-        
+#         for attr in dir(self):
+#             if not attr.startswith('_'):
+#                 func = getattr(self, attr)
+#                 if callable(func):
+#                     if hasattr(func, "_senslist"):
+#                         self.add(Process(self, func, func._senslist))
+
+    def _get_intfs(self):
+        return self.findall(of_type=Intf)
 
 def proc(*args):
     """This process decorator instantiates the Process wrapper object for the process."""

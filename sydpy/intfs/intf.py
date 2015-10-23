@@ -43,3 +43,16 @@ class Intf(object):
             return self.e.event_def.unsubscribe(proc)
         else:
             return getattr(self.e, event).subscribe(proc)
+
+    def __str__(self):
+        return str(self.read())
+
+    def __ilshift__(self, val):
+        self.write(val)
+        return self
+
+    def __add__(self, other):
+        return self.read() + other
+
+    def __radd__(self, other):
+        return other + self.read()

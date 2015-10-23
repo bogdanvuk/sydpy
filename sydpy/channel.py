@@ -30,14 +30,20 @@ class Channel(Unit):
         self.master = None
         Unit.__init__(self, parent, name)
     
-    def drive(self, intf):
+    def __irshift__(self, other):
+        self.sink(other)
+    
+    def sink(self, intf):
         if self.master is not None:
             raise Exception("Can only have one master per channel!")
         
         self.master = intf
         intf._mch = self
-        
-    def sink(self, intf):
+    
+    def __ilshift__(self, other):
+        self.drive(other)
+    
+    def drive(self, intf):
         self.slaves.append(intf)
         intf._sch = self
 
