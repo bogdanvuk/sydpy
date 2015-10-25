@@ -1,20 +1,23 @@
-from sydpy.component import Component
+from sydpy.component import Component, compinit
 from sydpy._signal import Signal
 from sydpy._event import EventSet
 from sydpy.unit import Unit
 from sydpy.intfs.intf import Intf
 
-class isig(Unit, Intf):
+class isig(Component, Intf):
     _intf_type = 'isig'
 #     def __init__(self, parent, name, dtype, dflt):
 #         Unit.__init__(self, name)
 #         self.dtype = dtype
 #         self.dflt = dflt
 
-    def build(self):
+    @compinit
+    def __init__(self, name, dtype, dflt):
         self._mch = None
         self._sch = None
         self._sig = None
+        self.dtype = dtype
+        self.dflt = dflt
         
     def con_driver(self, intf):
         pass

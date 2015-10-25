@@ -1,19 +1,20 @@
-from sydpy.unit import Unit
 from sydpy.process import Process
 from sydpy.intfs.intf import Intf
+from sydpy.component import Component
 
-class Module(Unit):
+class Module(Component):
     
-    def __init__(self, parent, name, **kwargs):
-        Unit.__init__(self, parent, name, **kwargs)
-        self.sim = self.find('/sim')
-        
 #         for attr in dir(self):
 #             if not attr.startswith('_'):
 #                 func = getattr(self, attr)
 #                 if callable(func):
 #                     if hasattr(func, "_senslist"):
 #                         self.add(Process(self, func, func._senslist))
+
+    def proc(self, name, senslist = None):
+        proc = Process(self.name + '.' + name, getattr(self, name), senslist)
+        setattr(self, name, proc)
+        return proc
 
     def _get_intfs(self):
         return self.findall(of_type=Intf)

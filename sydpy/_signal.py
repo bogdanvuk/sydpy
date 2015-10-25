@@ -16,12 +16,11 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 from sydpy._event import EventSet, Event
+from sydpy.component import RequiredFeature
 
 """Module implements Signal class"""
 
 from sydpy._delay import Delay 
-from sydpy._component import Component
-from sydpy._simulator import simupdate, simwait
 from enum import Enum
 
 class SignalMem(Enum):
@@ -41,6 +40,9 @@ class SignalQueueEmpty(Exception):
 
 class Signal(object):
     """Signal is smallest unit that provides evaluate-update mechanism for data."""
+    
+    sim = RequiredFeature('sim')
+    
     def __init__(self, val=None, event_set=None, trace=False): 
         """"Create a new Signal.
         
@@ -62,10 +64,10 @@ class Signal(object):
         for the value to become available."""
         
         if not self.mem:
-            simwait(self.e.enqueued)
+            self.sim.wait(self.e.enqueued)
         
-        simupdate(self)
-        simwait(self.e.updated)
+        self.sim.update(self)
+        self.sim.wait(self.e.updated)
             
         return self._val
     
@@ -74,7 +76,7 @@ class Signal(object):
         SignalQueueEmpty exception. """
         
         if self.mem:
-            simupdate(self)
+            self.sim.update(self)
                         
             return self.mem[0]
         else:
@@ -85,7 +87,7 @@ class Signal(object):
         trigger the update."""
         
         while self.mem:
-            simwait(self.e.updated)
+            self.sim.wait(self.e.updated)
         
         self.push(val)
            
@@ -99,12 +101,12 @@ class Signal(object):
     def write(self, val):
         """Write a new value to the signal."""
         self._next = val
-        simupdate(self)
+        self.sim.update(self)
         
     def write_after(self, val, delay):
         """Write a new value to the signal after a certain delay."""
         if delay:
-            simwait(Delay(delay))
+            self.sim.wait(Delay(delay))
 
         self.write(val)
     

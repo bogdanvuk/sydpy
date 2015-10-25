@@ -15,14 +15,14 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
-from sydpy._util._injector import RequiredFeature
+from sydpy.component import RequiredFeature
 
 """Module implements Delay class"""
 
 # from sydpy._simulator import simdelay_add, simdelay_pop
 
 class Delay(object):
-    sim = RequiredFeature('Simulator')
+    sim = RequiredFeature('sim')
     
     """Class to model delay events."""
     def unsubscribe(self, obj):

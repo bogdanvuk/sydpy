@@ -15,20 +15,19 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
-from sydpy.unit import Unit
 
 """Module that implements the Channel class."""
 
-from sydpy._component import Component
+from sydpy.component import Component, compinit
 
-class Channel(Unit):
+class Channel(Component):
     """Instances of this class allow the information they carry to be read
     and written in various interfaces (by various protocols)"""
-    
-    def __init__(self, parent, name):
+
+    @compinit    
+    def __init__(self, name):
         self.slaves = []
         self.master = None
-        Unit.__init__(self, parent, name)
     
     def __irshift__(self, other):
         self.sink(other)

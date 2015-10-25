@@ -1,4 +1,4 @@
-from sydpy.component import Component
+from sydpy.component import Component, compinit, RequiredFeature, system
 from sydpy.unit import Unit
 from sydpy._util._util import class_load, unif_enum
 
@@ -56,14 +56,14 @@ class SimEvent(list):
     def __repr__(self):
         return "Event(%s)" % list.__repr__(self)
 
-class Scheduler(Unit, greenlet):
+class Scheduler(Component, greenlet):
     """Simulator scheduler kernel greenlet wrapper"""
     
-    def __init__(self, sim):
+    sim = RequiredFeature('sim')
+    
+    @compinit
+    def __init__(self, name, log_task_switching = False):
         greenlet.__init__(self)
-        self.log_task_switching = False
-        self.sim = sim
-        Unit.__init__(self, sim, "sched")
     
     def run(self, duration = 0, quiet = 0):
         self.sim._run(duration, quiet)
@@ -85,20 +85,15 @@ class Scheduler(Unit, greenlet):
             print("I Threw!")
             return
             
-class Simulator(Unit):
+class Simulator(Component):
     '''Simulator kernel.'''
 
-    def __init__(self, parent):
-        self.max_delta_count = 1000
-        Unit.__init__(self, parent, "sim")
+    @compinit
+    def __init__(self, name, top=None, duration = 0, max_delta_count=1000):
+        self.inst('top', class_load(top))
+        self.inst('sched', Scheduler)
 
-    def build(self):
-        if hasattr(self, 'top'):
-            self.top = class_load(self.top)(self._parent, 'top')
-        
-        self.add(Scheduler(self))
-        features.Provide('Simulator', self)
-                # Create events for Simulator extensions to hook to.
+        # Create events for Simulator extensions to hook to.
         self.events = {
                        'init_start'     : SimEvent(),
                        'run_start'      : SimEvent(),
@@ -109,15 +104,16 @@ class Simulator(Unit):
                        'timestep_start' : SimEvent(),
                        'timestep_end'   : SimEvent(),
                        }
+        #         Unit.__init__(self, parent, "sim")
     
     def gen_drivers(self):
-        for _, comp in self.top.index().items():
+        for _, comp in system.findall(self.name + '.top*').items():
             if hasattr(comp, '_gen_drivers'):
                 comp._gen_drivers()
 
     def find_sources(self):
         finished_all = True
-        for _, comp in self.top.index().items():
+        for _, comp in system.findall(self.name + '.top*').items():
             if hasattr(comp, '_find_sources'):
                 finished = comp._find_sources()
                 if not finished:
@@ -187,7 +183,7 @@ class Simulator(Unit):
         self._ready_pool = set()
         self._proc_pool = []
         
-        procs = self.top.findall(of_type=Process)
+        procs = system.findall(self.name + '.top*', of_type=Process)
         for qname, proc in procs.items():
             self.proc_reg(proc)
         
@@ -289,6 +285,9 @@ class Simulator(Unit):
         """Register a process with simulator kernel."""
         self._ready_pool.add(proc)
         self._proc_pool.append(proc)
+    
+    def update (self, sig):
+        self.update_pool.add(sig)
     
     def wait(self, events = None):
         """Delay process execution by waiting for events."""

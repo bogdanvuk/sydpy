@@ -15,8 +15,7 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
-from sydpy._util._injector import RequiredFeature
-
+from sydpy.component import RequiredFeature
 """Module implements Event and EventSet classes"""
 
 from sydpy._util._util import key_repr
@@ -60,7 +59,7 @@ class EventSet(object):
         return self.events[key]
 
 class Event(object):
-    sim = RequiredFeature('Simulator')
+    sim = RequiredFeature('sim')
 
     """Class that allows processes to register to it. When the Event is 
     triggered, it activates all processes that registered to it."""

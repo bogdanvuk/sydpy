@@ -157,7 +157,8 @@ def get_arch_args(arch_func):
 def getio_vars(func, intfs):
         
 #     varnames = func.__code__.co_varnames
-    symdict = {intf.name: intf for _,intf in intfs.items()}
+#     symdict = {intf.name: intf for _,intf in intfs.items()}
+    symdict = intfs
 
 #     try:    
 #         if func.arch == True:
@@ -180,13 +181,13 @@ def getio_vars(func, intfs):
     s = inspect.getsource(func)
     tree = ast.parse(_dedent(s))
 
-    from astmonkey import visitors, transformers
-    
-    node = transformers.ParentNodeTransformer().visit(tree)
-    visitor = visitors.GraphNodeVisitor()
-    visitor.visit(node)
-    
-    visitor.graph.write_png('graph.png')
+#     from astmonkey import visitors, transformers
+#     
+#     node = transformers.ParentNodeTransformer().visit(tree)
+#     visitor = visitors.GraphNodeVisitor()
+#     visitor.visit(node)
+#     
+#     visitor.graph.write_png('graph.png')
 
     v = _SigNameVisitor(symdict)
     v.visit(tree)
