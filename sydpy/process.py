@@ -12,12 +12,12 @@ class Process(Component, greenlet):
     sim = RequiredFeature('sim')
    
     @compinit
-    def __init__(self, name, func, senslist=None):
+    def __init__(self, func, senslist=None, **kwargs):
         self.func = func
 
         self.senslist = senslist
         if not self.senslist:
-            parent_name = '.'.join(name.split('.')[:-1])
+            parent_name = '.'.join(self.name.split('.')[:-1])
             qname_intfs = system.findall(parent_name + '.*', of_type=Intf)
             intfs = {}
             for k,v in qname_intfs.items():
@@ -26,7 +26,7 @@ class Process(Component, greenlet):
             (self.senslist, outputs) = getio_vars(func, intfs=intfs)
 
         self._exit_func = None 
-        
+        self.sim.proc_reg(self)
         greenlet.__init__(self)
     
     def run(self):

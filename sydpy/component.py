@@ -1,5 +1,6 @@
 import fnmatch
 import inspect
+import re
 # from sydpy.sydpy import system
 
 class System(object):
@@ -10,6 +11,11 @@ class System(object):
         self.index = {}
        
     def __getitem__(self, path):
+        if path not in self.index:
+            attr_name = path.split('.', 1)[0]
+            val = self.get_config('', attr_name)
+            setattr(self, attr_name, val(attr_name))
+            
         return self.index[path]
     
     def __setitem__(self, path, val):
@@ -50,7 +56,8 @@ class System(object):
         self.config = config
         params = self.get_all_attrs('')
         for p,v in params.items():
-            setattr(self, p, v(p))
+            if p not in self.index:
+                setattr(self, p, v(p))
     
     def get_config(self, comp_qualified_name, attr_name):
         if comp_qualified_name:
@@ -73,7 +80,7 @@ class System(object):
                 # if there exists clear compinit.attribute syntax for the conf
                 if len(names) > 1:
                     # we are listing the attributes, so no wildcards allowed
-                    if names[1].isalnum() and fnmatch.fnmatch(comp_qualified_name, names[0]):
+                    if re.match(r'\w+$', names[1]) and fnmatch.fnmatch(comp_qualified_name, names[0]):
                         attrs[names[1]] = conf[1]
             else:
                 # we are listing the attributes, so no wildcards allowed
@@ -138,10 +145,13 @@ def compinit(func):
         
         system[name] = self
         
-        params = all2kwargs(func, self, name, *args, **kwargs)
+        sys_conf = system.get_all_attrs(name)
         
-        system.update_params(name, params)
+        params = all2kwargs(func, self, *args, name=name, **kwargs)
         
+        for name, val in sys_conf.items():
+            params[name] = val
+            
         arg_names, varargs, varkw, defaults = (
                                                inspect.getargspec(func))
         
@@ -149,7 +159,7 @@ def compinit(func):
             for arg_name, _ in zip(reversed(arg_names), reversed(defaults)):
                 setattr(self, arg_name, params[arg_name])
     
-        Component.__init__(self, name)
+        self.__class__.__bases__[0].__init__(**params)
         func(**params)
     
     return wrapper
@@ -159,7 +169,7 @@ class Component(object):
     object hierarchy.    
     """
     
-    def __init__(self, name):
+    def __init__(self, name, **kwargs):
         """Instantiate a new compinit
         
         name    -- The name of the compinit
@@ -181,7 +191,7 @@ class Component(object):
         except KeyError: 
             pass
         
-        obj = cls(self.name + '.' + name, *args, **kwargs)
+        obj = cls(self.name + '.' + name, *args , **kwargs)
         setattr(self, name, obj)
         
         return obj

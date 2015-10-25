@@ -25,7 +25,7 @@ class Channel(Component):
     and written in various interfaces (by various protocols)"""
 
     @compinit    
-    def __init__(self, name):
+    def __init__(self, **kwargs):
         self.slaves = []
         self.master = None
     

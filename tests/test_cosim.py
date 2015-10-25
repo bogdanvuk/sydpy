@@ -8,6 +8,8 @@ from sydpy._delay import Delay
 from sydpy.module import proc, Module
 from sydpy.process import Process
 from sydpy.simulator import Simulator
+from sydpy.cosim import Cosim
+from sydpy.xsim import XsimIntf
 
 class Generator(Component):
     
@@ -19,14 +21,10 @@ class Generator(Component):
     def gen(self):
         self.sout <<= self.sout + 1
      
-class Sink(Component):
+class Sink(Cosim):
     @compinit
     def __init__(self, chin, **kwargs):
         chin >>= self.inst('sin', isig, dtype=bit8, dflt=0)
-        self.inst('p_sink', Process, self.psink)
-
-    def psink(self):
-        print(system['sim'].time, ': ', self.sin)
      
 class TestDff(Module):
     @compinit
@@ -37,6 +35,8 @@ class TestDff(Module):
 
 conf = [
         ('sim'              , Simulator),
+        ('xsim'             , XsimIntf),
+        ('sim.top.*.cosim_intf', 'xsim'),
         ('sim.top'          , TestDff),
         ('sim.duration'     , 100)
         ]

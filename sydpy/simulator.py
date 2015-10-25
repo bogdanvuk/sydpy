@@ -62,7 +62,7 @@ class Scheduler(Component, greenlet):
     sim = RequiredFeature('sim')
     
     @compinit
-    def __init__(self, name, log_task_switching = False):
+    def __init__(self, log_task_switching = False, **kwargs):
         greenlet.__init__(self)
     
     def run(self, duration = 0, quiet = 0):
@@ -89,9 +89,12 @@ class Simulator(Component):
     '''Simulator kernel.'''
 
     @compinit
-    def __init__(self, name, top=None, duration = 0, max_delta_count=1000):
-        self.inst('top', class_load(top))
-        self.inst('sched', Scheduler)
+    def __init__(self, top=None, duration = 0, max_delta_count=1000, **kwargs):
+        self.delay_pool = {}
+        self.trig_pool = set()
+        self.update_pool = set()     
+        self._ready_pool = set()
+        self._proc_pool = []
 
         # Create events for Simulator extensions to hook to.
         self.events = {
@@ -101,9 +104,14 @@ class Simulator(Component):
                        'delta_start'    : SimEvent(),
                        'post_evaluate'  : SimEvent(),
                        'delta_end'      : SimEvent(),
+                       'delta_settled'  : SimEvent(),
                        'timestep_start' : SimEvent(),
                        'timestep_end'   : SimEvent(),
                        }
+        
+        self.inst('top', class_load(top))
+        self.inst('sched', Scheduler)
+
         #         Unit.__init__(self, parent, "sim")
     
     def gen_drivers(self):
@@ -161,7 +169,10 @@ class Simulator(Component):
                     self.events['run_end'](self)
                     self._finished = True
                     raise Exception("Maximum number of delta cycles reached: {0}".format(self.max_delta_count))
-                 
+                
+                if not (self._ready_pool or self.trig_pool):
+                    self.events['delta_settled'](self)
+                
 #                 print('-----------------------------------------')
                  
             self.events['timestep_end'](self.time, self)
@@ -177,15 +188,6 @@ class Simulator(Component):
         
         self.max_time = None
         self.time = 0
-        self.delay_pool = {}
-        self.trig_pool = set()
-        self.update_pool = set()     
-        self._ready_pool = set()
-        self._proc_pool = []
-        
-        procs = system.findall(self.name + '.top*', of_type=Process)
-        for qname, proc in procs.items():
-            self.proc_reg(proc)
         
         self.gen_drivers()
         

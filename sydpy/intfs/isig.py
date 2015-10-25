@@ -12,7 +12,7 @@ class isig(Component, Intf):
 #         self.dflt = dflt
 
     @compinit
-    def __init__(self, name, dtype, dflt):
+    def __init__(self, dtype, dflt, **kwargs):
         self._mch = None
         self._sch = None
         self._sig = None
