@@ -5,11 +5,11 @@ from sydpy.process import Process
 
 class Cosim(Component):
     
-    def __init__(self, cosim_intf, module_name=None, **kwargs):
+    def __init__(self, cosim_intf, fileset = [], module_name=None, **kwargs):
         Component.__init__(self, **kwargs)
         self.cosim_intf = system[cosim_intf]
         self.module_name = module_name
-#         self.fileset = fileset
+        self.fileset = fileset
 
         if self.module_name is None:
             self.module_name = self.name.rsplit('.', 1)[-1]
@@ -27,7 +27,7 @@ class Cosim(Component):
             else:
                 self.outputs[name.rsplit('.',1)[-1]] = intf
         
-        self.inst('proc', Process, self.proc, self.outputs.values())
+        self.inst('proc', Process, self.proc, self.inputs.values())
         
     def proc(self):
         self.cosim_intf.updated(self)

@@ -9,6 +9,7 @@ import pexpect
 import sys
 import logging
 from sydpy.unit import Unit
+from sydpy.component import Component, compinit
 
 def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=1, max_fails=3):
     """Set TCP keepalive on an open socket.
@@ -22,15 +23,28 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=1, max_fails=3):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
-class Server(Unit):
+class Server(Component):
     '''Simulator kernel.'''
 
-    def __init__(self, parent):
-        self.host = ''
-        self.port = 60000
-        Unit.__init__(self, parent, "srv")
+    @compinit
+    def __init__(self, host = '', port=60000, **kwargs):
         self.client = None
-
+        self.sock = None
+        backlog = 0
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.bind((self.host,self.port))
+        except Exception as e:
+            raise Exception("Server port in use.")
+        
+#         logging.info('Socket port opened.')
+        
+        try:
+            self.sock.listen(backlog)
+            set_keepalive_linux(self.sock)
+        except:
+            self.sock.close()
+    
     def connect(self):
         self.client, address = self.sock.accept()
 #         logging.info('Client connected.')
@@ -52,20 +66,9 @@ class Server(Unit):
             data = self.client.recv(size)
 
         return data.decode()
-
-    def build(self):
-        backlog = 0
+            
+    def __del__(self):
         try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.bind((self.host,self.port))
-            break
-        except Exception as e:
-            raise Exception("Server port in use.")
-        
-#         logging.info('Socket port opened.')
-        
-        try:
-            self.sock.listen(backlog)
-            set_keepalive_linux(self.sock)
-        except:
             self.sock.close()
+        except:
+            pass

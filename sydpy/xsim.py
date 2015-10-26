@@ -2,6 +2,8 @@ from sydpy.component import Component, compinit, RequiredFeature
 import string
 import os
 import itertools
+from subprocess import Popen, PIPE
+
 wrapper_tmpl = string.Template("""
 module wrap();
 
@@ -20,6 +22,7 @@ module wrap();
     always #1 begin
         automatic integer vals_read;
         automatic string   strimp;
+        automatic integer  delay;
         
         delay = xsimintf_wait();
         #delay;
@@ -51,14 +54,26 @@ module_inst_tmpl = string.Template("""
 
 port_map_tmpl = string.Template(".${port_name} (${signal_name})")
 
+def shell(cmd):
+    print(' '.join(cmd))
+    p = Popen(' '.join(cmd), shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    out, err = p.communicate()
+    print("Return code: ", p.returncode)
+    print(out.rstrip(), err.rstrip())
+
 class XsimIntf(Component):
 
     sim = RequiredFeature('sim')
+    server = RequiredFeature('server')
 
     @compinit
     def __init__(self, builddir='.', **kwargs):
         self.cosim_pool = []
         self.sim.events['run_start'].append(self.sim_run_start)
+        self.sim.events['run_end'].append(self.sim_run_end)
+        self.sim.events['delta_settled'].append(self.sim_delta_settled)
+        self.sim.events['timestep_start'].append(self.sim_timestep_start)
+        
     
     def render_module_inst(self, cosim):
         port_map = []
@@ -84,19 +99,11 @@ class XsimIntf(Component):
         import_str_format  = ['%d']*len(self.inputs)
         export_str_format  = ['%d']*len(self.outputs)
 
-        print(dict(port_definition='\n  '.join(ports_definition),
-                                       import_str_format=' '.join(['"'] + import_str_format + ['"']),
-                                       in_port_list = ','.join(sorted(self.inputs.keys())),
-                                       export_str_format=' '.join(['"'] + export_str_format + ['"']),
-                                       out_port_list = ','.join(sorted(self.outputs.keys())),
-                                       module_instantiation = '\n\n'.join(module_insts)
-                                       ))
-        
         return wrapper_tmpl.substitute(
                                        port_definition='\n  '.join(ports_definition),
-                                       import_str_format=' '.join(['"'] + import_str_format + ['"']),
+                                       import_str_format='"{0}"'.format(' '.join(import_str_format)),
                                        in_port_list = ','.join(sorted(self.inputs.keys())),
-                                       export_str_format=' '.join(['"'] + export_str_format + ['"']),
+                                       export_str_format='"{0}"'.format(' '.join(export_str_format)),
                                        out_port_list = ','.join(sorted(self.outputs.keys())),
                                        module_instantiation = '\n\n'.join(module_insts)
                                        )
@@ -104,21 +111,55 @@ class XsimIntf(Component):
     def resolve_cosims(self):
         self.inputs = {}
         self.outputs = {}
+        self.fileset = []
         for cosim in self.cosim_pool:
             cosim.resolve()
             self.inputs.update({'_'.join([cosim.module_name, k]):v for k,v in cosim.inputs.items()})
             self.outputs.update({'_'.join([cosim.module_name, k]):v for k,v in cosim.outputs.items()})
+            self.fileset.extend(cosim.fileset)
     
     def sim_run_start(self, sim):
+        self.cosim_time = 0
         self.resolve_cosims()
+        os.makedirs(self.builddir, exist_ok=True)
+        os.chdir(self.builddir)
         
 #         print(self.render_wrapper())
         text = self.render_wrapper()
-        with open(os.path.join(self.builddir, "wrapper.sv"), "w") as text_file:
+#         with open(os.path.join(self.builddir, "wrapper.sv"), "w") as text_file:
+        with open("wrapper.sv", "w") as text_file:
             text_file.write(text)
+
+#         self.fileset.append(os.path.join(self.builddir, "wrapper.sv"))
+        self.fileset.append('wrapper.sv')
+
+        shell(cmd = ['xvlog', '-sv'] + self.fileset)
+        shell(cmd = ['xelab', '-m64', '-svlog', 'wrapper.sv', '-sv_root', '/home/bvukobratovic/projects/sydpy/intf/xsim/xsim.dir/xsc', '-sv_lib', 'dpi', '-debug', 'all'])
+#         shell(cmd = ['xsim', 'work.wrap', '-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl'])
+        cmd = ['xsim', 'work.wrap', '-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl']
+        self.xsim_proc = Popen(' '.join(cmd), shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    
+    def sim_run_end(self, sim):
+        self.xsim_proc.terminate()
+    
+    def sim_timestep_start(self, time, sim):
+        self.cosim_time = time
+    
+    def sim_delta_settled(self, sim):
+        if self.update:
+            pass
         
+    def updated(self, cosim):
+        self.update = True
+    
     def register(self, cosim):
         self.cosim_pool.append(cosim)
+        
+    def __del__(self):
+        try:
+            self.xsim_proc.terminate()
+        except:
+            pass
 
 def generate_wrapper(modules):
     for name, port_list in modules:

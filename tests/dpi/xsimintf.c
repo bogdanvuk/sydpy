@@ -4,7 +4,7 @@
 
 FILE *fp = NULL;
 int cur_time = 0;
-char import_buf[1024] = "";
+char import_buf[8192] = "";
 
 DPI_DLLESPEC void xsimintf_init()
 {

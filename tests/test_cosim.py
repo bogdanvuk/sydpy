@@ -10,6 +10,7 @@ from sydpy.process import Process
 from sydpy.simulator import Simulator
 from sydpy.cosim import Cosim
 from sydpy.xsim import XsimIntf
+from sydpy.server import Server
 
 class Generator(Component):
     
@@ -23,20 +24,26 @@ class Generator(Component):
      
 class Sink(Cosim):
     @compinit
-    def __init__(self, chin, **kwargs):
-        chin >>= self.inst('sin', isig, dtype=bit8, dflt=0)
+    def __init__(self, chin, chout, **kwargs):
+        chin >>= self.inst('din', isig, dtype=bit8, dflt=0)
+        chout <<= self.inst('dout', isig, dtype=bit8, dflt=0)
      
 class TestDff(Module):
     @compinit
     def __init__ (self, name):
-        self.inst('ch_gen', Channel)
+        for ch in ['ch_gen', 'ch_out']:
+            self.inst(ch, Channel)
+            
         self.inst('gen', Generator, chout=self.ch_gen, dtype=bit8)
-        self.inst('sink', Sink, chin=self.ch_gen)
+        self.inst('sink', Sink, chin=self.ch_gen, chout=self.ch_out)
 
 conf = [
         ('sim'              , Simulator),
         ('xsim'             , XsimIntf),
+        ('server'           , Server),
+        ('xsim.builddir'    , './xsim'),
         ('sim.top.*.cosim_intf', 'xsim'),
+        ('sim.top.sink.fileset', ['/home/bvukobratovic/projects/sydpy/tests/sink.sv']),
         ('sim.top'          , TestDff),
         ('sim.duration'     , 100)
         ]
