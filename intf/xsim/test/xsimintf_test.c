@@ -549,6 +549,33 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_GetAttrStr(PyObject* obj, PyObject
 
 static PyObject *__Pyx_GetBuiltinName(PyObject *name);
 
+static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name);
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg, PyObject *kw);
+#else
+#define __Pyx_PyObject_Call(func, arg, kw) PyObject_Call(func, arg, kw)
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg);
+#endif
+
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg);
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func);
+#else
+#define __Pyx_PyObject_CallNoArg(func) __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL)
+#endif
+
+static CYTHON_INLINE void __Pyx_ErrRestore(PyObject *type, PyObject *value, PyObject *tb);
+static CYTHON_INLINE void __Pyx_ErrFetch(PyObject **type, PyObject **value, PyObject **tb);
+
+static void __Pyx_WriteUnraisable(const char *name, int clineno,
+                                  int lineno, const char *filename,
+                                  int full_traceback, int nogil);
+
 typedef struct {
     int code_line;
     PyCodeObject* code_object;
@@ -587,13 +614,13 @@ static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
 
 static int __Pyx_check_binary_version(void);
 
-static int __Pyx_ExportFunction(const char *name, void (*f)(void), const char *sig);
-
 static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 
 
 /* Module declarations from 'xsimintf_test' */
-static int decode_command(void); /*proto*/
+__PYX_EXTERN_C DL_EXPORT(void) cython_get_new_message(void); /*proto*/
+__PYX_EXTERN_C DL_EXPORT(void) cython_post_new_message(void); /*proto*/
+__PYX_EXTERN_C DL_EXPORT(void) cython_print(char const *); /*proto*/
 static CYTHON_INLINE PyObject *__Pyx_carray_to_py_char____32__(char (*)[32], Py_ssize_t); /*proto*/
 static CYTHON_INLINE PyObject *__Pyx_carray_to_tuple_char____32__(char (*)[32], Py_ssize_t); /*proto*/
 #define __Pyx_MODULE_NAME "xsimintf_test"
@@ -604,6 +631,7 @@ static PyObject *__pyx_builtin_range;
 static char __pyx_k_cmd[] = "cmd";
 static char __pyx_k_end[] = "end";
 static char __pyx_k_msg[] = "msg";
+static char __pyx_k_data[] = "data";
 static char __pyx_k_file[] = "file";
 static char __pyx_k_main[] = "__main__";
 static char __pyx_k_name[] = "name";
@@ -614,48 +642,76 @@ static char __pyx_k_range[] = "range";
 static char __pyx_k_decode[] = "decode";
 static char __pyx_k_params[] = "params";
 static char __pyx_k_Hello_s[] = "Hello %s!";
+static char __pyx_k_sv_init[] = "sv_init";
 static char __pyx_k_pass_msg[] = "pass_msg";
 static char __pyx_k_read_msg[] = "read_msg";
+static char __pyx_k_sv_delay[] = "sv_delay";
+static char __pyx_k_callbacks[] = "callbacks";
 static char __pyx_k_param_cnt[] = "param_cnt";
-static char __pyx_k_get_cur_cmd[] = "get_cur_cmd";
+static char __pyx_k_sv_export[] = "sv_export";
+static char __pyx_k_sv_import[] = "sv_import";
+static char __pyx_k_get_recv_cmd[] = "get_recv_cmd";
 static char __pyx_k_say_hello_to[] = "say_hello_to";
 static char __pyx_k_xsimintf_test[] = "xsimintf_test";
+static char __pyx_k_command_handler[] = "command_handler";
+static char __pyx_k_get_new_message[] = "get_new_message";
+static char __pyx_k_post_new_message[] = "post_new_message";
 static char __pyx_k_data_projects_sydpy_intf_xsim_t[] = "/data/projects/sydpy/intf/xsim/test/xsimintf_test.pyx";
 static PyObject *__pyx_kp_s_Hello_s;
 static PyObject *__pyx_n_s_c_msg;
+static PyObject *__pyx_n_s_callbacks;
 static PyObject *__pyx_n_s_cmd;
+static PyObject *__pyx_n_s_command_handler;
+static PyObject *__pyx_n_s_data;
 static PyObject *__pyx_kp_s_data_projects_sydpy_intf_xsim_t;
 static PyObject *__pyx_n_s_decode;
 static PyObject *__pyx_n_s_end;
 static PyObject *__pyx_n_s_file;
-static PyObject *__pyx_n_s_get_cur_cmd;
+static PyObject *__pyx_n_s_get_new_message;
+static PyObject *__pyx_n_s_get_recv_cmd;
 static PyObject *__pyx_n_s_main;
 static PyObject *__pyx_n_s_msg;
 static PyObject *__pyx_n_s_name;
 static PyObject *__pyx_n_s_param_cnt;
 static PyObject *__pyx_n_s_params;
 static PyObject *__pyx_n_s_pass_msg;
+static PyObject *__pyx_n_s_post_new_message;
 static PyObject *__pyx_n_s_print;
 static PyObject *__pyx_n_s_range;
 static PyObject *__pyx_n_s_read_msg;
 static PyObject *__pyx_n_s_say_hello_to;
+static PyObject *__pyx_n_s_sv_delay;
+static PyObject *__pyx_n_s_sv_export;
+static PyObject *__pyx_n_s_sv_import;
+static PyObject *__pyx_n_s_sv_init;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_xsimintf_test;
 static PyObject *__pyx_pf_13xsimintf_test_say_hello_to(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_name); /* proto */
 static PyObject *__pyx_pf_13xsimintf_test_2pass_msg(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_msg); /* proto */
 static PyObject *__pyx_pf_13xsimintf_test_4read_msg(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
 static PyObject *__pyx_pf_13xsimintf_test_6decode(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
-static PyObject *__pyx_pf_13xsimintf_test_8get_cur_cmd(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
+static PyObject *__pyx_pf_13xsimintf_test_8get_recv_cmd(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
+static PyObject *__pyx_pf_13xsimintf_test_10command_handler(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
+static PyObject *__pyx_pf_13xsimintf_test_12sv_export(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_data); /* proto */
+static PyObject *__pyx_pf_13xsimintf_test_14sv_import(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
+static PyObject *__pyx_pf_13xsimintf_test_16sv_delay(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
+static PyObject *__pyx_pf_13xsimintf_test_18sv_init(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
 static PyObject *__pyx_tuple_;
 static PyObject *__pyx_tuple__3;
+static PyObject *__pyx_tuple__9;
 static PyObject *__pyx_codeobj__2;
 static PyObject *__pyx_codeobj__4;
 static PyObject *__pyx_codeobj__5;
 static PyObject *__pyx_codeobj__6;
 static PyObject *__pyx_codeobj__7;
+static PyObject *__pyx_codeobj__8;
+static PyObject *__pyx_codeobj__10;
+static PyObject *__pyx_codeobj__11;
+static PyObject *__pyx_codeobj__12;
+static PyObject *__pyx_codeobj__13;
 
-/* "xsimintf_test.pyx":15
- *     T_Command cur_cmd
+/* "xsimintf_test.pyx":22
+ * callbacks = {}
  * 
  * def say_hello_to(name):             # <<<<<<<<<<<<<<
  *     print("Hello %s!" % name)
@@ -685,20 +741,20 @@ static PyObject *__pyx_pf_13xsimintf_test_say_hello_to(CYTHON_UNUSED PyObject *_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("say_hello_to", 0);
 
-  /* "xsimintf_test.pyx":16
+  /* "xsimintf_test.pyx":23
  * 
  * def say_hello_to(name):
  *     print("Hello %s!" % name)             # <<<<<<<<<<<<<<
  * 
  * def pass_msg(bytes msg):
  */
-  __pyx_t_1 = __Pyx_PyString_Format(__pyx_kp_s_Hello_s, __pyx_v_name); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 16; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyString_Format(__pyx_kp_s_Hello_s, __pyx_v_name); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  if (__Pyx_PrintOne(0, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 16; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (__Pyx_PrintOne(0, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "xsimintf_test.pyx":15
- *     T_Command cur_cmd
+  /* "xsimintf_test.pyx":22
+ * callbacks = {}
  * 
  * def say_hello_to(name):             # <<<<<<<<<<<<<<
  *     print("Hello %s!" % name)
@@ -718,7 +774,7 @@ static PyObject *__pyx_pf_13xsimintf_test_say_hello_to(CYTHON_UNUSED PyObject *_
   return __pyx_r;
 }
 
-/* "xsimintf_test.pyx":18
+/* "xsimintf_test.pyx":25
  *     print("Hello %s!" % name)
  * 
  * def pass_msg(bytes msg):             # <<<<<<<<<<<<<<
@@ -736,7 +792,7 @@ static PyObject *__pyx_pw_13xsimintf_test_3pass_msg(PyObject *__pyx_self, PyObje
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("pass_msg (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_msg), (&PyBytes_Type), 1, "msg", 1))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_msg), (&PyBytes_Type), 1, "msg", 1))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 25; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_r = __pyx_pf_13xsimintf_test_2pass_msg(__pyx_self, ((PyObject*)__pyx_v_msg));
 
   /* function exit code */
@@ -759,17 +815,17 @@ static PyObject *__pyx_pf_13xsimintf_test_2pass_msg(CYTHON_UNUSED PyObject *__py
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("pass_msg", 0);
 
-  /* "xsimintf_test.pyx":21
+  /* "xsimintf_test.pyx":28
  *     global msg_buf
  *     global msg_buf_cnt
  *     cdef char* c_msg = msg             # <<<<<<<<<<<<<<
  *     strcpy(msg_buf, c_msg)
  *     msg_buf_cnt = len(msg)
  */
-  __pyx_t_1 = __Pyx_PyObject_AsString(__pyx_v_msg); if (unlikely((!__pyx_t_1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_AsString(__pyx_v_msg); if (unlikely((!__pyx_t_1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_c_msg = __pyx_t_1;
 
-  /* "xsimintf_test.pyx":22
+  /* "xsimintf_test.pyx":29
  *     global msg_buf_cnt
  *     cdef char* c_msg = msg
  *     strcpy(msg_buf, c_msg)             # <<<<<<<<<<<<<<
@@ -778,7 +834,7 @@ static PyObject *__pyx_pf_13xsimintf_test_2pass_msg(CYTHON_UNUSED PyObject *__py
  */
   strcpy(msg_buf, __pyx_v_c_msg);
 
-  /* "xsimintf_test.pyx":23
+  /* "xsimintf_test.pyx":30
  *     cdef char* c_msg = msg
  *     strcpy(msg_buf, c_msg)
  *     msg_buf_cnt = len(msg)             # <<<<<<<<<<<<<<
@@ -787,12 +843,12 @@ static PyObject *__pyx_pf_13xsimintf_test_2pass_msg(CYTHON_UNUSED PyObject *__py
  */
   if (unlikely(__pyx_v_msg == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 30; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
-  __pyx_t_2 = PyBytes_GET_SIZE(__pyx_v_msg); if (unlikely(__pyx_t_2 == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = PyBytes_GET_SIZE(__pyx_v_msg); if (unlikely(__pyx_t_2 == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 30; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   msg_buf_cnt = __pyx_t_2;
 
-  /* "xsimintf_test.pyx":18
+  /* "xsimintf_test.pyx":25
  *     print("Hello %s!" % name)
  * 
  * def pass_msg(bytes msg):             # <<<<<<<<<<<<<<
@@ -812,7 +868,7 @@ static PyObject *__pyx_pf_13xsimintf_test_2pass_msg(CYTHON_UNUSED PyObject *__py
   return __pyx_r;
 }
 
-/* "xsimintf_test.pyx":25
+/* "xsimintf_test.pyx":32
  *     msg_buf_cnt = len(msg)
  * 
  * def read_msg():             # <<<<<<<<<<<<<<
@@ -843,7 +899,7 @@ static PyObject *__pyx_pf_13xsimintf_test_4read_msg(CYTHON_UNUSED PyObject *__py
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("read_msg", 0);
 
-  /* "xsimintf_test.pyx":27
+  /* "xsimintf_test.pyx":34
  * def read_msg():
  *     global msg_buf
  *     return msg_buf             # <<<<<<<<<<<<<<
@@ -851,13 +907,13 @@ static PyObject *__pyx_pf_13xsimintf_test_4read_msg(CYTHON_UNUSED PyObject *__py
  * def decode():
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBytes_FromString(msg_buf); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBytes_FromString(msg_buf); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 34; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "xsimintf_test.pyx":25
+  /* "xsimintf_test.pyx":32
  *     msg_buf_cnt = len(msg)
  * 
  * def read_msg():             # <<<<<<<<<<<<<<
@@ -876,7 +932,7 @@ static PyObject *__pyx_pf_13xsimintf_test_4read_msg(CYTHON_UNUSED PyObject *__py
   return __pyx_r;
 }
 
-/* "xsimintf_test.pyx":29
+/* "xsimintf_test.pyx":36
  *     return msg_buf
  * 
  * def decode():             # <<<<<<<<<<<<<<
@@ -907,21 +963,21 @@ static PyObject *__pyx_pf_13xsimintf_test_6decode(CYTHON_UNUSED PyObject *__pyx_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("decode", 0);
 
-  /* "xsimintf_test.pyx":30
+  /* "xsimintf_test.pyx":37
  * 
  * def decode():
  *     return decode_command()             # <<<<<<<<<<<<<<
  * 
- * def get_cur_cmd():
+ * def get_recv_cmd():
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(decode_command()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 30; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(decode_command()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 37; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "xsimintf_test.pyx":29
+  /* "xsimintf_test.pyx":36
  *     return msg_buf
  * 
  * def decode():             # <<<<<<<<<<<<<<
@@ -940,66 +996,566 @@ static PyObject *__pyx_pf_13xsimintf_test_6decode(CYTHON_UNUSED PyObject *__pyx_
   return __pyx_r;
 }
 
-/* "xsimintf_test.pyx":32
+/* "xsimintf_test.pyx":39
  *     return decode_command()
  * 
- * def get_cur_cmd():             # <<<<<<<<<<<<<<
- *     global cur_cmd
- *     return cur_cmd
+ * def get_recv_cmd():             # <<<<<<<<<<<<<<
+ *     global recv_cmd
+ *     return recv_cmd
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_13xsimintf_test_9get_cur_cmd(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static PyMethodDef __pyx_mdef_13xsimintf_test_9get_cur_cmd = {"get_cur_cmd", (PyCFunction)__pyx_pw_13xsimintf_test_9get_cur_cmd, METH_NOARGS, 0};
-static PyObject *__pyx_pw_13xsimintf_test_9get_cur_cmd(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_13xsimintf_test_9get_recv_cmd(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyMethodDef __pyx_mdef_13xsimintf_test_9get_recv_cmd = {"get_recv_cmd", (PyCFunction)__pyx_pw_13xsimintf_test_9get_recv_cmd, METH_NOARGS, 0};
+static PyObject *__pyx_pw_13xsimintf_test_9get_recv_cmd(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("get_cur_cmd (wrapper)", 0);
-  __pyx_r = __pyx_pf_13xsimintf_test_8get_cur_cmd(__pyx_self);
+  __Pyx_RefNannySetupContext("get_recv_cmd (wrapper)", 0);
+  __pyx_r = __pyx_pf_13xsimintf_test_8get_recv_cmd(__pyx_self);
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_13xsimintf_test_8get_cur_cmd(CYTHON_UNUSED PyObject *__pyx_self) {
+static PyObject *__pyx_pf_13xsimintf_test_8get_recv_cmd(CYTHON_UNUSED PyObject *__pyx_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
-  __Pyx_RefNannySetupContext("get_cur_cmd", 0);
+  __Pyx_RefNannySetupContext("get_recv_cmd", 0);
 
-  /* "xsimintf_test.pyx":34
- * def get_cur_cmd():
- *     global cur_cmd
- *     return cur_cmd             # <<<<<<<<<<<<<<
+  /* "xsimintf_test.pyx":41
+ * def get_recv_cmd():
+ *     global recv_cmd
+ *     return recv_cmd             # <<<<<<<<<<<<<<
+ * 
+ * def command_handler():
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_convert__to_py_T_Command(cur_cmd); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 34; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __pyx_convert__to_py_T_Command(recv_cmd); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 41; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "xsimintf_test.pyx":32
+  /* "xsimintf_test.pyx":39
  *     return decode_command()
  * 
- * def get_cur_cmd():             # <<<<<<<<<<<<<<
- *     global cur_cmd
- *     return cur_cmd
+ * def get_recv_cmd():             # <<<<<<<<<<<<<<
+ *     global recv_cmd
+ *     return recv_cmd
  */
 
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("xsimintf_test.get_cur_cmd", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("xsimintf_test.get_recv_cmd", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
+}
+
+/* "xsimintf_test.pyx":43
+ *     return recv_cmd
+ * 
+ * def command_handler():             # <<<<<<<<<<<<<<
+ *     cmd_handler()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_13xsimintf_test_11command_handler(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyMethodDef __pyx_mdef_13xsimintf_test_11command_handler = {"command_handler", (PyCFunction)__pyx_pw_13xsimintf_test_11command_handler, METH_NOARGS, 0};
+static PyObject *__pyx_pw_13xsimintf_test_11command_handler(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("command_handler (wrapper)", 0);
+  __pyx_r = __pyx_pf_13xsimintf_test_10command_handler(__pyx_self);
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_13xsimintf_test_10command_handler(CYTHON_UNUSED PyObject *__pyx_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("command_handler", 0);
+
+  /* "xsimintf_test.pyx":44
+ * 
+ * def command_handler():
+ *     cmd_handler()             # <<<<<<<<<<<<<<
+ * 
+ * def sv_export(bytes data):
+ */
+  cmd_handler();
+
+  /* "xsimintf_test.pyx":43
+ *     return recv_cmd
+ * 
+ * def command_handler():             # <<<<<<<<<<<<<<
+ *     cmd_handler()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "xsimintf_test.pyx":46
+ *     cmd_handler()
+ * 
+ * def sv_export(bytes data):             # <<<<<<<<<<<<<<
+ *     return <bytes> xsimintf_export(<char*> data)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_13xsimintf_test_13sv_export(PyObject *__pyx_self, PyObject *__pyx_v_data); /*proto*/
+static PyMethodDef __pyx_mdef_13xsimintf_test_13sv_export = {"sv_export", (PyCFunction)__pyx_pw_13xsimintf_test_13sv_export, METH_O, 0};
+static PyObject *__pyx_pw_13xsimintf_test_13sv_export(PyObject *__pyx_self, PyObject *__pyx_v_data) {
+  CYTHON_UNUSED int __pyx_lineno = 0;
+  CYTHON_UNUSED const char *__pyx_filename = NULL;
+  CYTHON_UNUSED int __pyx_clineno = 0;
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("sv_export (wrapper)", 0);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_data), (&PyBytes_Type), 1, "data", 1))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_r = __pyx_pf_13xsimintf_test_12sv_export(__pyx_self, ((PyObject*)__pyx_v_data));
+
+  /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_13xsimintf_test_12sv_export(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_data) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  char *__pyx_t_1;
+  PyObject *__pyx_t_2 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("sv_export", 0);
+
+  /* "xsimintf_test.pyx":47
+ * 
+ * def sv_export(bytes data):
+ *     return <bytes> xsimintf_export(<char*> data)             # <<<<<<<<<<<<<<
+ * 
+ * def sv_import():
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = __Pyx_PyObject_AsString(__pyx_v_data); if (unlikely((!__pyx_t_1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 47; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyBytes_FromString(xsimintf_export(((char *)__pyx_t_1))); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 47; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_INCREF(((PyObject*)__pyx_t_2));
+  __pyx_r = __pyx_t_2;
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  goto __pyx_L0;
+
+  /* "xsimintf_test.pyx":46
+ *     cmd_handler()
+ * 
+ * def sv_export(bytes data):             # <<<<<<<<<<<<<<
+ *     return <bytes> xsimintf_export(<char*> data)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_AddTraceback("xsimintf_test.sv_export", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "xsimintf_test.pyx":49
+ *     return <bytes> xsimintf_export(<char*> data)
+ * 
+ * def sv_import():             # <<<<<<<<<<<<<<
+ *     return <bytes> xsimintf_import()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_13xsimintf_test_15sv_import(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyMethodDef __pyx_mdef_13xsimintf_test_15sv_import = {"sv_import", (PyCFunction)__pyx_pw_13xsimintf_test_15sv_import, METH_NOARGS, 0};
+static PyObject *__pyx_pw_13xsimintf_test_15sv_import(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("sv_import (wrapper)", 0);
+  __pyx_r = __pyx_pf_13xsimintf_test_14sv_import(__pyx_self);
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_13xsimintf_test_14sv_import(CYTHON_UNUSED PyObject *__pyx_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("sv_import", 0);
+
+  /* "xsimintf_test.pyx":50
+ * 
+ * def sv_import():
+ *     return <bytes> xsimintf_import()             # <<<<<<<<<<<<<<
+ * 
+ * def sv_delay():
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = __Pyx_PyBytes_FromString(xsimintf_import()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 50; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_INCREF(((PyObject*)__pyx_t_1));
+  __pyx_r = __pyx_t_1;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "xsimintf_test.pyx":49
+ *     return <bytes> xsimintf_export(<char*> data)
+ * 
+ * def sv_import():             # <<<<<<<<<<<<<<
+ *     return <bytes> xsimintf_import()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("xsimintf_test.sv_import", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "xsimintf_test.pyx":52
+ *     return <bytes> xsimintf_import()
+ * 
+ * def sv_delay():             # <<<<<<<<<<<<<<
+ *     return xsimintf_delay()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_13xsimintf_test_17sv_delay(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyMethodDef __pyx_mdef_13xsimintf_test_17sv_delay = {"sv_delay", (PyCFunction)__pyx_pw_13xsimintf_test_17sv_delay, METH_NOARGS, 0};
+static PyObject *__pyx_pw_13xsimintf_test_17sv_delay(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("sv_delay (wrapper)", 0);
+  __pyx_r = __pyx_pf_13xsimintf_test_16sv_delay(__pyx_self);
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_13xsimintf_test_16sv_delay(CYTHON_UNUSED PyObject *__pyx_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("sv_delay", 0);
+
+  /* "xsimintf_test.pyx":53
+ * 
+ * def sv_delay():
+ *     return xsimintf_delay()             # <<<<<<<<<<<<<<
+ * 
+ * def sv_init():
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = __Pyx_PyInt_From_int(xsimintf_delay()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 53; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "xsimintf_test.pyx":52
+ *     return <bytes> xsimintf_import()
+ * 
+ * def sv_delay():             # <<<<<<<<<<<<<<
+ *     return xsimintf_delay()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("xsimintf_test.sv_delay", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "xsimintf_test.pyx":55
+ *     return xsimintf_delay()
+ * 
+ * def sv_init():             # <<<<<<<<<<<<<<
+ *     return xsimintf_init()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_13xsimintf_test_19sv_init(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyMethodDef __pyx_mdef_13xsimintf_test_19sv_init = {"sv_init", (PyCFunction)__pyx_pw_13xsimintf_test_19sv_init, METH_NOARGS, 0};
+static PyObject *__pyx_pw_13xsimintf_test_19sv_init(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("sv_init (wrapper)", 0);
+  __pyx_r = __pyx_pf_13xsimintf_test_18sv_init(__pyx_self);
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_13xsimintf_test_18sv_init(CYTHON_UNUSED PyObject *__pyx_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("sv_init", 0);
+
+  /* "xsimintf_test.pyx":56
+ * 
+ * def sv_init():
+ *     return xsimintf_init()             # <<<<<<<<<<<<<<
+ * 
+ * cdef public void cython_get_new_message():
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = __Pyx_void_to_None(xsimintf_init()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 56; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "xsimintf_test.pyx":55
+ *     return xsimintf_delay()
+ * 
+ * def sv_init():             # <<<<<<<<<<<<<<
+ *     return xsimintf_init()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("xsimintf_test.sv_init", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "xsimintf_test.pyx":58
+ *     return xsimintf_init()
+ * 
+ * cdef public void cython_get_new_message():             # <<<<<<<<<<<<<<
+ *      callbacks['get_new_message']()
+ * 
+ */
+
+void cython_get_new_message(void) {
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("cython_get_new_message", 0);
+
+  /* "xsimintf_test.pyx":59
+ * 
+ * cdef public void cython_get_new_message():
+ *      callbacks['get_new_message']()             # <<<<<<<<<<<<<<
+ * 
+ * cdef public void cython_post_new_message():
+ */
+  __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_callbacks); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 59; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = PyObject_GetItem(__pyx_t_2, __pyx_n_s_get_new_message); if (unlikely(__pyx_t_3 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 59; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_3))) {
+    __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_3);
+    if (likely(__pyx_t_2)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+      __Pyx_INCREF(__pyx_t_2);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_3, function);
+    }
+  }
+  if (__pyx_t_2) {
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 59; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  } else {
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 59; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  }
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "xsimintf_test.pyx":58
+ *     return xsimintf_init()
+ * 
+ * cdef public void cython_get_new_message():             # <<<<<<<<<<<<<<
+ *      callbacks['get_new_message']()
+ * 
+ */
+
+  /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_WriteUnraisable("xsimintf_test.cython_get_new_message", __pyx_clineno, __pyx_lineno, __pyx_filename, 0, 0);
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+}
+
+/* "xsimintf_test.pyx":61
+ *      callbacks['get_new_message']()
+ * 
+ * cdef public void cython_post_new_message():             # <<<<<<<<<<<<<<
+ *      callbacks['post_new_message']()
+ * 
+ */
+
+void cython_post_new_message(void) {
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("cython_post_new_message", 0);
+
+  /* "xsimintf_test.pyx":62
+ * 
+ * cdef public void cython_post_new_message():
+ *      callbacks['post_new_message']()             # <<<<<<<<<<<<<<
+ * 
+ * cdef public void cython_print(const char* str):
+ */
+  __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_callbacks); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 62; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = PyObject_GetItem(__pyx_t_2, __pyx_n_s_post_new_message); if (unlikely(__pyx_t_3 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 62; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_3))) {
+    __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_3);
+    if (likely(__pyx_t_2)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+      __Pyx_INCREF(__pyx_t_2);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_3, function);
+    }
+  }
+  if (__pyx_t_2) {
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 62; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  } else {
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 62; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  }
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "xsimintf_test.pyx":61
+ *      callbacks['get_new_message']()
+ * 
+ * cdef public void cython_post_new_message():             # <<<<<<<<<<<<<<
+ *      callbacks['post_new_message']()
+ * 
+ */
+
+  /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_WriteUnraisable("xsimintf_test.cython_post_new_message", __pyx_clineno, __pyx_lineno, __pyx_filename, 0, 0);
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+}
+
+/* "xsimintf_test.pyx":64
+ *      callbacks['post_new_message']()
+ * 
+ * cdef public void cython_print(const char* str):             # <<<<<<<<<<<<<<
+ *      print(<bytes> str)
+ */
+
+void cython_print(char const *__pyx_v_str) {
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("cython_print", 0);
+
+  /* "xsimintf_test.pyx":65
+ * 
+ * cdef public void cython_print(const char* str):
+ *      print(<bytes> str)             # <<<<<<<<<<<<<<
+ */
+  __pyx_t_1 = __Pyx_PyBytes_FromString(__pyx_v_str); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 65; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  if (__Pyx_PrintOne(0, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 65; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "xsimintf_test.pyx":64
+ *      callbacks['post_new_message']()
+ * 
+ * cdef public void cython_print(const char* str):             # <<<<<<<<<<<<<<
+ *      print(<bytes> str)
+ */
+
+  /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_WriteUnraisable("xsimintf_test.cython_print", __pyx_clineno, __pyx_lineno, __pyx_filename, 0, 0);
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
 }
 
 /* "carray.to_py":112
@@ -1242,22 +1798,31 @@ static struct PyModuleDef __pyx_moduledef = {
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_s_Hello_s, __pyx_k_Hello_s, sizeof(__pyx_k_Hello_s), 0, 0, 1, 0},
   {&__pyx_n_s_c_msg, __pyx_k_c_msg, sizeof(__pyx_k_c_msg), 0, 0, 1, 1},
+  {&__pyx_n_s_callbacks, __pyx_k_callbacks, sizeof(__pyx_k_callbacks), 0, 0, 1, 1},
   {&__pyx_n_s_cmd, __pyx_k_cmd, sizeof(__pyx_k_cmd), 0, 0, 1, 1},
+  {&__pyx_n_s_command_handler, __pyx_k_command_handler, sizeof(__pyx_k_command_handler), 0, 0, 1, 1},
+  {&__pyx_n_s_data, __pyx_k_data, sizeof(__pyx_k_data), 0, 0, 1, 1},
   {&__pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_k_data_projects_sydpy_intf_xsim_t, sizeof(__pyx_k_data_projects_sydpy_intf_xsim_t), 0, 0, 1, 0},
   {&__pyx_n_s_decode, __pyx_k_decode, sizeof(__pyx_k_decode), 0, 0, 1, 1},
   {&__pyx_n_s_end, __pyx_k_end, sizeof(__pyx_k_end), 0, 0, 1, 1},
   {&__pyx_n_s_file, __pyx_k_file, sizeof(__pyx_k_file), 0, 0, 1, 1},
-  {&__pyx_n_s_get_cur_cmd, __pyx_k_get_cur_cmd, sizeof(__pyx_k_get_cur_cmd), 0, 0, 1, 1},
+  {&__pyx_n_s_get_new_message, __pyx_k_get_new_message, sizeof(__pyx_k_get_new_message), 0, 0, 1, 1},
+  {&__pyx_n_s_get_recv_cmd, __pyx_k_get_recv_cmd, sizeof(__pyx_k_get_recv_cmd), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
   {&__pyx_n_s_msg, __pyx_k_msg, sizeof(__pyx_k_msg), 0, 0, 1, 1},
   {&__pyx_n_s_name, __pyx_k_name, sizeof(__pyx_k_name), 0, 0, 1, 1},
   {&__pyx_n_s_param_cnt, __pyx_k_param_cnt, sizeof(__pyx_k_param_cnt), 0, 0, 1, 1},
   {&__pyx_n_s_params, __pyx_k_params, sizeof(__pyx_k_params), 0, 0, 1, 1},
   {&__pyx_n_s_pass_msg, __pyx_k_pass_msg, sizeof(__pyx_k_pass_msg), 0, 0, 1, 1},
+  {&__pyx_n_s_post_new_message, __pyx_k_post_new_message, sizeof(__pyx_k_post_new_message), 0, 0, 1, 1},
   {&__pyx_n_s_print, __pyx_k_print, sizeof(__pyx_k_print), 0, 0, 1, 1},
   {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},
   {&__pyx_n_s_read_msg, __pyx_k_read_msg, sizeof(__pyx_k_read_msg), 0, 0, 1, 1},
   {&__pyx_n_s_say_hello_to, __pyx_k_say_hello_to, sizeof(__pyx_k_say_hello_to), 0, 0, 1, 1},
+  {&__pyx_n_s_sv_delay, __pyx_k_sv_delay, sizeof(__pyx_k_sv_delay), 0, 0, 1, 1},
+  {&__pyx_n_s_sv_export, __pyx_k_sv_export, sizeof(__pyx_k_sv_export), 0, 0, 1, 1},
+  {&__pyx_n_s_sv_import, __pyx_k_sv_import, sizeof(__pyx_k_sv_import), 0, 0, 1, 1},
+  {&__pyx_n_s_sv_init, __pyx_k_sv_init, sizeof(__pyx_k_sv_init), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_n_s_xsimintf_test, __pyx_k_xsimintf_test, sizeof(__pyx_k_xsimintf_test), 0, 0, 1, 1},
   {0, 0, 0, 0, 0, 0, 0}
@@ -1273,56 +1838,104 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "xsimintf_test.pyx":15
- *     T_Command cur_cmd
+  /* "xsimintf_test.pyx":22
+ * callbacks = {}
  * 
  * def say_hello_to(name):             # <<<<<<<<<<<<<<
  *     print("Hello %s!" % name)
  * 
  */
-  __pyx_tuple_ = PyTuple_Pack(1, __pyx_n_s_name); if (unlikely(!__pyx_tuple_)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_tuple_ = PyTuple_Pack(1, __pyx_n_s_name); if (unlikely(!__pyx_tuple_)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
-  __pyx_codeobj__2 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple_, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_say_hello_to, 15, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_codeobj__2 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple_, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_say_hello_to, 22, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "xsimintf_test.pyx":18
+  /* "xsimintf_test.pyx":25
  *     print("Hello %s!" % name)
  * 
  * def pass_msg(bytes msg):             # <<<<<<<<<<<<<<
  *     global msg_buf
  *     global msg_buf_cnt
  */
-  __pyx_tuple__3 = PyTuple_Pack(2, __pyx_n_s_msg, __pyx_n_s_c_msg); if (unlikely(!__pyx_tuple__3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_tuple__3 = PyTuple_Pack(2, __pyx_n_s_msg, __pyx_n_s_c_msg); if (unlikely(!__pyx_tuple__3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 25; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_tuple__3);
   __Pyx_GIVEREF(__pyx_tuple__3);
-  __pyx_codeobj__4 = (PyObject*)__Pyx_PyCode_New(1, 0, 2, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__3, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_pass_msg, 18, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_codeobj__4 = (PyObject*)__Pyx_PyCode_New(1, 0, 2, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__3, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_pass_msg, 25, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 25; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "xsimintf_test.pyx":25
+  /* "xsimintf_test.pyx":32
  *     msg_buf_cnt = len(msg)
  * 
  * def read_msg():             # <<<<<<<<<<<<<<
  *     global msg_buf
  *     return msg_buf
  */
-  __pyx_codeobj__5 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_read_msg, 25, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 25; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_codeobj__5 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_read_msg, 32, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "xsimintf_test.pyx":29
+  /* "xsimintf_test.pyx":36
  *     return msg_buf
  * 
  * def decode():             # <<<<<<<<<<<<<<
  *     return decode_command()
  * 
  */
-  __pyx_codeobj__6 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_decode, 29, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 29; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_codeobj__6 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_decode, 36, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 36; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "xsimintf_test.pyx":32
+  /* "xsimintf_test.pyx":39
  *     return decode_command()
  * 
- * def get_cur_cmd():             # <<<<<<<<<<<<<<
- *     global cur_cmd
- *     return cur_cmd
+ * def get_recv_cmd():             # <<<<<<<<<<<<<<
+ *     global recv_cmd
+ *     return recv_cmd
  */
-  __pyx_codeobj__7 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_get_cur_cmd, 32, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__7)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_codeobj__7 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_get_recv_cmd, 39, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__7)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+  /* "xsimintf_test.pyx":43
+ *     return recv_cmd
+ * 
+ * def command_handler():             # <<<<<<<<<<<<<<
+ *     cmd_handler()
+ * 
+ */
+  __pyx_codeobj__8 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_command_handler, 43, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+  /* "xsimintf_test.pyx":46
+ *     cmd_handler()
+ * 
+ * def sv_export(bytes data):             # <<<<<<<<<<<<<<
+ *     return <bytes> xsimintf_export(<char*> data)
+ * 
+ */
+  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_n_s_data); if (unlikely(!__pyx_tuple__9)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__9);
+  __Pyx_GIVEREF(__pyx_tuple__9);
+  __pyx_codeobj__10 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__9, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_sv_export, 46, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__10)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+  /* "xsimintf_test.pyx":49
+ *     return <bytes> xsimintf_export(<char*> data)
+ * 
+ * def sv_import():             # <<<<<<<<<<<<<<
+ *     return <bytes> xsimintf_import()
+ * 
+ */
+  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_sv_import, 49, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 49; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+  /* "xsimintf_test.pyx":52
+ *     return <bytes> xsimintf_import()
+ * 
+ * def sv_delay():             # <<<<<<<<<<<<<<
+ *     return xsimintf_delay()
+ * 
+ */
+  __pyx_codeobj__12 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_sv_delay, 52, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 52; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+  /* "xsimintf_test.pyx":55
+ *     return xsimintf_delay()
+ * 
+ * def sv_init():             # <<<<<<<<<<<<<<
+ *     return xsimintf_init()
+ * 
+ */
+  __pyx_codeobj__13 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_data_projects_sydpy_intf_xsim_t, __pyx_n_s_sv_init, 55, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 55; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -1422,7 +2035,6 @@ PyMODINIT_FUNC PyInit_xsimintf_test(void)
   /*--- Global init code ---*/
   /*--- Variable export code ---*/
   /*--- Function export code ---*/
-  if (__Pyx_ExportFunction("decode_command", (void (*)(void))decode_command, "int (void)") < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   /*--- Type init code ---*/
   /*--- Type import code ---*/
   /*--- Variable import code ---*/
@@ -1432,64 +2044,136 @@ PyMODINIT_FUNC PyInit_xsimintf_test(void)
   if (__Pyx_patch_abc() < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   #endif
 
-  /* "xsimintf_test.pyx":15
- *     T_Command cur_cmd
+  /* "xsimintf_test.pyx":20
+ *     T_Command recv_cmd
+ * 
+ * callbacks = {}             # <<<<<<<<<<<<<<
+ * 
+ * def say_hello_to(name):
+ */
+  __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_callbacks, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "xsimintf_test.pyx":22
+ * callbacks = {}
  * 
  * def say_hello_to(name):             # <<<<<<<<<<<<<<
  *     print("Hello %s!" % name)
  * 
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_1say_hello_to, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_1say_hello_to, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_say_hello_to, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_say_hello_to, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "xsimintf_test.pyx":18
+  /* "xsimintf_test.pyx":25
  *     print("Hello %s!" % name)
  * 
  * def pass_msg(bytes msg):             # <<<<<<<<<<<<<<
  *     global msg_buf
  *     global msg_buf_cnt
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_3pass_msg, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_3pass_msg, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 25; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_pass_msg, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_pass_msg, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 25; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "xsimintf_test.pyx":25
+  /* "xsimintf_test.pyx":32
  *     msg_buf_cnt = len(msg)
  * 
  * def read_msg():             # <<<<<<<<<<<<<<
  *     global msg_buf
  *     return msg_buf
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_5read_msg, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 25; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_5read_msg, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_read_msg, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 25; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_read_msg, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "xsimintf_test.pyx":29
+  /* "xsimintf_test.pyx":36
  *     return msg_buf
  * 
  * def decode():             # <<<<<<<<<<<<<<
  *     return decode_command()
  * 
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_7decode, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 29; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_7decode, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 36; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_decode, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 29; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_decode, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 36; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "xsimintf_test.pyx":32
+  /* "xsimintf_test.pyx":39
  *     return decode_command()
  * 
- * def get_cur_cmd():             # <<<<<<<<<<<<<<
- *     global cur_cmd
- *     return cur_cmd
+ * def get_recv_cmd():             # <<<<<<<<<<<<<<
+ *     global recv_cmd
+ *     return recv_cmd
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_9get_cur_cmd, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_9get_recv_cmd, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_get_cur_cmd, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_get_recv_cmd, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "xsimintf_test.pyx":43
+ *     return recv_cmd
+ * 
+ * def command_handler():             # <<<<<<<<<<<<<<
+ *     cmd_handler()
+ * 
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_11command_handler, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_command_handler, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "xsimintf_test.pyx":46
+ *     cmd_handler()
+ * 
+ * def sv_export(bytes data):             # <<<<<<<<<<<<<<
+ *     return <bytes> xsimintf_export(<char*> data)
+ * 
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_13sv_export, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_sv_export, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "xsimintf_test.pyx":49
+ *     return <bytes> xsimintf_export(<char*> data)
+ * 
+ * def sv_import():             # <<<<<<<<<<<<<<
+ *     return <bytes> xsimintf_import()
+ * 
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_15sv_import, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 49; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_sv_import, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 49; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "xsimintf_test.pyx":52
+ *     return <bytes> xsimintf_import()
+ * 
+ * def sv_delay():             # <<<<<<<<<<<<<<
+ *     return xsimintf_delay()
+ * 
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_17sv_delay, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 52; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_sv_delay, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 52; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "xsimintf_test.pyx":55
+ *     return xsimintf_delay()
+ * 
+ * def sv_init():             # <<<<<<<<<<<<<<
+ *     return xsimintf_init()
+ * 
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_13xsimintf_test_19sv_init, NULL, __pyx_n_s_xsimintf_test); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 55; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_sv_init, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 55; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "xsimintf_test.pyx":1
@@ -1586,6 +2270,177 @@ static PyObject *__Pyx_GetBuiltinName(PyObject *name) {
 #endif
     }
     return result;
+}
+
+static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name) {
+    PyObject *result;
+#if CYTHON_COMPILING_IN_CPYTHON
+    result = PyDict_GetItem(__pyx_d, name);
+    if (likely(result)) {
+        Py_INCREF(result);
+    } else {
+#else
+    result = PyObject_GetItem(__pyx_d, name);
+    if (!result) {
+        PyErr_Clear();
+#endif
+        result = __Pyx_GetBuiltinName(name);
+    }
+    return result;
+}
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg, PyObject *kw) {
+    PyObject *result;
+    ternaryfunc call = func->ob_type->tp_call;
+    if (unlikely(!call))
+        return PyObject_Call(func, arg, kw);
+    if (unlikely(Py_EnterRecursiveCall((char*)" while calling a Python object")))
+        return NULL;
+    result = (*call)(func, arg, kw);
+    Py_LeaveRecursiveCall();
+    if (unlikely(!result) && unlikely(!PyErr_Occurred())) {
+        PyErr_SetString(
+            PyExc_SystemError,
+            "NULL result without error in PyObject_Call");
+    }
+    return result;
+}
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg) {
+    PyObject *self, *result;
+    PyCFunction cfunc;
+    cfunc = PyCFunction_GET_FUNCTION(func);
+    self = PyCFunction_GET_SELF(func);
+    if (unlikely(Py_EnterRecursiveCall((char*)" while calling a Python object")))
+        return NULL;
+    result = cfunc(self, arg);
+    Py_LeaveRecursiveCall();
+    if (unlikely(!result) && unlikely(!PyErr_Occurred())) {
+        PyErr_SetString(
+            PyExc_SystemError,
+            "NULL result without error in PyObject_Call");
+    }
+    return result;
+}
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static PyObject* __Pyx__PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+    PyObject *result;
+    PyObject *args = PyTuple_New(1);
+    if (unlikely(!args)) return NULL;
+    Py_INCREF(arg);
+    PyTuple_SET_ITEM(args, 0, arg);
+    result = __Pyx_PyObject_Call(func, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+#ifdef __Pyx_CyFunction_USED
+    if (likely(PyCFunction_Check(func) || PyObject_TypeCheck(func, __pyx_CyFunctionType))) {
+#else
+    if (likely(PyCFunction_Check(func))) {
+#endif
+        if (likely(PyCFunction_GET_FLAGS(func) & METH_O)) {
+            return __Pyx_PyObject_CallMethO(func, arg);
+        }
+    }
+    return __Pyx__PyObject_CallOneArg(func, arg);
+}
+#else
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+    PyObject *result;
+    PyObject *args = PyTuple_Pack(1, arg);
+    if (unlikely(!args)) return NULL;
+    result = __Pyx_PyObject_Call(func, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func) {
+#ifdef __Pyx_CyFunction_USED
+    if (likely(PyCFunction_Check(func) || PyObject_TypeCheck(func, __pyx_CyFunctionType))) {
+#else
+    if (likely(PyCFunction_Check(func))) {
+#endif
+        if (likely(PyCFunction_GET_FLAGS(func) & METH_NOARGS)) {
+            return __Pyx_PyObject_CallMethO(func, NULL);
+        }
+    }
+    return __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL);
+}
+#endif
+
+static CYTHON_INLINE void __Pyx_ErrRestore(PyObject *type, PyObject *value, PyObject *tb) {
+#if CYTHON_COMPILING_IN_CPYTHON
+    PyObject *tmp_type, *tmp_value, *tmp_tb;
+    PyThreadState *tstate = PyThreadState_GET();
+    tmp_type = tstate->curexc_type;
+    tmp_value = tstate->curexc_value;
+    tmp_tb = tstate->curexc_traceback;
+    tstate->curexc_type = type;
+    tstate->curexc_value = value;
+    tstate->curexc_traceback = tb;
+    Py_XDECREF(tmp_type);
+    Py_XDECREF(tmp_value);
+    Py_XDECREF(tmp_tb);
+#else
+    PyErr_Restore(type, value, tb);
+#endif
+}
+static CYTHON_INLINE void __Pyx_ErrFetch(PyObject **type, PyObject **value, PyObject **tb) {
+#if CYTHON_COMPILING_IN_CPYTHON
+    PyThreadState *tstate = PyThreadState_GET();
+    *type = tstate->curexc_type;
+    *value = tstate->curexc_value;
+    *tb = tstate->curexc_traceback;
+    tstate->curexc_type = 0;
+    tstate->curexc_value = 0;
+    tstate->curexc_traceback = 0;
+#else
+    PyErr_Fetch(type, value, tb);
+#endif
+}
+
+static void __Pyx_WriteUnraisable(const char *name, CYTHON_UNUSED int clineno,
+                                  CYTHON_UNUSED int lineno, CYTHON_UNUSED const char *filename,
+                                  int full_traceback, CYTHON_UNUSED int nogil) {
+    PyObject *old_exc, *old_val, *old_tb;
+    PyObject *ctx;
+#ifdef WITH_THREAD
+    PyGILState_STATE state;
+    if (nogil)
+        state = PyGILState_Ensure();
+#endif
+    __Pyx_ErrFetch(&old_exc, &old_val, &old_tb);
+    if (full_traceback) {
+        Py_XINCREF(old_exc);
+        Py_XINCREF(old_val);
+        Py_XINCREF(old_tb);
+        __Pyx_ErrRestore(old_exc, old_val, old_tb);
+        PyErr_PrintEx(1);
+    }
+    #if PY_MAJOR_VERSION < 3
+    ctx = PyString_FromString(name);
+    #else
+    ctx = PyUnicode_FromString(name);
+    #endif
+    __Pyx_ErrRestore(old_exc, old_val, old_tb);
+    if (!ctx) {
+        PyErr_WriteUnraisable(Py_None);
+    } else {
+        PyErr_WriteUnraisable(ctx);
+        Py_DECREF(ctx);
+    }
+#ifdef WITH_THREAD
+    if (nogil)
+        PyGILState_Release(state);
+#endif
 }
 
 static int __pyx_bisect_code_objects(__Pyx_CodeObjectCacheEntry* entries, int count, int code_line) {
@@ -1915,25 +2770,25 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value) {
 }
 
 static PyObject* __pyx_convert__to_py_T_Command(T_Command s) {
-  PyObject* res;
-  PyObject* member;
-  res = PyDict_New(); if (res == NULL) return NULL;
-  member = __Pyx_PyInt_From_int(s.cmd); if (member == NULL) goto bad;
-  if (PyDict_SetItem(res, __pyx_n_s_cmd, member) < 0) goto bad;
-  Py_DECREF(member);
-  member = __Pyx_carray_to_py_char____32__(s.params, 0x80); if (member == NULL) goto bad;
-  if (PyDict_SetItem(res, __pyx_n_s_params, member) < 0) goto bad;
-  Py_DECREF(member);
-  member = __Pyx_PyInt_From_int(s.param_cnt); if (member == NULL) goto bad;
-  if (PyDict_SetItem(res, __pyx_n_s_param_cnt, member) < 0) goto bad;
-  Py_DECREF(member);
-  return res;
-  bad:
-  Py_XDECREF(member);
-  Py_DECREF(res);
-  return NULL;
-}
-#define __PYX_VERIFY_RETURN_INT(target_type, func_type, func_value)\
+        PyObject* res;
+        PyObject* member;
+        res = PyDict_New(); if (res == NULL) return NULL;
+        member = __Pyx_PyInt_From_int(s.cmd); if (member == NULL) goto bad;
+        if (PyDict_SetItem(res, __pyx_n_s_cmd, member) < 0) goto bad;
+        Py_DECREF(member);
+        member = __Pyx_carray_to_py_char____32__(s.params, 0x80); if (member == NULL) goto bad;
+        if (PyDict_SetItem(res, __pyx_n_s_params, member) < 0) goto bad;
+        Py_DECREF(member);
+        member = __Pyx_PyInt_From_int(s.param_cnt); if (member == NULL) goto bad;
+        if (PyDict_SetItem(res, __pyx_n_s_param_cnt, member) < 0) goto bad;
+        Py_DECREF(member);
+        return res;
+        bad:
+        Py_XDECREF(member);
+        Py_DECREF(res);
+        return NULL;
+      }
+      #define __PYX_VERIFY_RETURN_INT(target_type, func_type, func_value)\
     __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 0)
 #define __PYX_VERIFY_RETURN_INT_EXC(target_type, func_type, func_value)\
     __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 1)
@@ -2549,42 +3404,6 @@ static int __Pyx_check_binary_version(void) {
         return PyErr_WarnEx(NULL, message, 1);
     }
     return 0;
-}
-
-static int __Pyx_ExportFunction(const char *name, void (*f)(void), const char *sig) {
-    PyObject *d = 0;
-    PyObject *cobj = 0;
-    union {
-        void (*fp)(void);
-        void *p;
-    } tmp;
-    d = PyObject_GetAttrString(__pyx_m, (char *)"__pyx_capi__");
-    if (!d) {
-        PyErr_Clear();
-        d = PyDict_New();
-        if (!d)
-            goto bad;
-        Py_INCREF(d);
-        if (PyModule_AddObject(__pyx_m, (char *)"__pyx_capi__", d) < 0)
-            goto bad;
-    }
-    tmp.fp = f;
-#if PY_VERSION_HEX >= 0x02070000
-    cobj = PyCapsule_New(tmp.p, sig, 0);
-#else
-    cobj = PyCObject_FromVoidPtrAndDesc(tmp.p, (void *)sig, 0);
-#endif
-    if (!cobj)
-        goto bad;
-    if (PyDict_SetItemString(d, name, cobj) < 0)
-        goto bad;
-    Py_DECREF(cobj);
-    Py_DECREF(d);
-    return 0;
-bad:
-    Py_XDECREF(cobj);
-    Py_XDECREF(d);
-    return -1;
 }
 
 static int __Pyx_InitStrings(__Pyx_StringTabEntry *t) {

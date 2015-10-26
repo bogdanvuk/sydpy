@@ -3,20 +3,32 @@
 #include "xsimintf_socket.h"
 
 #define IMPORT_BUF_LEN 8192
+#define EXPORT_BUF_LEN 8192
+#define MSG_BUF_LEN 8192
 #define MAX_PARAMS 128
 #define MAX_PARAM_LEN 32
 
+#ifdef CYTHON_XSIMINTF_DBG
+void cython_get_new_message(void);
+void cython_post_new_message(void);
+void cython_print(const char* str);
+#endif
+
 FILE *fp = NULL;
 int cur_time = 0;
-char msg_buf[IMPORT_BUF_LEN] = "";
+char msg_buf[MSG_BUF_LEN] = "";
+char import_buf[IMPORT_BUF_LEN] = "";
+char export_buf[EXPORT_BUF_LEN] = "";
 int msg_buf_cnt = 0;
 
-enum state_type {STARTED, CONNECTED, INITIALIZED};
+enum state_type {S_STARTED, S_CONNECTED, S_INITIALIZED, S_IMPORT, S_EXPORT, S_DELAY};
 enum state_type state;
-enum command_type { GET, SET, IMPORT, EXPORT, ERROR, NUMBER_OF_COMMAND_TYPES };
+enum command_type { CMD_GET, CMD_SET, CMD_IMPORT, CMD_EXPORT, CMD_ERROR, CMD_CONTINUE, CMD_RESP, NUMBER_OF_COMMAND_TYPES };
+
+int delay;
 
 const char *command_names[NUMBER_OF_COMMAND_TYPES] = {
-    "$GET", "$SET", "$IMPORT", "$EXPORT", "$ERROR"
+    "$GET", "$SET", "$IMPORT", "$EXPORT", "$ERROR", "$CONTINUE", "$RESP"
 };
 
 typedef struct {
@@ -25,10 +37,15 @@ typedef struct {
     int param_cnt;
 } T_Command;
 
-T_Command cur_cmd;
+T_Command recv_cmd;
+T_Command send_cmd;
 
 static int get_new_message(void) {
+#ifdef CYTHON_XSIMINTF_DBG
+    cython_get_new_message();
+#else
     msg_buf_cnt = socket_recv(msg_buf, IMPORT_BUF_LEN);
+#endif
     return msg_buf_cnt;
 }
 
@@ -38,8 +55,8 @@ static int decode_command(void) {
     int i;
 
     if (msg_buf_cnt > 0) {
-        cur_cmd.cmd = ERROR;
-        cur_cmd.param_cnt = 0;
+        recv_cmd.cmd = CMD_ERROR;
+        recv_cmd.param_cnt = 0;
 
         token = strtok (msg_buf,",");
 
@@ -50,28 +67,127 @@ static int decode_command(void) {
                 {
                     if(!strcmp(command_names[i], token))
                     {
-                        cur_cmd.cmd = i;
+                        recv_cmd.cmd = i;
                         break;
                     }
                 }
             } else {
-                strncpy(cur_cmd.params[token_cnt-1], token, MAX_PARAM_LEN);
+                strncpy(recv_cmd.params[token_cnt-1], token, MAX_PARAM_LEN);
 
             }
             token_cnt++;
             token = strtok (NULL, ",");
         }
 
-        cur_cmd.param_cnt = token_cnt - 1;
+        recv_cmd.param_cnt = token_cnt - 1;
+
+        msg_buf_cnt = 0;
+        return recv_cmd.cmd;
     }
 
-    return msg_buf_cnt;
+    return -1;
 }
 
+static int recv_command(void) {
+    get_new_message();
+    return decode_command();
+}
+
+static int send_msg() {
+#ifdef CYTHON_XSIMINTF_DBG
+    cython_post_new_message();
+#else
+    socket_send(msg_buf);
+#endif
+}
+
+static int send_command(void) {
+    int length = 0;
+    int i;
+
+    length += sprintf(msg_buf+length, "%s", command_names[send_cmd.cmd]);
+    for (i = 0; i < send_cmd.param_cnt; i ++) {
+        length += sprintf(msg_buf+length, "%s", ",");
+        length += sprintf(msg_buf+length, "%s", send_cmd.params[i]);
+    }
+    send_msg();
+}
+
+void cmd_handler(void) {
+    int length = 0;
+    int i;
+
+    do {
+        recv_command();
+
+        switch(recv_cmd.cmd) {
+
+        case CMD_GET:
+            send_cmd.cmd = CMD_RESP;
+            send_cmd.param_cnt = recv_cmd.param_cnt;
+
+            for (i = 0; i < recv_cmd.param_cnt; i++) {
+                if(!strcmp("state", recv_cmd.params[i])) {
+                    sprintf(send_cmd.params[i], "%d", state);
+                } else if(!strcmp("delay", recv_cmd.params[i])) {
+                    sprintf(send_cmd.params[i], "%d", delay);
+                } else {
+                    send_cmd.cmd = CMD_ERROR;
+                    send_cmd.param_cnt = 0;
+                    break;
+                }
+            }
+            send_command();
+            break;
+        case CMD_SET:
+            send_cmd.cmd = CMD_RESP;
+            send_cmd.param_cnt = 0;
+
+            for (i = 0; i < recv_cmd.param_cnt; i+=2) {
+                if(!strcmp("state", recv_cmd.params[i])) {
+                    sscanf(recv_cmd.params[i+1], "%d", &state);
+                } else if(!strcmp("delay", recv_cmd.params[i])) {
+                    sscanf(recv_cmd.params[i+1], "%d", &delay);
+                } else {
+                    send_cmd.cmd = CMD_ERROR;
+                    send_cmd.param_cnt = 0;
+                    break;
+                }
+            }
+            send_command();
+            break;
+        case CMD_EXPORT:
+            sprintf(msg_buf, "$EXPORT,%s", export_buf);
+            send_msg();
+            break;
+        case CMD_IMPORT:
+            import_buf[0] = 0;
+            for (length=0,i = 0; i < recv_cmd.param_cnt; i ++) {
+                if (length > 0)
+                    length += sprintf(import_buf+length, "%s", ",");
+
+                length += sprintf(import_buf+length, "%s", recv_cmd.params[i]);
+            }
+            send_cmd.cmd = CMD_RESP;
+            send_cmd.param_cnt = 0;
+            send_command();
+            break;
+        case CMD_CONTINUE:
+            send_cmd.cmd = CMD_RESP;
+            send_cmd.param_cnt = 0;
+            send_command();
+            break;
+        default:
+            break;
+        }
+
+    } while (recv_cmd.cmd != CMD_CONTINUE);
+}
 
 DPI_DLLESPEC void xsimintf_init(void)
 {
-    state = STARTED;
+    state = S_STARTED;
+#ifndef CYTHON_XSIMINTF_DBG
     fp = fopen("xsimintf.log", "w");
     if (fp != NULL) {
         fprintf(fp, "XSIMINTF INITIALIZED\n");
@@ -82,42 +198,32 @@ DPI_DLLESPEC void xsimintf_init(void)
     } else {
         fprintf(fp, "SOCKET OPEN FAILED\n");
     }
-    state = CONNECTED;
+#endif
+    state = S_CONNECTED;
 
-    /* do { */
-    /*     socket_recv(msg_buf, IMPORT_BUF_LEN) */
-
+    cmd_handler();
 }
 
-DPI_DLLESPEC int xsimintf_wait(void)
+DPI_DLLESPEC int xsimintf_delay(void)
 {
-    cur_time += 5;
-    return 5;
+    state = S_DELAY;
+    cmd_handler();
+    return delay;
 }
 
-DPI_DLLESPEC const char* xsimintf_import(void)
+DPI_DLLESPEC const char* xsimintf_export(const char * vals)
 {
-    int clk;
-
-    if ((cur_time / 5) % 2) {
-        clk = 1;
-    } else {
-        clk = 0;
-    }
-
-    sprintf(msg_buf, "%d", clk);
-    if (fp != NULL) {
-        fprintf(fp, "XSIMINTF IMPORT: %s\n", msg_buf);
-    }
-
-    return msg_buf;
+    strcpy(export_buf, vals);
+    state = S_EXPORT;
+    cmd_handler();
+    return import_buf;
 }
 
-DPI_DLLESPEC void xsimintf_export(const char * vals)
+DPI_DLLESPEC const char* xsimintf_import()
 {
-    if (fp != NULL) {
-        fprintf(fp, "XSIMINTF EXPORT: %s\n", vals);
-    }
+    state = S_IMPORT;
+    cmd_handler();
+    return import_buf;
 }
 
 void main(void)
