@@ -7,37 +7,43 @@ from subprocess import Popen, PIPE
 wrapper_tmpl = string.Template("""
 module wrap();
 
-    import "DPI-C" pure function void xsimintf_init ();
-    import "DPI-C" pure function void xsimintf_export (input string s);
+    import "DPI-C" pure function int xsimintf_init ();
+    import "DPI-C" pure function string xsimintf_export (input string s);
     import "DPI-C" pure function string xsimintf_import ();
-    import "DPI-C" pure function int xsimintf_wait ();
+    import "DPI-C" pure function int xsimintf_delay ();
     
     ${port_definition}
     
     initial
     begin
-        xsimintf_init();
+        if (xsimintf_init())
+          $$finish;
     end
     
     always #1 begin
-        automatic integer vals_read;
+        automatic integer  vals_read;
         automatic string   strimp;
+        automatic string   strexp;
         automatic integer  delay;
         
-        delay = xsimintf_wait();
-        #delay;
-        strimp = xsimintf_import();
+        delay = xsimintf_delay();
+        if (delay > 0)
+            #delay;
+        else if (delay < 0)
+            $$finish;
+        
+        $$sformat(strexp, ${export_str_format}, ${out_port_list});
+        strimp = xsimintf_export(strexp);
         vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
     end
 
     always_comb begin
         automatic string       strexp;
         automatic string       strimp;
-        automatic integer vals_read;
+        automatic integer      vals_read;
         
         $$sformat(strexp, ${export_str_format}, ${out_port_list});
-        xsimintf_export(strexp);
-        strimp = xsimintf_import();
+        strimp = xsimintf_export(strexp);
         vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
     end
     
@@ -65,6 +71,11 @@ class XsimIntf(Component):
 
     sim = RequiredFeature('sim')
     server = RequiredFeature('server')
+    
+    state_type = {0: "S_STARTED", 1: "S_CONNECTED", 2: "S_INITIALIZED", 3:"S_IMPORT", 4:"S_EXPORT", 5:"S_DELAY"};
+    cmds = {'GET_STATE': {'type': 'GET', 'params': ['state']},
+            'CONTINUE': {'type': 'CONTINUE', 'params': ['state']}
+            }
 
     @compinit
     def __init__(self, builddir='.', **kwargs):
@@ -96,8 +107,8 @@ class XsimIntf(Component):
             else:
                 ports_definition.append('logic [{0}:0] {1};'.format(intf.dtype.w-1,name))
         
-        import_str_format  = ['%d']*len(self.inputs)
-        export_str_format  = ['%d']*len(self.outputs)
+        import_str_format  = ['%x']*len(self.inputs)
+        export_str_format  = ['%x']*len(self.outputs)
 
         return wrapper_tmpl.substitute(
                                        port_definition='\n  '.join(ports_definition),
@@ -118,6 +129,44 @@ class XsimIntf(Component):
             self.outputs.update({'_'.join([cosim.module_name, k]):v for k,v in cosim.outputs.items()})
             self.fileset.extend(cosim.fileset)
     
+    def send_command(self, type, params = []):
+        msg = "$" + type
+        if params:
+            msg += ',' + ','.join(params)
+            
+        self.server.send(msg)
+
+        ret = self.server.recv().split(',')
+        if len(ret) > 1:
+            params = ret[1:]
+        else:
+            params = []
+            
+        return ret[0][1:], params
+    
+    def get_xsim_state(self):
+        cmd_type, params = self.send_command('GET', ['state'])
+        
+        if cmd_type != 'RESP':
+            raise Exception('Error in the connection with Xsim!')
+        
+        return self.state_type[int(params[0])]
+    
+    def recv_export(self):
+        ret_type, params = self.send_command('EXPORT')
+        
+        for intf, p in zip(sorted(self.outputs.items()), params):
+            intf[1].write('0x' + p.replace('x', 'u').replace('z', 'u'))
+            
+        self.sim._update()
+
+                  
+    def send_import(self):
+        cmd_type, params = self.send_command('IMPORT', [str(intf.read())[2:].replace('U', 'x') for _, intf in sorted(self.inputs.items())])
+
+        if cmd_type != 'RESP':
+            raise Exception('Error in the connection with Xsim!')
+    
     def sim_run_start(self, sim):
         self.cosim_time = 0
         self.resolve_cosims()
@@ -134,23 +183,59 @@ class XsimIntf(Component):
         self.fileset.append('wrapper.sv')
 
         shell(cmd = ['xvlog', '-sv'] + self.fileset)
-        shell(cmd = ['xelab', '-m64', '-svlog', 'wrapper.sv', '-sv_root', '/home/bvukobratovic/projects/sydpy/intf/xsim/xsim.dir/xsc', '-sv_lib', 'dpi', '-debug', 'all'])
+        shell(cmd = ['xelab', '-m64', '-svlog', 'wrapper.sv', '-sv_root', '/home/bvukobratovic/projects/sydpy/intf/xsim/build', '-sv_lib', 'dpi', '-debug', 'all'])
 #         shell(cmd = ['xsim', 'work.wrap', '-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl'])
-        cmd = ['xsim', 'work.wrap', '-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl']
+        cmd = ['xsim', 'work.wrap', '--runall'] #-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl']
         self.xsim_proc = Popen(' '.join(cmd), shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        
+        xsim_state = self.get_xsim_state()
+        
+        if xsim_state != 'S_CONNECTED':
+            raise Exception('Error in the connection with Xsim!')
+
+#         self.send_import()
+        
+#         self.send_command('CONTINUE')
     
     def sim_run_end(self, sim):
+        xsim_state = None
+        while (xsim_state != 'S_DELAY'):
+            xsim_state = self.get_xsim_state()
+            if xsim_state != 'S_DELAY':
+                self.send_command('CONTINUE')
+            
+        self.send_command('SET', ['delay', '-1'])
+        self.send_command('CONTINUE')
         self.xsim_proc.terminate()
     
     def sim_timestep_start(self, time, sim):
+        if time > 0:
+            self.send_command('SET', ['delay', str(time - self.cosim_time - 1)])
+            self.send_command('CONTINUE')
+
         self.cosim_time = time
+        
+        return True
     
     def sim_delta_settled(self, sim):
-        if self.update:
-            pass
+        self.send_import()
+        self.send_command('CONTINUE')
         
+        xsim_state = self.get_xsim_state()
+
+        if xsim_state == 'S_EXPORT':
+            self.recv_export()
+            self.send_command('CONTINUE')
+        elif xsim_state == 'S_DELAY':
+            pass
+        else:
+            raise Exception('Error in the connection with Xsim!')
+        
+        return True
+                    
     def updated(self, cosim):
-        self.update = True
+#         self.update = True
+        pass
     
     def register(self, cosim):
         self.cosim_pool.append(cosim)

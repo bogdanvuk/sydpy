@@ -36,3 +36,5 @@ def test_bit():
     
 def test_vector():
     pass
+
+print(Bit(16)("0xfb"))

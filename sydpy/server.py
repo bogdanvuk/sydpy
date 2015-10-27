@@ -54,7 +54,8 @@ class Server(Component):
     def send(self, msg):
         if not self.client:
             self.connect()
-      
+            
+#         print("Sending: ", msg)
         self.client.send(msg.encode())
 
     def recv(self, size=1024):
@@ -64,7 +65,9 @@ class Server(Component):
         data = None
         while not data:
             data = self.client.recv(size)
-
+        
+#         print("Receiving: ", data)
+        
         return data.decode()
             
     def __del__(self):

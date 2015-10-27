@@ -44,7 +44,12 @@ static int get_new_message(void) {
 #ifdef CYTHON_XSIMINTF_DBG
     cython_get_new_message();
 #else
-    msg_buf_cnt = socket_recv(msg_buf, IMPORT_BUF_LEN);
+    msg_buf_cnt = 0;
+    while (msg_buf_cnt == 0) {
+    	msg_buf_cnt = socket_recv(msg_buf, IMPORT_BUF_LEN);
+    }
+
+    msg_buf[msg_buf_cnt] = 0;
 #endif
     return msg_buf_cnt;
 }
@@ -81,6 +86,7 @@ static int decode_command(void) {
 
         recv_cmd.param_cnt = token_cnt - 1;
 
+        msg_buf[0] = 0;
         msg_buf_cnt = 0;
         return recv_cmd.cmd;
     }
@@ -90,6 +96,8 @@ static int decode_command(void) {
 
 static int recv_command(void) {
     get_new_message();
+    //    puts("*** RECV ***");
+    //puts(msg_buf);
     return decode_command();
 }
 
@@ -97,6 +105,8 @@ static int send_msg() {
 #ifdef CYTHON_XSIMINTF_DBG
     cython_post_new_message();
 #else
+    //    puts("*** SEND ***");
+    //puts(msg_buf);
     socket_send(msg_buf);
 #endif
 }
@@ -117,7 +127,9 @@ void cmd_handler(void) {
     int length = 0;
     int i;
 
+    //    puts("entered cmd handler");
     do {
+        //        puts("cmd handler entered loop...");
         recv_command();
 
         switch(recv_cmd.cmd) {
@@ -181,10 +193,10 @@ void cmd_handler(void) {
             break;
         }
 
-    } while (recv_cmd.cmd != CMD_CONTINUE);
+   } while (recv_cmd.cmd != CMD_CONTINUE);
 }
 
-DPI_DLLESPEC void xsimintf_init(void)
+DPI_DLLESPEC int xsimintf_init(void)
 {
     state = S_STARTED;
 #ifndef CYTHON_XSIMINTF_DBG
@@ -192,16 +204,17 @@ DPI_DLLESPEC void xsimintf_init(void)
     if (fp != NULL) {
         fprintf(fp, "XSIMINTF INITIALIZED\n");
     }
-    cur_time = 0;
     if (socket_open() == 0) {
         fprintf(fp, "SOCKET OPENED\n");
     } else {
         fprintf(fp, "SOCKET OPEN FAILED\n");
+        return 1;
     }
 #endif
     state = S_CONNECTED;
 
     cmd_handler();
+    return 0;
 }
 
 DPI_DLLESPEC int xsimintf_delay(void)
@@ -215,6 +228,7 @@ DPI_DLLESPEC const char* xsimintf_export(const char * vals)
 {
     strcpy(export_buf, vals);
     state = S_EXPORT;
+    //    puts(export_buf);
     cmd_handler();
     return import_buf;
 }

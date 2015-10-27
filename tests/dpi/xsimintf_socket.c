@@ -14,7 +14,7 @@ int socket_open()
     sock = socket(AF_INET , SOCK_STREAM , 0);
     if (sock == -1)
     {
-        printf("Could not create socket");
+        puts("Could not create socket");
     }
     puts("Socket created");
 

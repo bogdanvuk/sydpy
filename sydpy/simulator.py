@@ -200,12 +200,20 @@ class Simulator(Component):
         """Unsubscribe the process from all events from  its sensitivity list."""
         
         events = getattr(proc, 'events', None)
+        if not isinstance(events, set):
+            if hasattr(events, '__iter__'):
+                events = set([e for e in events])
+            elif events is not None:
+                events = set([events])
+            
         if events:
-            for e in unif_enum(events):
-                try:
-                    e.unsubscribe(proc)
-                except:
-                    e.event_def.unsubscribe(proc)
+            for e in events:
+                e.unsubscribe(proc)
+#                 try:
+#                     e.unsubscribe(proc)
+#                 except:
+#                     raise
+#                     e.event_def.unsubscribe(proc)
     
     def _subscribe(self, proc, events):
         """Subscribe the process to all events from  its sensitivity list."""

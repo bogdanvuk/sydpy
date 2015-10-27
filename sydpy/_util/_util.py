@@ -92,8 +92,8 @@ def _dedent(s):
 
 class _SigNameVisitor(ast.NodeVisitor):
     def __init__(self, symdict):
-        self.inputs = []
-        self.outputs = []
+        self.inputs = set()
+        self.outputs = set()
         self.symdict = symdict
         self.ref_path = []
         self.store = False
@@ -123,9 +123,9 @@ class _SigNameVisitor(ast.NodeVisitor):
                         break
                            
                 if self.store:
-                    self.outputs.append(intf)
+                    self.outputs.add(intf)
                 else:
-                    self.inputs.append(intf)
+                    self.inputs.add(intf)
         
         self.ref_path = []                    
 

@@ -80,14 +80,23 @@ class bit(TypeBase):
                 val = val.val
             except AttributeError:
                 if isinstance(val, str):
-                    if 'b' in val:
+                    val = val.strip()
+                    if val.startswith('0b'):
                         pos = val.find('b')
                         vld = (1 << (len(val) - pos)) - 1
                         val = int(val, 2)
-                    elif 'x' in val:    
-                        pos = val.find('x')
-                        vld = (1 << ((len(val) - pos)*4)) - 1
-                        val = int(val, 16)
+                    elif val.startswith('0x'):
+                        val = val.split('x')[-1]
+                        num = 0
+                        vld = self._mask
+                        for c in val:
+                            num <<= 4
+                            vld <<= 4
+                            if c != 'u':
+                                num += int(c, 16)
+                                vld += 0xf
+                                
+                        val = num
                     else:
                         val = int(val)
             
