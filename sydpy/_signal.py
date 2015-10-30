@@ -17,6 +17,7 @@
 #  <http://www.gnu.org/licenses/>.
 from sydpy._event import EventSet, Event
 from sydpy.component import RequiredFeature
+import copy
 
 """Module implements Signal class"""
 
@@ -54,8 +55,8 @@ class Signal(object):
         self._tracing = trace
         self.traces = None
         self.mem = []
-        self._val = val
-        self._init = val
+        self._val = copy.deepcopy(val)
+        self._next = copy.deepcopy(val)
             
         self.e = EventSet(missing_event_handle=self._missing_event)
         
@@ -146,7 +147,7 @@ class Signal(object):
                 if 'negedge' in self.e:
                     self.e.negedge.trigger()
 
-            self._val = next_val
+            self._val = copy.deepcopy(next_val)
     
     def _create_event(self, event):
         if event not in self.e.events:

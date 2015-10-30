@@ -29,17 +29,21 @@ class ConversionError(Exception):
     def __init__(self, val=None):
         self.val = val
 
-from sydpy._simulator import Simulator, simwait
-from sydpy._process import always, always_acquire, always_comb
-from sydpy.intfs import *
+from sydpy.component import system, compinit, Component
+from sydpy.simulator import Simulator
+from sydpy.channel import Channel
+from sydpy.process import Process
+# from sydpy._simulator import Simulator, simwait
+# from sydpy._process import always, always_acquire, always_comb
+from sydpy.intfs.isig import isig
 from sydpy._delay import Delay
 from sydpy.rnd import rnd
 from sydpy.types import *
 from sydpy._module import Module
 from sydpy._util._util import arch, arch_def
-from sydpy.procs import Clocking
-from sydpy.verif import *
-from sydpy.extens import *
+# from sydpy.procs import Clocking
+# from sydpy.verif import *
+# from sydpy.extens import *
     
 __all__ = ["Simulator",
            "Module",

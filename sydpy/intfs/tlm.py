@@ -18,7 +18,6 @@
 
 """Module implements the tlm interface."""
 
-from sydpy import always_acquire
 from sydpy._util._util import arch
 from sydpy.types import convgen
 from sydpy.intfs._intf import IntfDir

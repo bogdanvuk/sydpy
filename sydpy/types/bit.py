@@ -202,7 +202,39 @@ class bit(TypeBase):
     @classmethod
     def _rnd(cls, rnd_gen):
         return cls(rnd_gen._rnd_int(0, (1 << cls.w) - 1))
+    
+    def __setitem__(self, key, val):
+        if isinstance( key, slice ) :
+            #Get the start, stop, and step from the slice
+#             return [self[ii] for ii in xrange(*key.indices(len(self)))]
+            high = max(key.start, key.stop)
+            low = min(key.start, key.stop)
+            
+        elif isinstance( key, int ) :
+            high = low = int(key)
+        else:
+            raise TypeError("Invalid argument type.")
+
+        w_slice = high - low + 1
         
+        if high >= self.w:
+            raise IndexError("The index ({0}) is out of range.".format(key))
+         
+        self_mask = self._mask ^ (((1 << w_slice) - 1) << low)
+       
+        if val is None:
+            self.vld &= self_mask
+        else:
+            ival = int(val) & ((1 << w_slice) - 1)
+            
+            if isinstance(val, bit):
+                if val.w > w_slice:
+                    raise IndexError("The applied value width ({0}) is larger than the slice size ({1}).".format(val.w, w_slice))
+
+                self.vld = (self.vld & self_mask) | (val.vld << low)
+
+            self.val = (self.val & self_mask) | (ival << low)
+   
     def __getitem__(self, key):
         if isinstance( key, slice ) :
             #Get the start, stop, and step from the slice
@@ -336,20 +368,19 @@ class bit(TypeBase):
     # integer-like methods
 
     def __add__(self, other):
-        try:
-            other_val = other.val
-            width = max(self.w, other.w)
-            if (not other._full) or (not self._full):
-                return Bit(width)()
-            
-        except AttributeError:
-            other_val = other
-            width = self.w
-
-        return Bit(width)(other_val + self.val)
+        return Bit(self.w)((self.val + int(other)) & self._mask)
         
     def __radd__(self, other):
         return self.__add__(other)
+    
+    def __sub__(self, other):
+        return Bit(self.w)((self.val - int(other)) & self._mask)
+    
+    def __mul__(self, other):
+        return Bit(self.w)((self.val * int(other)) & self._mask)
+    
+    def __truediv__(self, other):
+        return Bit(self.w)(int(self.val / int(other)) & self._mask)
     
 #     def __sub__(self, other):
 #         try:

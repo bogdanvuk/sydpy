@@ -18,7 +18,7 @@
 
 """Module implements the base classes for the interfaces."""
 
-from sydpy import ConversionError, simwait, Hdlang
+from sydpy import ConversionError, Hdlang
 from enum import Enum
 from sydpy._event import EventSet, Event
 import types

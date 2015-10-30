@@ -33,14 +33,23 @@ class isig(Component, Intf):
                 return False
         else:
             return True
+        
     def _add_source(self, intf):
         self._sig = intf._sig
         self.e = self._sig.e
     
-    def _gen_drivers(self):
-        if self._mch:
-            self._sig = Signal(val=self._dtype.conv(self._dflt))
-            self.e = self._sig.e
+    def _drive(self, channel):
+        self._mch = channel
+        self._sig = Signal(val=self._dtype.conv(self._dflt))
+        self.e = self._sig.e
+        
+    def _sink(self, channel):
+        self._sch = channel
+    
+#     def _gen_drivers(self):
+#         if self._mch:
+#             self._sig = Signal(val=self._dtype.conv(self._dflt))
+#             self.e = self._sig.e
     
     def write(self, val, keys=None):
         try:
@@ -51,6 +60,9 @@ class isig(Component, Intf):
         val = self._dtype.conv(val)
         
         self._sig.write(val)
+    
+    def read_next(self):
+        return self._sig._next
     
     def read(self):
         return self._sig.read()

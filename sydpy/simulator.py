@@ -189,7 +189,7 @@ class Simulator(Component):
         self.max_time = None
         self.time = 0
         
-        self.gen_drivers()
+#         self.gen_drivers()
         
         while (not self.find_sources()):
             pass

@@ -217,21 +217,15 @@ class SlicedIntf(_IntfBase):
                 return lambda *args, **kwargs: member(*args, keys=keys, **kwargs)
             else:
                 return member
-
-    def connect(self, *args, **kwargs):
-        return self.__parent.connect(*args, keys=self.__keys, **kwargs)
     
     def read(self):
         return self.__parent.read().__getitem__(self.__keys)
     
-    @property
-    def next(self):
-        raise Exception("Next is write-only property!")
-        
-    @next.setter
-    def next(self, val):
-        self.__parent.write(val, keys=self.__keys)
-
+    def write(self, val):
+        next_val = self.__parent.read_next()
+        next_val[self.__keys] = val
+        return self.__parent.write(next_val)
+    
     def unsubscribe(self, proc, event=None):
         if event is None:
             self.__parent.e.event_def[self.__keys].unsubscribe(proc)
@@ -303,6 +297,9 @@ class Intf(_IntfBase):
 
     def __str__(self):
         return str(self.read())
+
+    def __setitem__(self, key, val):
+        pass
 
     def __getitem__(self, key):
         if repr(key) not in self._sliced_intfs:

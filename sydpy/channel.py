@@ -38,7 +38,9 @@ class Channel(Component):
             raise Exception("Can only have one master per channel!")
         
         self.master = intf
-        intf._mch = self
+        intf._drive(self)
+#         self._gen_drivers()
+#         intf._mch = self
     
     def __ilshift__(self, other):
         self.sink(other)
@@ -46,5 +48,6 @@ class Channel(Component):
     
     def drive(self, intf):
         self.slaves.append(intf)
-        intf._sch = self
+        intf._sink(self)
+#         intf._sch = self
 
