@@ -11,6 +11,7 @@ from sydpy.simulator import Simulator
 from sydpy.cosim import Cosim
 from sydpy.xsim import XsimIntf
 from sydpy.server import Server
+from sydpy.extens.profiler import Profiler
 
 class Generator(Component):
     
@@ -19,15 +20,14 @@ class Generator(Component):
         chout <<= self.inst('sout', isig, dtype=dtype, dflt=0)
         self.inst('p_gen', Process, self.gen, [Delay(20)])
     def gen(self):
-        self.sout <<= self.sout + 1
         print("GEN : ", system['sim'].time, ': ', self.sout.read() + 1)
-        
+        self.sout <<= self.sout + 1
 
-# class Sink(Cosim):
-#     @compinit
-#     def __init__(self, chin, chout, dtype=bit, **kwargs):
-#         chin >>= self.inst('din', isig, dtype=dtype, dflt=0)
-#         chout <<= self.inst('dout', isig, dtype=dtype, dflt=0)
+class Pong(Cosim):
+    @compinit
+    def __init__(self, chin, chout, dtype=bit, **kwargs):
+        chin >>= self.inst('din', isig, dtype=dtype, dflt=0)
+        chout <<= self.inst('dout', isig, dtype=dtype, dflt=0)
 
 class Ping(Component):
     @compinit
@@ -41,16 +41,16 @@ class Ping(Component):
         print("PING : ", system['sim'].time, ': ', self.din[31:24] % self.din[15:8] % self.din[15:8] % self.gen)
         self.dout <<= self.din[31:24] % self.din[15:8] % self.din[15:8] % self.gen 
 
-class Pong(Component):
-    @compinit
-    def __init__(self, chin, chout, dtype=bit, **kwargs):
-        chin >>= self.inst('din', isig, dtype=dtype, dflt=0)
-        chout <<= self.inst('dout', isig, dtype=dtype, dflt=0)
-        self.inst('p_pong', Process, self.pong)
-        
-    def pong(self):
-        print("PONG : ", system['sim'].time, ': ', self.din[23:16] % self.din[23:16] % self.din[7:0] % self.din[7:0])
-        self.dout <<= self.din[23:16] % self.din[23:16] % self.din[7:0] % self.din[7:0]
+# class Pong(Component):
+#     @compinit
+#     def __init__(self, chin, chout, dtype=bit, **kwargs):
+#         chin >>= self.inst('din', isig, dtype=dtype, dflt=0)
+#         chout <<= self.inst('dout', isig, dtype=dtype, dflt=0)
+#         self.inst('p_pong', Process, self.pong)
+#         
+#     def pong(self):
+#         print("PONG : ", system['sim'].time, ': ', self.din[23:16] % self.din[23:16] % self.din[7:0] % self.din[7:0])
+#         self.dout <<= self.din[23:16] % self.din[23:16] % self.din[7:0] % self.din[7:0]
 
 # class Printout(Component):
 #     @compinit
@@ -74,11 +74,12 @@ class TestDff(Component):
 
 conf = [
         ('sim'              , Simulator),
-#         ('xsim'             , XsimIntf),
-#         ('server'           , Server),
+        ('xsim'             , XsimIntf),
+        ('server'           , Server),
+        ('profiler'         , Profiler),
         ('xsim.builddir'    , './xsim'),
         ('sim.top.*.cosim_intf', 'xsim'),
-        ('sim.top.sink.fileset', ['/home/bvukobratovic/projects/sydpy/tests/sink.sv']),
+        ('sim.top.pong.fileset', ['/home/bvukobratovic/projects/sydpy/tests/test_ping_pong_cosim_pong.sv']),
         ('sim.top'          , TestDff),
         ('sim.top.ping.dtype'  , bit32),
         ('sim.top.pong.dtype'  , bit32),

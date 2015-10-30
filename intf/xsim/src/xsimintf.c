@@ -23,12 +23,12 @@ int msg_buf_cnt = 0;
 
 enum state_type {S_STARTED, S_CONNECTED, S_INITIALIZED, S_IMPORT, S_EXPORT, S_DELAY};
 enum state_type state;
-enum command_type { CMD_GET, CMD_SET, CMD_IMPORT, CMD_EXPORT, CMD_ERROR, CMD_CONTINUE, CMD_RESP, NUMBER_OF_COMMAND_TYPES };
+enum command_type { CMD_GET, CMD_SET, CMD_IMPORT, CMD_EXPORT, CMD_ERROR, CMD_CONTINUE, CMD_RESP, CMD_CLOSE, NUMBER_OF_COMMAND_TYPES };
 
 int delay;
 
 const char *command_names[NUMBER_OF_COMMAND_TYPES] = {
-    "$GET", "$SET", "$IMPORT", "$EXPORT", "$ERROR", "$CONTINUE", "$RESP"
+    "$GET", "$SET", "$IMPORT", "$EXPORT", "$ERROR", "$CONTINUE", "$RESP", "$CLOSE"
 };
 
 typedef struct {
@@ -189,6 +189,9 @@ void cmd_handler(void) {
             send_cmd.param_cnt = 0;
             send_command();
             break;
+        case CMD_CLOSE:
+            socket_close();
+            break;
         default:
             break;
         }
@@ -221,6 +224,9 @@ DPI_DLLESPEC int xsimintf_delay(void)
 {
     state = S_DELAY;
     cmd_handler();
+    if (delay < 0) {
+        socket_close();
+    }
     return delay;
 }
 

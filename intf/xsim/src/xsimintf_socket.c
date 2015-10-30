@@ -9,6 +9,7 @@ int socket_open()
 {
     struct sockaddr_in server;
     char message[1000] , server_reply[2000];
+    int so_reuseaddr = 1;
 
     //Create socket
     sock = socket(AF_INET , SOCK_STREAM , 0);
@@ -17,6 +18,8 @@ int socket_open()
         printf("Could not create socket");
     }
     puts("Socket created");
+
+    setsockopt(sock,SOL_SOCKET,SO_REUSEADDR, &so_reuseaddr, sizeof so_reuseaddr);
 
     server.sin_addr.s_addr = inet_addr("127.0.0.1");
     server.sin_family = AF_INET;

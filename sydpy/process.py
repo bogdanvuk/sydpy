@@ -24,6 +24,7 @@ class Process(Component, greenlet):
                 intfs[k.rsplit('.', 1)[1]] = v
              
             (self.senslist, outputs) = getio_vars(func, intfs=intfs)
+            self.senslist -= outputs
 
         self._exit_func = None 
         self.sim.proc_reg(self)

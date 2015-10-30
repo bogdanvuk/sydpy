@@ -41,7 +41,7 @@ class Server(Component):
         
         try:
             self.sock.listen(backlog)
-            set_keepalive_linux(self.sock)
+#             set_keepalive_linux(self.sock)
         except:
             self.sock.close()
     

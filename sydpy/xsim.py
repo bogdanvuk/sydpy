@@ -14,17 +14,19 @@ module wrap();
     
     ${port_definition}
     
-    initial
-    begin
-        if (xsimintf_init())
+    initial begin
+        int      vals_read;
+        
+        if (xsimintf_init()) begin
           $$finish;
+        end
+        
+        vals_read = $$sscanf(xsimintf_import(), ${import_str_format}, ${in_port_list});
     end
     
     always #1 begin
-        automatic integer  vals_read;
-        automatic string   strimp;
-        automatic string   strexp;
-        automatic integer  delay;
+        automatic int  vals_read;
+        automatic int  delay;
         
         delay = xsimintf_delay();
         if (delay > 0)
@@ -32,12 +34,10 @@ module wrap();
         else if (delay < 0)
             $$finish;
         
-        $$sformat(strexp, ${export_str_format}, ${out_port_list});
-        strimp = xsimintf_export(strexp);
-        vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
+        vals_read = $$sscanf(xsimintf_import(), ${import_str_format}, ${in_port_list});
     end
 
-    always_comb begin
+    always @(${out_port_list}) begin
         automatic string       strexp;
         automatic string       strimp;
         automatic integer      vals_read;
@@ -102,10 +102,10 @@ class XsimIntf(Component):
         
         ports_definition = []
         for name, intf in sorted(itertools.chain(self.inputs.items(), self.outputs.items())):
-            if intf.dtype.w == 1:
+            if intf._get_dtype().w == 1:
                 ports_definition.append('logic {0};'.format(name))
             else:
-                ports_definition.append('logic [{0}:0] {1};'.format(intf.dtype.w-1,name))
+                ports_definition.append('logic [{0}:0] {1};'.format(intf._get_dtype().w-1,name))
         
         import_str_format  = ['%x']*len(self.inputs)
         export_str_format  = ['%x']*len(self.outputs)
@@ -135,8 +135,10 @@ class XsimIntf(Component):
             msg += ',' + ','.join(params)
             
         self.server.send(msg)
+#         print(msg)
 
         ret = self.server.recv().split(',')
+#         print(ret)
         if len(ret) > 1:
             params = ret[1:]
         else:
@@ -192,10 +194,10 @@ class XsimIntf(Component):
         
         if xsim_state != 'S_CONNECTED':
             raise Exception('Error in the connection with Xsim!')
-
+        
 #         self.send_import()
         
-#         self.send_command('CONTINUE')
+        self.send_command('CONTINUE')
     
     def sim_run_end(self, sim):
         xsim_state = None
@@ -210,6 +212,14 @@ class XsimIntf(Component):
     
     def sim_timestep_start(self, time, sim):
         if time > 0:
+            xsim_state = self.get_xsim_state()
+            # The XSIM either:
+            #    - Waits at the end of the delta cycle (the always block) for new inputs
+            #    - Waits to receive the timestep waiting period (delay)
+            if xsim_state == 'S_EXPORT':
+                # If XSIM waits at the end of the delta cycle, just send it to CONTINUE, this will affect no input signals, hence XSIM will move straight to timestep process
+                self.send_command('CONTINUE')
+                
             self.send_command('SET', ['delay', str(time - self.cosim_time - 1)])
             self.send_command('CONTINUE')
 
@@ -218,14 +228,20 @@ class XsimIntf(Component):
         return True
     
     def sim_delta_settled(self, sim):
+        # The XSIM is either in: 
+        #    - initial import - This is the first finished sydpy delta cycle in the simultaion, 
+        #    - timestep import - This is the first finished sydpy delta cycle in this timestep 
+        #    - delta cycle import state
         self.send_import()
         self.send_command('CONTINUE')
         
         xsim_state = self.get_xsim_state()
 
+        # The XSIM either:
+        #    - Entered new delta cycle (the always block) since its outputs have changed
+        #    - Entered the timestep process and is waiting for the length of the waiting period, since its outputs have settled
         if xsim_state == 'S_EXPORT':
             self.recv_export()
-            self.send_command('CONTINUE')
         elif xsim_state == 'S_DELAY':
             pass
         else:
@@ -242,6 +258,7 @@ class XsimIntf(Component):
         
     def __del__(self):
         try:
+            self.server.send('$CLOSE')
             self.xsim_proc.terminate()
         except:
             pass
