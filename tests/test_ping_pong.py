@@ -76,13 +76,13 @@ conf = [
         ('sim'              , Simulator),
 #         ('xsim'             , XsimIntf),
 #         ('server'           , Server),
-        ('xsim.builddir'    , './xsim'),
-        ('sim.top.*.cosim_intf', 'xsim'),
-        ('sim.top.sink.fileset', ['/home/bvukobratovic/projects/sydpy/tests/sink.sv']),
+#         ('xsim.builddir'    , './xsim'),
+#         ('sim.top.*.cosim_intf', 'xsim'),
+#         ('sim.top.sink.fileset', ['/home/bvukobratovic/projects/sydpy/tests/sink.sv']),
         ('sim.top'          , TestDff),
         ('sim.top.ping.dtype'  , bit32),
         ('sim.top.pong.dtype'  , bit32),
-        ('sim.duration'     , 10000)
+        ('sim.duration'     , 1000)
         ]
 
 system.set_config(conf)

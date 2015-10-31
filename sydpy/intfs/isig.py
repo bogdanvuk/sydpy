@@ -4,17 +4,18 @@ from sydpy._event import EventSet
 from sydpy.unit import Unit
 from sydpy.intfs.intf import Intf, SlicedIntf
 
-class isig(Component, Intf):
+class isig(Intf):
     _intf_type = 'isig'
 
     @compinit
     def __init__(self, dtype, dflt, **kwargs):
-        Intf.__init__(self)
         self._mch = None
         self._sch = None
         self._sig = None
         self._dtype = dtype
-        self._dflt = dflt
+        self._dflt = self._dtype.conv(dflt)
+        self._sinks = set()
+        self.e = EventSet(missing_event_handle=self._missing_event)
         
     def con_driver(self, intf):
         pass
@@ -35,21 +36,17 @@ class isig(Component, Intf):
             return True
         
     def _add_source(self, intf):
-        self._sig = intf._sig
-        self.e = self._sig.e
-    
+        self._sig = intf
+        for event in self.e:
+            getattr(intf.e, event).subscribe(event)
+            
+        self.e = intf.e
+
     def _drive(self, channel):
         self._mch = channel
-        self._sig = Signal(val=self._dtype.conv(self._dflt))
-        self.e = self._sig.e
-        
+
     def _sink(self, channel):
         self._sch = channel
-    
-#     def _gen_drivers(self):
-#         if self._mch:
-#             self._sig = Signal(val=self._dtype.conv(self._dflt))
-#             self.e = self._sig.e
     
     def write(self, val, keys=None):
         try:
@@ -59,13 +56,22 @@ class isig(Component, Intf):
         
         val = self._dtype.conv(val)
         
+        if self._sig is None:
+            self._sig = Signal(val=self._dflt, event_set = self.e)
+                    
         self._sig.write(val)
     
     def read_next(self):
-        return self._sig._next
+        if self._sig is None:
+            return self._dflt
+        else:
+            return self._sig._next
     
     def read(self):
-        return self._sig.read()
+        if self._sig is None:
+            return self._dflt
+        else:
+            return self._sig.read()
     
     def deref(self, key):
         return SlicedIntf(self, key)

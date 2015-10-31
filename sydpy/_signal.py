@@ -57,9 +57,9 @@ class Signal(object):
         self.mem = []
         self._val = copy.deepcopy(val)
         self._next = copy.deepcopy(val)
-            
-        self.e = EventSet(missing_event_handle=self._missing_event)
         
+        self.e = event_set
+       
     def blk_pop(self):
         """Pop the value from the signal queue. If the queue is empty, wait 
         for the value to become available."""
@@ -149,15 +149,15 @@ class Signal(object):
 
             self._val = copy.deepcopy(next_val)
     
-    def _create_event(self, event):
-        if event not in self.e.events:
-            e = Event(self, event)
-            self.e.add({event:e})
-        else:
-            e = self.e.events[event]
-        
-        return e
-
-    def _missing_event(self, event_set, event):
-        e = self._create_event(event)
-        return e
+#     def _create_event(self, event):
+#         if event not in self.e.events:
+#             e = Event(self, event)
+#             self.e.add({event:e})
+#         else:
+#             e = self.e.events[event]
+#          
+#         return e
+#  
+#     def _missing_event(self, event_set, event):
+#         e = self._create_event(event)
+#         return e

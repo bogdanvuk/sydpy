@@ -14,20 +14,28 @@ def test(sydpy):
             self.intf._sig.e.changed.subscribe(self)
             self.data = 0
         
+        def data_slice(self, key):
+            if isinstance( key, slice ) :
+                high = max(key.start, key.stop)
+                low = min(key.start, key.stop)
+            elif isinstance( key, int ) :
+                high = low = int(key)
+                
+            w_slice = high - low + 1
+                
+            return (self.data >> low) & ((1 << w_slice) - 1)
+        
         def resolve(self, pool):
             byte1 = (self.data + 1) & 0xff
-            nibble3 = (self.data & 0xff) - ((self.data & 0xf00) >> 8)
-            nibble3_old = ((self.data & 0xf00) >> 8)
-            nibble4 = nibble3_old + ((nibble3_old & 0x3) << 2) | (nibble3_old >> 2)
-            bit16 = ((self.data >> 15) & 1) ^ 1
-            bit17 = (bit16 << 1) & ((self.data >> 15) & 1)
-            bit1918 = self.data & 0x3
-            bit1918_old = ((self.data >> 18) & 0xf)
-            nibble6 = (bit1918_old * 2) & 0x3
-            nibble6_old = ((self.data >> 18) & 0x3)
-            nibble7 = int(nibble6_old / 2)
-            nibble8 = nibble6_old >> 1
-            
+            nibble3 = (self.data_slice(slice(7,0)) - self.data_slice(slice(11,8))) & 0xf
+            nibble4 = (self.data_slice(slice(11,8)) + ((self.data_slice(slice(9,8)) << 2) | (self.data_slice(slice(11,10))))) & 0xf
+            bit16 = self.data_slice(15) ^ 1
+            bit17 = self.data_slice(16) & self.data_slice(15)
+            bit1918 = self.data_slice(slice(1,0))
+            nibble6 = (self.data_slice(slice(19,18)) * 2) & 0x3
+            nibble7 = (int(self.data_slice(slice(23,20)) / 2)) & 0xf
+            nibble8 = (self.data_slice(slice(23,20)) >> 1) & 0xf
+
             self.data = nibble8 << 28 | nibble7 << 24 | nibble6 << 20 | bit1918 << 18 | bit17 << 17 | bit16 << 16 | nibble4 << 12 | nibble3 << 8 | byte1
             assert (self.data == int(self.intf.read()))
             
@@ -51,7 +59,7 @@ def test(sydpy):
             self.dout[23:20] <<= self.dout[19:18] * 2
             self.dout[27:24] <<= self.dout[23:20] / 2
             self.dout[31:28] <<= self.dout[23:20] >> 1
-    
+#             print(self.dout.read(), self.dout[16].read(), self.dout[15].read())
     conf = [
         ('sim'              , sydpy.Simulator),
         ('sim.top'          , Test),
@@ -60,5 +68,3 @@ def test(sydpy):
 
     sydpy.system.set_config(conf)
     sydpy.system.sim.run()
-
-    assert 0

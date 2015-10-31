@@ -16,15 +16,17 @@ class Process(Component, greenlet):
         self.func = func
 
         self.senslist = senslist
-        if not self.senslist:
+        
+        if self.senslist is None:
             parent_name = '.'.join(self.name.split('.')[:-1])
             qname_intfs = system.findall(parent_name + '.*', of_type=Intf)
             intfs = {}
             for k,v in qname_intfs.items():
                 intfs[k.rsplit('.', 1)[1]] = v
              
-            (self.senslist, outputs) = getio_vars(func, intfs=intfs)
-            self.senslist -= outputs
+            (inputs, outputs) = getio_vars(func, intfs=intfs)
+        
+            self.senslist = inputs - outputs
 
         self._exit_func = None 
         self.sim.proc_reg(self)

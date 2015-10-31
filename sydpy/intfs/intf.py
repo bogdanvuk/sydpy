@@ -1,6 +1,7 @@
 from sydpy._event import Event
 from inspect import signature
 import types
+from sydpy.component import Component, compinit
 
 def proxy_bioper(method):
     def wrapper(self, other):
@@ -248,9 +249,10 @@ class SlicedIntf(_IntfBase):
         self.write(other)
         return self
 
-class Intf(_IntfBase):
+class Intf(Component, _IntfBase):
 
-    def __init__(self):
+    def __init__(self, **kwargs):
+        Component.__init__(self, **kwargs)
         self._sliced_intfs = {}
 
     def conn_to_intf(self, other):
@@ -308,3 +310,17 @@ class Intf(_IntfBase):
         else:
             sliced_intf = self._sliced_intfs[repr(key)]
         return sliced_intf
+
+    def _create_event(self, event):
+        if event not in self.e.events:
+            e = Event(self, event)
+            self.e.add({event:e})
+        else:
+            e = self.e.events[event]
+         
+        return e
+ 
+    def _missing_event(self, event_set, event):
+        e = self._create_event(event)
+        return e
+

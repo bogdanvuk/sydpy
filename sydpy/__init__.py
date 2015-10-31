@@ -36,6 +36,7 @@ from sydpy.process import Process
 # from sydpy._simulator import Simulator, simwait
 # from sydpy._process import always, always_acquire, always_comb
 from sydpy.intfs.isig import isig
+from sydpy.intfs.iseq import iseq
 from sydpy._delay import Delay
 from sydpy.rnd import rnd
 from sydpy.types import *

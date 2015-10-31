@@ -507,7 +507,7 @@ class bit(TypeBase):
         return abs(self.read())
 
     def __invert__(self):
-        return self.__class__(~self.val, self.vld)
+        return self.__class__(self.val ^ self._mask, self.vld)
             
     # conversions
     

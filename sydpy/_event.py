@@ -99,9 +99,9 @@ class Event(object):
 #         print(str(self))
         
         for s in self.pool:
-            try:
+            if hasattr(s, 'resolve'):
                 s.resolve(pool)
-            except AttributeError:
+            else:
                 pool.add(s)
     
     def _hdl_gen_ref(self, conv):

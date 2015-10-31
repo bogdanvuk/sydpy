@@ -160,8 +160,9 @@ def compinit(func):
                 setattr(self, arg_name, params[arg_name])
     
         self.__class__.__bases__[0].__init__(**params)
+
         func(**params)
-    
+        
     return wrapper
 
 class Component(object):

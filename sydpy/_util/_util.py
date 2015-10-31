@@ -114,8 +114,8 @@ class _SigNameVisitor(ast.NodeVisitor):
                 intf = self.symdict[self.ref_path[0]]
                 
                 for p in self.ref_path[1:]:
-                    if p in intf:
-                        intf = intf[p]
+                    if hasattr(intf, p):
+                        intf = getattr(intf, p)
                     else:
                         if p in ['write', 'push']:
                             self.store = True
