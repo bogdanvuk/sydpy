@@ -1,8 +1,9 @@
 from sydpy.component import Component, compinit
 from sydpy._signal import Signal
-from sydpy._event import EventSet
+from sydpy._event import EventSet, Event
 from sydpy.unit import Unit
 from sydpy.intfs.intf import Intf, SlicedIntf
+import copy
 
 class isig(Intf):
     _intf_type = 'isig'
@@ -12,10 +13,11 @@ class isig(Intf):
         self._mch = None
         self._sch = None
         self._sig = None
+        self._sourced = False
         self._dtype = dtype
         self._dflt = self._dtype.conv(dflt)
         self._sinks = set()
-        self.e = EventSet(missing_event_handle=self._missing_event)
+        self.inst("e", EventSet, missing_event_handle=self._missing_event)
         
     def con_driver(self, intf):
         pass
@@ -23,12 +25,12 @@ class isig(Intf):
     def _get_dtype(self):
         return self._dtype
     
-    def _find_sources(self):
+    def _connect(self):
         if self._sch:
-            if self._sig is None:
-                self.conn_to_intf(self._sch.master)
+            if not self._sourced:
+                self._conn_to_intf(self._sch.master)
             
-            if self._sig is not None:
+            if self._sourced:
                 return True
             else:
                 return False
@@ -37,10 +39,12 @@ class isig(Intf):
         
     def _add_source(self, intf):
         self._sig = intf
-        for event in self.e:
+        for event in self.e.search(of_type=Event):
             getattr(intf.e, event).subscribe(event)
-            
-        self.e = intf.e
+        
+        self._sourced = True
+        
+#         self.e = intf.e
 
     def _drive(self, channel):
         self._mch = channel
@@ -56,22 +60,31 @@ class isig(Intf):
         
         val = self._dtype.conv(val)
         
-        if self._sig is None:
-            self._sig = Signal(val=self._dflt, event_set = self.e)
+        if not self._sourced:
+            self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
+            self._sourced = True
                     
         self._sig.write(val)
     
     def read_next(self):
-        if self._sig is None:
-            return self._dflt
+        if not self._sourced:
+            return copy.deepcopy(self._dflt)
         else:
             return self._sig._next
     
     def read(self):
-        if self._sig is None:
-            return self._dflt
+        if not self._sourced:
+            return copy.deepcopy(self._dflt)
         else:
             return self._sig.read()
     
     def deref(self, key):
         return SlicedIntf(self, key)
+    
+    def _missing_event(self, _, name):
+        event = self.e.inst(name, Event)
+        
+        if self._sourced:
+            getattr(self._sig.e, name).subscribe(event)
+
+        return event

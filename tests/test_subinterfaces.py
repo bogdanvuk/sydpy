@@ -11,7 +11,7 @@ def test(sydpy):
         
         def __init__(self, intf):
             self.intf = intf
-            self.intf._sig.e.changed.subscribe(self)
+            self.intf.e.changed.subscribe(self)
             self.data = 0
         
         def data_slice(self, key):
@@ -62,7 +62,7 @@ def test(sydpy):
 #             print(self.dout.read(), self.dout[16].read(), self.dout[15].read())
     conf = [
         ('sim'              , sydpy.Simulator),
-        ('sim.top'          , Test),
+        ('top'              , Test),
         ('sim.duration'     , 512)
         ]
 

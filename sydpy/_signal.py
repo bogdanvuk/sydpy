@@ -123,15 +123,15 @@ class Signal(object):
             
         val = self._val
         
-        if 'updated' in self.e:
+        if 'updated' in self.e.comp:
             self.e.updated.trigger()
         
         if val != next_val:
             
-            if 'changed' in self.e:
+            if 'changed' in self.e.comp:
                 self.e.changed.trigger()
                 
-            if 'event_def' in self.e:
+            if 'event_def' in self.e.comp:
                 self.e.event_def.trigger()
                 
                 for _, sube in self.e.event_def.subevents.items():
@@ -141,10 +141,10 @@ class Signal(object):
                         sube.trigger()
 
             if not val and next_val and (val is not None):
-                if 'posedge' in self.e:
+                if 'posedge' in self.e.comp:
                     self.e.posedge.trigger()
             elif not next_val and val:
-                if 'negedge' in self.e:
+                if 'negedge' in self.e.comp:
                     self.e.negedge.trigger()
 
             self._val = copy.deepcopy(next_val)

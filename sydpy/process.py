@@ -18,15 +18,17 @@ class Process(Component, greenlet):
         self.senslist = senslist
         
         if self.senslist is None:
-            parent_name = '.'.join(self.name.split('.')[:-1])
-            qname_intfs = system.findall(parent_name + '.*', of_type=Intf)
-            intfs = {}
-            for k,v in qname_intfs.items():
-                intfs[k.rsplit('.', 1)[1]] = v
-             
-            (inputs, outputs) = getio_vars(func, intfs=intfs)
-        
-            self.senslist = inputs - outputs
+            if func.__self__:
+#                 parent_name = '.'.join(self.name.split('.')[:-1])
+#                 qname_intfs = {c.name: c for c in system.search(parent_name + '.*', of_type=Intf)}
+                qname_intfs = {c.name: c for c in func.__self__.search(of_type=Intf)}
+                intfs = {}
+                for k,v in qname_intfs.items():
+                    intfs[k.rsplit('.', 1)[1]] = v
+                 
+                (inputs, outputs) = getio_vars(func, intfs=intfs)
+            
+                self.senslist = inputs - outputs
 
         self._exit_func = None 
         self.sim.proc_reg(self)

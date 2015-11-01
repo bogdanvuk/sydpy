@@ -22,6 +22,7 @@ class _IntfBase(object):
     def __hash__(self):
         return id(self)
     
+    @proxy_bioper
     def __ilshift__(self, other):
         self.write(other)
         return self
@@ -244,10 +245,10 @@ class SlicedIntf(_IntfBase):
 #     def _hdl_gen_ref(self, conv, lang=Hdlang.Verilog):
 #         if lang == Hdlang.Verilog:
 #             return self._parent._hdl_gen_ref(lang) + key_repr(self._keys)
-
-    def __ilshift__(self, other):
-        self.write(other)
-        return self
+# 
+#     def __ilshift__(self, other):
+#         self.write(other)
+#         return self
 
 class Intf(Component, _IntfBase):
 
@@ -255,11 +256,15 @@ class Intf(Component, _IntfBase):
         Component.__init__(self, **kwargs)
         self._sliced_intfs = {}
 
-    def conn_to_intf(self, other):
+    def _conn_to_intf(self, other):
         if self._intf_eq(other):
             self._add_source(other)
+        elif hasattr(self, '_from_' + other._intf_type):
+            getattr(self, '_from_' + other._intf_type)(other)
+        elif hasattr(other, '_to_' + self._intf_type):
+            getattr(other, '_to_' + self._intf_type)(self)
         else:
-            arch, cfg = self.conv_path(other)
+            raise Exception('Cannot connect to master interface!')
             
     def _intf_eq(self, other):
         try:
@@ -310,17 +315,4 @@ class Intf(Component, _IntfBase):
         else:
             sliced_intf = self._sliced_intfs[repr(key)]
         return sliced_intf
-
-    def _create_event(self, event):
-        if event not in self.e.events:
-            e = Event(self, event)
-            self.e.add({event:e})
-        else:
-            e = self.e.events[event]
-         
-        return e
- 
-    def _missing_event(self, event_set, event):
-        e = self._create_event(event)
-        return e
-
+        

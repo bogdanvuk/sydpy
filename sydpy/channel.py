@@ -28,6 +28,7 @@ class Channel(Component):
     def __init__(self, **kwargs):
         self.slaves = []
         self.master = None
+        self.master_connected = False
     
     def __irshift__(self, other):
         self.drive(other)
@@ -38,7 +39,12 @@ class Channel(Component):
             raise Exception("Can only have one master per channel!")
         
         self.master = intf
+        self.master_connected = True
         intf._drive(self)
+        
+        for s in self.slaves:
+            s._connect()
+        
 #         self._gen_drivers()
 #         intf._mch = self
     
@@ -49,5 +55,8 @@ class Channel(Component):
     def drive(self, intf):
         self.slaves.append(intf)
         intf._sink(self)
+
+        if self.master_connected:
+            intf._connect()
 #         intf._sch = self
 

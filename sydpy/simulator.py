@@ -5,6 +5,7 @@ from sydpy._util._util import class_load, unif_enum
 from greenlet import greenlet
 from sydpy.process import Process
 from sydpy._util._injector import features
+from sydpy.intfs.intf import Intf
 
 class SimEvent(list):
     """Simulator Event that can trigger list of callbacks.
@@ -109,7 +110,7 @@ class Simulator(Component):
                        'timestep_end'   : SimEvent(),
                        }
         
-        self.inst('top', class_load(top))
+#         self.inst('top', class_load(top))
         self.inst('sched', Scheduler)
 
         #         Unit.__init__(self, parent, "sim")
@@ -119,15 +120,16 @@ class Simulator(Component):
             if hasattr(comp, '_gen_drivers'):
                 comp._gen_drivers()
 
-    def find_sources(self):
-        finished_all = True
-        for _, comp in system.findall(self.name + '.top*').items():
-            if hasattr(comp, '_find_sources'):
-                finished = comp._find_sources()
-                if not finished:
-                    finished_all = False
-                    
-        return finished_all
+#     def find_sources(self):
+#         finished_all = True
+#         for comp in system.search(self.name + '.top*', of_type=Intf).items():
+# #         for _, comp in system.findall(self.name + '.top*').items():
+#             if hasattr(comp, '_find_sources'):
+#                 finished = comp._find_sources()
+#                 if not finished:
+#                     finished_all = False
+#                     
+#         return finished_all
     
     def run(self):
         self.sched.switch(self.duration)
@@ -191,8 +193,8 @@ class Simulator(Component):
         
 #         self.gen_drivers()
         
-        while (not self.find_sources()):
-            pass
+#         while (not self.find_sources()):
+#             pass
         
 #         self.top_module = self.top_module_cls('top', None)
 
@@ -220,12 +222,14 @@ class Simulator(Component):
         
         proc.events = events
         
-        for e in unif_enum(events):
-            try:
-                e.subscribe(proc)
-            except AttributeError:
-                e.subscribe(proc)
-                e.event_def.subscribe(proc)
+#         for e in unif_enum(events):
+        for e in events:
+            e.subscribe(proc)
+#             try:
+#                 e.subscribe(proc)
+#             except AttributeError:
+#                 e.subscribe(proc)
+#                 e.event_def.subscribe(proc)
    
     def _evaluate(self):
         """Run all processes scheduled for execution. Resolve all triggered events afterwards."""

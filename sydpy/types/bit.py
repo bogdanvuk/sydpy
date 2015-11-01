@@ -334,15 +334,23 @@ class bit(TypeBase):
             raise ConversionError
     
     def __concat__(self, other):
-        if hasattr(other, 'w'):
-            other_w = other.w
+        if isinstance(other, bit):
+            return Bit(self.w + other.w)((self.val << other.w) + other.val, (self.vld << other.w) + other.vld)
         else:
-            other_w = self.bit_length()
-            
-        return Bit(self.w + other_w)((self.val << other.w) + other.val, (self.vld << other.w) + other.vld)
+            raise TypeError('unsupported operand type(s) for +'+
+                            ': \''+ self.__class__.__name__ +'\' and \''+ other.__class__.__name__ +'\'')
     
     concat = __concat__
-    __mod__ = __concat__
+#     __mod__ = __concat__
+
+    def __mod__(self, other):
+        if isinstance(other, bit):
+            return Bit(self.w + other.w)((self.val << other.w) + other.val, (self.vld << other.w) + other.vld)
+        else:
+            return NotImplemented
+#             raise TypeError('unsupported operand type(s) for +'+
+#                             ': \''+ self.__class__.__name__ +'\' and \''+ other.__class__.__name__ +'\'')
+
     
     @classmethod
     def _from_bit(cls, other):

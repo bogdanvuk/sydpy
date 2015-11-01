@@ -5,7 +5,7 @@ from sydpy.intfs.isig import isig
 from sydpy.types import bit
 from sydpy.process import Process
 
-class iseq(Component):
+class iseq(Intf):
     _intf_type = 'iseq'
 
     @compinit
@@ -46,6 +46,9 @@ class iseq(Component):
 #                 return False
 #         else:
 #             return True
+    
+    def _to_isig(self, other):
+        other._add_source(self._dout)
         
     def _add_source(self, intf):
         self._sig = intf._sig
