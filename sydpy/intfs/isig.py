@@ -25,17 +25,9 @@ class isig(Intf):
     def _get_dtype(self):
         return self._dtype
     
-    def _connect(self):
-        if self._sch:
-            if not self._sourced:
-                self._conn_to_intf(self._sch.master)
-            
-            if self._sourced:
-                return True
-            else:
-                return False
-        else:
-            return True
+#     def _connect(self, master):
+#         if not self._sourced:
+#             self._conn_to_intf(master)
         
     def _add_source(self, intf):
         self._sig = intf

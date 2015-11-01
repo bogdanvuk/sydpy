@@ -46,6 +46,13 @@ class iseq(Intf):
 #                 return False
 #         else:
 #             return True
+
+#     def _connect(self, master):
+#         self.con
+        
+    
+    def _from_isig(self, other):
+        self.data._add_source(other)
     
     def _to_isig(self, other):
         other._add_source(self._dout)

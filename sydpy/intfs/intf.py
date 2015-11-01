@@ -256,7 +256,7 @@ class Intf(Component, _IntfBase):
         Component.__init__(self, **kwargs)
         self._sliced_intfs = {}
 
-    def _conn_to_intf(self, other):
+    def _connect(self, other):
         if self._intf_eq(other):
             self._add_source(other)
         elif hasattr(self, '_from_' + other._intf_type):

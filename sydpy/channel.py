@@ -43,7 +43,7 @@ class Channel(Component):
         intf._drive(self)
         
         for s in self.slaves:
-            s._connect()
+            s._connect(self.master)
         
 #         self._gen_drivers()
 #         intf._mch = self
@@ -57,6 +57,6 @@ class Channel(Component):
         intf._sink(self)
 
         if self.master_connected:
-            intf._connect()
+            intf._connect(self.master)
 #         intf._sch = self
 
