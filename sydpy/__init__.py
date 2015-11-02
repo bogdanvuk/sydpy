@@ -40,6 +40,7 @@ from sydpy.cosim import Cosim
 # from sydpy._process import always, always_acquire, always_comb
 from sydpy.intfs.isig import isig
 from sydpy.intfs.iseq import iseq
+from sydpy.intfs.itlm import itlm
 from sydpy._delay import Delay
 from sydpy.types import *
 # from sydpy.procs import Clocking

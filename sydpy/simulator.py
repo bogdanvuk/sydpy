@@ -96,6 +96,7 @@ class Simulator(Component):
         self.update_pool = set()     
         self._ready_pool = set()
         self._proc_pool = []
+        self.running = False
 
         # Create events for Simulator extensions to hook to.
         self.events = {
@@ -145,8 +146,8 @@ class Simulator(Component):
         
         self.max_time = self.time + self.duration
  
-        self.events['run_start'](self)
         self.running = True
+        self.events['run_start'](self)
          
         while 1:
             self.delta_count = 0
@@ -303,7 +304,7 @@ class Simulator(Component):
     def update (self, sig):
         self.update_pool.add(sig)
     
-    def wait(self, events = None):
+    def wait(self, *events):
         """Delay process execution by waiting for events."""
         self.sched.switch(events)
     

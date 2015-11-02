@@ -59,8 +59,8 @@ class Signal(object):
         self._next = copy.deepcopy(val)
         
         self.e = event_set
-       
-    def blk_pop(self):
+        
+    def bpop(self):
         """Pop the value from the signal queue. If the queue is empty, wait 
         for the value to become available."""
         
@@ -83,7 +83,7 @@ class Signal(object):
         else:
             raise SignalQueueEmpty
 
-    def blk_push(self, val):
+    def bpush(self, val):
         """Push value to signal queue only if the queue is empty. Do not 
         trigger the update."""
         
@@ -96,7 +96,7 @@ class Signal(object):
         """Push value to signal queue without triggering the update."""
         
         self.mem.append(val)
-        if 'enqueued' in self.e:
+        if 'enqueued' in self.e.comp:
             self.e.enqueued.trigger()
         
     def write(self, val):

@@ -1,7 +1,7 @@
 from sydpy._event import Event
 from inspect import signature
 import types
-from sydpy.component import Component, compinit
+from sydpy.component import Component, compinit, system
 
 def proxy_bioper(method):
     def wrapper(self, other):
@@ -26,9 +26,11 @@ class _IntfBase(object):
     def __ilshift__(self, other):
         self.write(other)
         return self
-    
+        
 #     def __irshift__(self, other):
-#         self.connect(other, side=IntfDir.master)
+#         if not system.sim.running:
+#             self._connect(other)
+#         
 #         return self
     
     def __nonzero__(self):
@@ -107,9 +109,20 @@ class _IntfBase(object):
     def __rpow__(self, other):
         return other ** self.read()
 
-    @proxy_bioper
+#     @proxy_bioper
     def __lshift__(self, other):
-        return self.read() << other
+        if system.sim.running:
+            try:
+                other = other.read()
+            except AttributeError:
+                pass
+                    
+            return self.read() << other
+        else:
+            self._connect(other)
+        
+        return self
+        
     @proxy_bioper
     def __rlshift__(self, other):
         return other << self.read()
@@ -257,9 +270,9 @@ class Intf(Component, _IntfBase):
         self._sliced_intfs = {}
 
     def _connect(self, other):
-        if self._intf_eq(other):
-            self._add_source(other)
-        elif hasattr(self, '_from_' + other._intf_type):
+#         if self._intf_eq(other):
+#             self._add_source(other)
+        if hasattr(self, '_from_' + other._intf_type):
             getattr(self, '_from_' + other._intf_type)(other)
         elif hasattr(other, '_to_' + self._intf_type):
             getattr(other, '_to_' + self._intf_type)(self)

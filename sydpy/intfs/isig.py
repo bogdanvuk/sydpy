@@ -29,7 +29,7 @@ class isig(Intf):
 #         if not self._sourced:
 #             self._conn_to_intf(master)
         
-    def _add_source(self, intf):
+    def _from_isig(self, intf):
         self._sig = intf
         for event in self.e.search(of_type=Event):
             getattr(intf.e, event).subscribe(event)
@@ -44,7 +44,7 @@ class isig(Intf):
     def _sink(self, channel):
         self._sch = channel
     
-    def write(self, val, keys=None):
+    def write(self, val):
         try:
             val = val.read()
         except AttributeError:
@@ -73,10 +73,11 @@ class isig(Intf):
     def deref(self, key):
         return SlicedIntf(self, key)
     
-    def _missing_event(self, _, name):
+    def _missing_event(self, event_set, name):
         event = self.e.inst(name, Event)
         
         if self._sourced:
-            getattr(self._sig.e, name).subscribe(event)
+            if self._sig.e is not event_set:
+                getattr(self._sig.e, name).subscribe(event)
 
         return event

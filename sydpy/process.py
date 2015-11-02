@@ -12,11 +12,11 @@ class Process(Component, greenlet):
     sim = RequiredFeature('sim')
    
     @compinit
-    def __init__(self, func, senslist=None, **kwargs):
+    def __init__(self, func, senslist=None, pargs = (), pkwargs = {}, **kwargs):
         self.func = func
 
         self.senslist = senslist
-        
+
         if self.senslist is None:
             if func.__self__:
 #                 parent_name = '.'.join(self.name.split('.')[:-1])
@@ -37,10 +37,10 @@ class Process(Component, greenlet):
     def run(self):
         if self.senslist:
             while(1):
-                self.sim.wait(self.senslist)
-                self.func()
+                self.sim.wait(*list(self.senslist))
+                self.func(*self.pargs, **self.pkwargs)
         else:
-            self.func()
+            self.func(*self.pargs, **self.pkwargs)
             self.sim.wait()
             
     def exit_func(self):

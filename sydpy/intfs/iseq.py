@@ -52,12 +52,12 @@ class iseq(Intf):
         
     
     def _from_isig(self, other):
-        self.data._add_source(other)
+        self.data._connect(other)
     
     def _to_isig(self, other):
-        other._add_source(self._dout)
+        other._connect(self._dout)
         
-    def _add_source(self, intf):
+    def _from_iseq(self, intf):
         self._sig = intf._sig
         self.e = self._sig.e
     

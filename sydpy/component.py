@@ -8,6 +8,9 @@ class Component(object):
     object hierarchy.    
     """
     
+    comp = {}
+    __cur_parent_class__ = None
+    
     def __init__(self, name, **kwargs):
         """Instantiate a new compinit
         
@@ -83,7 +86,19 @@ class System(Component):
     
     def __setitem__(self, path, val):
         self.index[path] = val
+    
+    def __getattr__(self, name):
+        if name not in system.comp:
+            system.inst(name, None)
+            
+        try:
+            return self.comp[name]
+        except KeyError:
+            raise AttributeError(name)
+    
+        
 
+    
 #     
 #         path = path.split('.')
 #         comp = self
@@ -118,6 +133,7 @@ class System(Component):
 #         return comps
 
     def set_config(self, config):
+        self.comp.clear()
         self.config = config
         params = self.get_all_attrs('')
         for p,v in params.items():
@@ -207,27 +223,32 @@ def all2kwargs(func, *args, **kwargs):
 def compinit(func):
 
     def wrapper(self, name, *args, **kwargs):
-    
+        
         if func.__name__ != '__init__':
             raise Exception('Decorated function must be __init__().')
-        
-        system[name] = self
-        
-        sys_conf = system.get_all_attrs(name)
-        
+
         params = all2kwargs(func, self, *args, name=name, **kwargs)
-        
-        for name, val in sys_conf.items():
-            params[name] = val
+
+        if self.__cur_parent_class__ is None:
             
-        arg_names, varargs, varkw, defaults = (
-                                               inspect.getargspec(func))
-        
-        if defaults:
-            for arg_name, _ in zip(reversed(arg_names), reversed(defaults)):
-                setattr(self, arg_name, params[arg_name])
+            system[name] = self
+            
+            sys_conf = system.get_all_attrs(name)
+            
+            for name, val in sys_conf.items():
+                params[name] = val
+                
+            arg_names, varargs, varkw, defaults = (
+                                                   inspect.getargspec(func))
+            
+            if defaults:
+                for arg_name, _ in zip(reversed(arg_names), reversed(defaults)):
+                    setattr(self, arg_name, params[arg_name])
     
-        self.__class__.__bases__[0].__init__(**params)
+            self.__cur_parent_class__ = self.__class__
+        
+        self.__cur_parent_class__ = self.__cur_parent_class__.__bases__[0] 
+        self.__cur_parent_class__.__init__(**params)
 
         func(**params)
         
