@@ -9,7 +9,7 @@ class isig(Intf):
     _intf_type = 'isig'
 
     @compinit
-    def __init__(self, dtype, dflt, **kwargs):
+    def __init__(self, dtype, dflt=None, **kwargs):
         self._mch = None
         self._sch = None
         self._sig = None

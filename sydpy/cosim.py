@@ -17,7 +17,7 @@ class Cosim(Component):
         self.cosim_intf.register(self)
     
     def resolve(self):
-        self.intfs = system.findall(self.name + '.*', of_type=Intf)
+        self.intfs = {c.name: c for c in self.search(of_type=Intf)}
         self.outputs = {}
         self.inputs = {}
         

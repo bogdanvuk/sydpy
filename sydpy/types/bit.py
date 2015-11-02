@@ -371,7 +371,7 @@ class bit(TypeBase):
 #             return 0
  
     def __bool__(self):    
-        return bool(self.val)
+        return bool(self.val & self.vld)
         
     # integer-like methods
 

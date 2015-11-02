@@ -76,13 +76,14 @@ conf = [
         ('sim'              , Simulator),
         ('xsim'             , XsimIntf),
         ('server'           , Server),
-        ('profiler'         , Profiler),
+#         ('profiler'         , Profiler),
         ('xsim.builddir'    , './xsim'),
-        ('sim.top.*.cosim_intf', 'xsim'),
-        ('sim.top.pong.fileset', ['/home/bvukobratovic/projects/sydpy/tests/test_ping_pong_cosim_pong.sv']),
-        ('sim.top'          , TestDff),
-        ('sim.top.ping.dtype'  , bit32),
-        ('sim.top.pong.dtype'  , bit32),
+        ('top.*.cosim_intf', 'xsim'),
+        ('top.pong.fileset', ['/home/bvukobratovic/projects/sydpy/tests/test_ping_pong_cosim_pong.vhd']),
+#         ('top.pong.fileset', ['/home/bvukobratovic/projects/sydpy/tests/test_ping_pong_cosim_pong.sv']),        
+        ('top'          , TestDff),
+        ('top.ping.dtype'  , bit32),
+        ('top.pong.dtype'  , bit32),
         ('sim.duration'     , 10000)
         ]
 

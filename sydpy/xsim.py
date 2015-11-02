@@ -16,25 +16,33 @@ module wrap();
     
     initial begin
         int      vals_read;
+        automatic string       strimp;
         
         if (xsimintf_init()) begin
           $$finish;
         end
-        
-        vals_read = $$sscanf(xsimintf_import(), ${import_str_format}, ${in_port_list});
+        $$dumpfile("xsim.vdc");
+        $$dumpvars(${in_port_list}, ${out_port_list});
+        strimp = xsimintf_import();
+        $$display("INIT: %s", strimp);
+        vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
     end
     
     always #1 begin
         automatic int  vals_read;
         automatic int  delay;
+        automatic string       strimp;
         
         delay = xsimintf_delay();
-        if (delay > 0)
+        if (delay > 0) begin
             #delay;
-        else if (delay < 0)
+        end else if (delay < 0) begin
+            $$dumpflush;
             $$finish;
-        
-        vals_read = $$sscanf(xsimintf_import(), ${import_str_format}, ${in_port_list});
+        end
+        strimp = xsimintf_import();
+        $$display("TIMESTEP: %s", strimp);        
+        vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
     end
 
     always @(${out_port_list}) begin
@@ -44,6 +52,7 @@ module wrap();
         
         $$sformat(strexp, ${export_str_format}, ${out_port_list});
         strimp = xsimintf_export(strexp);
+        $$display("DELTA: %s", strimp);
         vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
     end
     
@@ -64,8 +73,9 @@ def shell(cmd):
     print(' '.join(cmd))
     p = Popen(' '.join(cmd), shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True)
     out, err = p.communicate()
-    print("Return code: ", p.returncode)
     print(out.rstrip(), err.rstrip())
+    print("Return code: ", p.returncode)
+    return out, err, p.returncode
 
 class XsimIntf(Component):
 
@@ -112,9 +122,9 @@ class XsimIntf(Component):
 
         return wrapper_tmpl.substitute(
                                        port_definition='\n  '.join(ports_definition),
-                                       import_str_format='"{0}"'.format(' '.join(import_str_format)),
+                                       import_str_format='"{0}"'.format(','.join(import_str_format)),
                                        in_port_list = ','.join(sorted(self.inputs.keys())),
-                                       export_str_format='"{0}"'.format(' '.join(export_str_format)),
+                                       export_str_format='"{0}"'.format(','.join(export_str_format)),
                                        out_port_list = ','.join(sorted(self.outputs.keys())),
                                        module_instantiation = '\n\n'.join(module_insts)
                                        )
@@ -135,10 +145,10 @@ class XsimIntf(Component):
             msg += ',' + ','.join(params)
             
         self.server.send(msg)
-#         print(msg)
+        print(msg)
 
         ret = self.server.recv().split(',')
-#         print(ret)
+        print(ret)
         if len(ret) > 1:
             params = ret[1:]
         else:
@@ -184,11 +194,34 @@ class XsimIntf(Component):
 #         self.fileset.append(os.path.join(self.builddir, "wrapper.sv"))
         self.fileset.append('wrapper.sv')
 
-        shell(cmd = ['xvlog', '-sv'] + self.fileset)
-        shell(cmd = ['xelab', '-m64', '-svlog', 'wrapper.sv', '-sv_root', '/home/bvukobratovic/projects/sydpy/intf/xsim/build', '-sv_lib', 'dpi', '-debug', 'all'])
-#         shell(cmd = ['xsim', 'work.wrap', '-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl'])
-        cmd = ['xsim', 'work.wrap', '--runall'] #-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl']
-        self.xsim_proc = Popen(' '.join(cmd), shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+#         files = {'sv' : [],
+#                  'v'  : [],
+#                  'vhd': []
+#                  }
+#         
+#         for f in self.fileset:
+#             files[os.path.splitext(f)[1][1:]].append(f)
+# 
+#         if files['sv']:
+#             _, _, ret = shell(cmd = ['xvlog', '-sv'] + files['sv'])
+#             if ret:
+#                 self.server.sock.close()
+#                 raise Exception('Error in HDL source compilation!') 
+#          
+#         if files['v']:
+#             shell(cmd = ['xvlog'] + files['v'])
+#          
+#         if files['vhd']:
+#             _,_,ret =shell(cmd = ['xvhdl'] + files['vhd'])
+#             if ret:
+#                 self.server.sock.close()
+#                 raise Exception('Error in HDL source compilation!') 
+#  
+#          
+#         shell(cmd = ['xelab', '-m64', '-svlog', 'wrapper.sv', '-sv_root', '/home/bvukobratovic/projects/sydpy/intf/xsim/build', '-sv_lib', 'dpi', '-debug', 'all'])
+# #         shell(cmd = ['xsim', 'work.wrap', '-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl'])
+#         cmd = ['xsim', 'work.wrap', '--runall'] #-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl']
+#         self.xsim_proc = Popen(' '.join(cmd), shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True)
         
         xsim_state = self.get_xsim_state()
         
@@ -208,7 +241,7 @@ class XsimIntf(Component):
             
         self.send_command('SET', ['delay', '-1'])
         self.send_command('CONTINUE')
-        self.xsim_proc.terminate()
+#         self.xsim_proc.terminate()
     
     def sim_timestep_start(self, time, sim):
         if time > 0:
@@ -259,7 +292,7 @@ class XsimIntf(Component):
     def __del__(self):
         try:
             self.server.send('$CLOSE')
-            self.xsim_proc.terminate()
+#             self.xsim_proc.terminate()
         except:
             pass
 

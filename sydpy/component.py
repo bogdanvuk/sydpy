@@ -73,11 +73,12 @@ class System(Component):
         self.index = {}
        
     def __getitem__(self, path):
-        if path not in self.index:
+        item = list(self.search(path, depth=1000))
+        if not item:
             attr_name = path.split('.', 1)[0]
-            val = self.get_config('', attr_name)
-            setattr(self, attr_name, val(attr_name))
-            
+#             val = self.get_config('', attr_name)
+            self.inst(attr_name, None)
+           
         return self.index[path]
     
     def __setitem__(self, path, val):

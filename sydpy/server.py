@@ -46,6 +46,7 @@ class Server(Component):
             self.sock.close()
     
     def connect(self):
+        print("Waiting for XSIM connection...")
         self.client, address = self.sock.accept()
 #         logging.info('Client connected.')
 #         client.send(vivhdr.encode())
