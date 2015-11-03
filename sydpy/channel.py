@@ -33,6 +33,10 @@ class Channel(Component):
     def __irshift__(self, other):
         self.drive(other)
         return self
+
+    def __rshift__(self, other):
+        self.drive(other)
+        return self
     
     def sink(self, intf):
         if self.master is not None:
@@ -49,6 +53,10 @@ class Channel(Component):
 #         intf._mch = self
     
     def __ilshift__(self, other):
+        self.sink(other)
+        return self
+    
+    def __lshift__(self, other):
         self.sink(other)
         return self
     

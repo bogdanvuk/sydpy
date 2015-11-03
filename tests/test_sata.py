@@ -1,6 +1,20 @@
 from sydpy import *
 import os
 
+class Stim(Component):
+    @compinit
+    def __init__(self, ch_logic_clk_i, ch_data_clk_i, ch_system_reset_i,
+                 ch_din_i, ch_dout_i):
+        
+        ch_logic_clk_i      << self.inst("logic_clk_i", isig, dtype=bit, dflt=0)
+        ch_data_clk_i       << self.inst("data_clk_i", isig, dtype=bit, dflt=0)
+        ch_system_reset_i   << self.inst("system_reset_i", isig, dtype=bit, dflt=1)
+        ch_din_i            << self.inst("din_i", iseq, dtype=Struct(('scr', bit),
+                                                                     ('cs', Bit(2)),
+                                                                     ('da', Bit(3)),
+                                                                     )
+                                                                     
+
 class Stimulus(Component):
     @compinit
     def __init__(self, ch_logic_clk_i, ch_data_clk_i, ch_system_reset_i,
@@ -51,7 +65,7 @@ class Stimulus(Component):
             self.state = "write"
     
     def p_reset(self):
-        system.sim.wait(Delay(4*self.data_clk_period))
+        sydsys().sim.wait(Delay(4*self.data_clk_period))
         self.system_reset_i <<= '0'
     
     def p_logic_clk(self):
@@ -127,5 +141,5 @@ conf = [
         ('sim.duration'     , 2000)
         ]
 
-system.set_config(conf)
-system.sim.run()
+sydsys().set_config(conf)
+sydsys().sim.run()
