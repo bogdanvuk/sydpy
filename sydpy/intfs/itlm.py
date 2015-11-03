@@ -2,7 +2,7 @@ from sydpy.intfs.isig import isig
 from sydpy.process import Process
 import copy
 from sydpy._signal import Signal
-from sydpy.component import system
+from sydpy.component import sydsys
 
 class itlm(isig):
     _intf_type = 'itlm'
@@ -15,16 +15,14 @@ class itlm(isig):
     
     def _pfunc_tlm_to_sig(self, other):
         while(1):
-            val = self.bpop()
-            print('to_sig: ', val)
-            other <<= val
+            other <<= self.bpop()
     
 #     def _from_sig(self, val):
 #         pass
     
     def bpop(self):
         if not self._sourced:
-            system.sim.wait(self.e.enqueued)
+            sydsys().sim.wait(self.e.enqueued)
             
         return self._sig.bpop()
 

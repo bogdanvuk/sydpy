@@ -1,9 +1,11 @@
-from sydpy.component import Component, compinit
+from sydpy.component import Component, compinit, sydsys
 from sydpy._signal import Signal
 from sydpy._event import EventSet, Event
 from sydpy.unit import Unit
 from sydpy.intfs.intf import Intf, SlicedIntf
 import copy
+from sydpy.types._type_base import convgen
+from sydpy.process import Process
 
 class isig(Intf):
     _intf_type = 'isig'
@@ -22,21 +24,32 @@ class isig(Intf):
     def con_driver(self, intf):
         pass
     
-    def _get_dtype(self):
-        return self._dtype
-    
 #     def _connect(self, master):
 #         if not self._sourced:
 #             self._conn_to_intf(master)
         
-    def _from_isig(self, intf):
-        self._sig = intf
-        for event in self.e.search(of_type=Event):
-            getattr(intf.e, event).subscribe(event)
-        
-        self._sourced = True
-        
-#         self.e = intf.e
+    def _from_isig(self, other):
+        if self._get_dtype() is other._get_dtype():
+            self._sig = other
+            for event in self.e.search(of_type=Event):
+                getattr(other.e, event).subscribe(event)
+            
+            self._sourced = True
+        else:
+            self.inst('_p_dtype_convgen', Process, self._pfunc_dtype_convgen, [], pargs=(other,))
+   
+    
+    def _pfunc_dtype_convgen(self, other):
+        while(1):
+            data_recv = other.bpop()
+            data_conv_gen = convgen(data_recv, self._dtype)
+             
+            try:
+                while True:
+                    self.bpush(next(data_conv_gen))
+            except StopIteration as e:
+                if e.value is not None:
+                    self.bpush(e.value)
 
     def _drive(self, channel):
         self._mch = channel
@@ -44,18 +57,30 @@ class isig(Intf):
     def _sink(self, channel):
         self._sch = channel
     
-    def write(self, val):
+    def _prep_write(self, val):
         try:
             val = val.read()
         except AttributeError:
             pass
         
-        val = self._dtype.conv(val)
+        val = self._get_dtype().conv(val)
         
         if not self._sourced:
             self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
             self._sourced = True
-                    
+            
+        return val
+    
+    def bpush(self, val):
+        val = self._prep_write(val)
+        self._sig.bpush(val)
+        
+    def push(self, val):
+        val = self._prep_write(val)
+        self._sig.push(val)
+    
+    def write(self, val):
+        val = self._prep_write(val)
         self._sig.write(val)
     
     def read_next(self):
@@ -69,9 +94,21 @@ class isig(Intf):
             return copy.deepcopy(self._dflt)
         else:
             return self._sig.read()
+        
+    def bpop(self):
+        if not self._sourced:
+            sydsys().sim.wait(self.e.enqueued)
+            
+        return self._sig.bpop()
     
     def deref(self, key):
         return SlicedIntf(self, key)
+    
+    def get_queue(self):
+        if not self._sourced:
+            return []
+        else:
+            return self._sig.get_queue()
     
     def _missing_event(self, event_set, name):
         event = self.e.inst(name, Event)

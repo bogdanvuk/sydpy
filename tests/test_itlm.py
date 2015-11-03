@@ -7,7 +7,6 @@ def sydpy():
 
 def test_itlm2isig(sydpy):
 
-    clk_period = 8
     gen_period = 2
     
     class ChangeListener(object):

@@ -1,7 +1,7 @@
 from greenlet import greenlet
 from sydpy.unit import Unit
 from sydpy._util._util import getio_vars
-from sydpy.component import Component, compinit, RequiredFeature, system
+from sydpy.component import Component, compinit, sydsys
 from sydpy.intfs.intf import Intf
 
 class Process(Component, greenlet):
@@ -9,8 +9,6 @@ class Process(Component, greenlet):
     
     Class turns function in the greenlet task.""" 
 
-    sim = RequiredFeature('sim')
-   
     @compinit
     def __init__(self, func, senslist=None, pargs = (), pkwargs = {}, **kwargs):
         self.func = func
@@ -31,19 +29,21 @@ class Process(Component, greenlet):
                 self.senslist = inputs - outputs
 
         self._exit_func = None 
-        self.sim.proc_reg(self)
+        sydsys().sim.proc_reg(self)
         greenlet.__init__(self)
     
     def run(self):
         if self.senslist:
             while(1):
-                self.sim.wait(*list(self.senslist))
+                sydsys().sim.wait(*list(self.senslist))
                 self.func(*self.pargs, **self.pkwargs)
         else:
             self.func(*self.pargs, **self.pkwargs)
-            self.sim.wait()
+            sydsys().sim.wait()
             
     def exit_func(self):
         if self._exit_func:
             self._exit_func()
+            
+#         raise greenlet.GreenletExit 
 

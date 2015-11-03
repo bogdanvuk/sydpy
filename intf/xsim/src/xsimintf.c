@@ -21,11 +21,12 @@ char import_buf[IMPORT_BUF_LEN] = "";
 char export_buf[EXPORT_BUF_LEN] = "";
 int msg_buf_cnt = 0;
 
-enum state_type {S_STARTED, S_CONNECTED, S_INITIALIZED, S_IMPORT, S_EXPORT, S_DELAY};
+enum state_type {S_STARTED, S_CONNECTED, S_INITIALIZED, S_IMPORT, S_EXPORT, S_DELAY, S_ERROR};
 enum state_type state;
 enum command_type { CMD_GET, CMD_SET, CMD_IMPORT, CMD_EXPORT, CMD_ERROR, CMD_CONTINUE, CMD_RESP, CMD_CLOSE, NUMBER_OF_COMMAND_TYPES };
 
 int delay;
+int finish;
 
 const char *command_names[NUMBER_OF_COMMAND_TYPES] = {
     "$GET", "$SET", "$IMPORT", "$EXPORT", "$ERROR", "$CONTINUE", "$RESP", "$CLOSE"
@@ -44,10 +45,10 @@ static int get_new_message(void) {
 #ifdef CYTHON_XSIMINTF_DBG
     cython_get_new_message();
 #else
-    msg_buf_cnt = 0;
-    while (msg_buf_cnt == 0) {
-    	msg_buf_cnt = socket_recv(msg_buf, IMPORT_BUF_LEN);
-    }
+    //    msg_buf_cnt = 0;
+    //while (msg_buf_cnt == 0) {
+     msg_buf_cnt = socket_recv(msg_buf, IMPORT_BUF_LEN);
+        // }
 
     msg_buf[msg_buf_cnt] = 0;
 #endif
@@ -127,80 +128,90 @@ void cmd_handler(void) {
     int length = 0;
     int i;
 
+    recv_cmd.cmd = CMD_ERROR;
+
     //    puts("entered cmd handler");
-    do {
+    while ((recv_cmd.cmd != CMD_CONTINUE) && (finish == 0)) {
         //        puts("cmd handler entered loop...");
-        recv_command();
+        if (recv_command() < 0) {
+            finish = 1;
+        } else {
 
-        switch(recv_cmd.cmd) {
+            switch(recv_cmd.cmd) {
 
-        case CMD_GET:
-            send_cmd.cmd = CMD_RESP;
-            send_cmd.param_cnt = recv_cmd.param_cnt;
+            case CMD_GET:
+                send_cmd.cmd = CMD_RESP;
+                send_cmd.param_cnt = recv_cmd.param_cnt;
 
-            for (i = 0; i < recv_cmd.param_cnt; i++) {
-                if(!strcmp("state", recv_cmd.params[i])) {
-                    sprintf(send_cmd.params[i], "%d", state);
-                } else if(!strcmp("delay", recv_cmd.params[i])) {
-                    sprintf(send_cmd.params[i], "%d", delay);
-                } else {
-                    send_cmd.cmd = CMD_ERROR;
-                    send_cmd.param_cnt = 0;
-                    break;
+                for (i = 0; i < recv_cmd.param_cnt; i++) {
+                    if(!strcmp("state", recv_cmd.params[i])) {
+                        sprintf(send_cmd.params[i], "%d", state);
+                    } else if(!strcmp("delay", recv_cmd.params[i])) {
+                        sprintf(send_cmd.params[i], "%d", delay);
+                    } else {
+                        send_cmd.cmd = CMD_ERROR;
+                        send_cmd.param_cnt = 0;
+                        break;
+                    }
                 }
-            }
-            send_command();
-            break;
-        case CMD_SET:
-            send_cmd.cmd = CMD_RESP;
-            send_cmd.param_cnt = 0;
+                send_command();
+                break;
+            case CMD_SET:
+                send_cmd.cmd = CMD_RESP;
+                send_cmd.param_cnt = 0;
 
-            for (i = 0; i < recv_cmd.param_cnt; i+=2) {
-                if(!strcmp("state", recv_cmd.params[i])) {
-                    sscanf(recv_cmd.params[i+1], "%d", &state);
-                } else if(!strcmp("delay", recv_cmd.params[i])) {
-                    sscanf(recv_cmd.params[i+1], "%d", &delay);
-                } else {
-                    send_cmd.cmd = CMD_ERROR;
-                    send_cmd.param_cnt = 0;
-                    break;
+                for (i = 0; i < recv_cmd.param_cnt; i+=2) {
+                    if(!strcmp("state", recv_cmd.params[i])) {
+                        sscanf(recv_cmd.params[i+1], "%d", &state);
+                    } else if(!strcmp("delay", recv_cmd.params[i])) {
+                        sscanf(recv_cmd.params[i+1], "%d", &delay);
+                    } else {
+                        send_cmd.cmd = CMD_ERROR;
+                        send_cmd.param_cnt = 0;
+                        break;
+                    }
                 }
-            }
-            send_command();
-            break;
-        case CMD_EXPORT:
-            sprintf(msg_buf, "$EXPORT,%s", export_buf);
-            send_msg();
-            break;
-        case CMD_IMPORT:
-            import_buf[0] = 0;
-            for (length=0,i = 0; i < recv_cmd.param_cnt; i ++) {
-                if (length > 0)
-                    length += sprintf(import_buf+length, "%s", ",");
+                send_command();
+                break;
+            case CMD_EXPORT:
+                sprintf(msg_buf, "$EXPORT,%s", export_buf);
+                send_msg();
+                break;
+            case CMD_IMPORT:
+                import_buf[0] = 0;
+                for (length=0,i = 0; i < recv_cmd.param_cnt; i ++) {
+                    if (length > 0)
+                        length += sprintf(import_buf+length, "%s", ",");
 
-                length += sprintf(import_buf+length, "%s", recv_cmd.params[i]);
+                    length += sprintf(import_buf+length, "%s", recv_cmd.params[i]);
+                }
+                send_cmd.cmd = CMD_RESP;
+                send_cmd.param_cnt = 0;
+                send_command();
+                break;
+            case CMD_CONTINUE:
+                send_cmd.cmd = CMD_RESP;
+                send_cmd.param_cnt = 0;
+                send_command();
+                break;
+            case CMD_CLOSE:
+                finish = 1;
+                break;
+            default:
+                break;
             }
-            send_cmd.cmd = CMD_RESP;
-            send_cmd.param_cnt = 0;
-            send_command();
-            break;
-        case CMD_CONTINUE:
-            send_cmd.cmd = CMD_RESP;
-            send_cmd.param_cnt = 0;
-            send_command();
-            break;
-        case CMD_CLOSE:
-            socket_close();
-            break;
-        default:
-            break;
         }
 
-   } while (recv_cmd.cmd != CMD_CONTINUE);
+    }
+
+    if (finish) {
+        socket_close();
+    }
 }
 
 DPI_DLLESPEC int xsimintf_init(void)
 {
+    finish = 0;
     state = S_STARTED;
 #ifndef CYTHON_XSIMINTF_DBG
     fp = fopen("xsimintf.log", "w");
@@ -224,10 +235,12 @@ DPI_DLLESPEC int xsimintf_delay(void)
 {
     state = S_DELAY;
     cmd_handler();
-    if (delay < 0) {
-        socket_close();
+
+    if (finish) {
+        return -1;
+    } else {
+        return delay;
     }
-    return delay;
 }
 
 DPI_DLLESPEC const char* xsimintf_export(const char * vals)

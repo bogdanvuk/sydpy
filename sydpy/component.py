@@ -25,7 +25,7 @@ class Component(object):
 
     def inst(self, name, cls, *args, **kwargs):
         try:
-            val = system.get_config(self.name, name)
+            val = sydsys().get_config(self.name, name)
             if not inspect.isclass(val):
                 setattr(self, name, val)
                 return val
@@ -88,8 +88,8 @@ class System(Component):
         self.index[path] = val
     
     def __getattr__(self, name):
-        if name not in system.comp:
-            system.inst(name, None)
+        if name not in sydsys().comp:
+            sydsys().inst(name, None)
             
         try:
             return self.comp[name]
@@ -184,24 +184,30 @@ class System(Component):
             except KeyError:
                 pass
         
-system = System()
+_system = [System()]
 
-def NoAssertion(obj): return True
+def sydsys(sid = 0):
+    return _system[sid]
 
-class RequiredFeature(object):
-    def __init__(self, feature):
-        self.feature = feature
-    def __get__(self, obj, T):
-        return self.result # <-- will request the feature upon first call
-    def __getattr__(self, name):
-        assert name == 'result', "Unexpected attribute request other then 'result'"
-        self.result = self.Request()
-        return self.result
-    def Request(self):
-        if self.feature not in system.comp:
-            system.inst(self.feature, None)
-            
-        return system.comp[self.feature]
+def restart_sydsys(sid = 0):
+    _system[sid] = System()
+
+# def NoAssertion(obj): return True
+
+# class RequiredFeature(object):
+#     def __init__(self, feature):
+#         self.feature = feature
+#     def __get__(self, obj, T):
+#         return self.result # <-- will request the feature upon first call
+#     def __getattr__(self, name):
+#         assert name == 'result', "Unexpected attribute request other then 'result'"
+#         self.result = self.Request()
+#         return self.result
+#     def Request(self):
+#         if self.feature not in sydsys().comp:
+#             sydsys().inst(self.feature, None)
+#             
+#         return sydsys().comp[self.feature]
 
 def all2kwargs(func, *args, **kwargs):
     arg_names, varargs, varkw, defaults = (
@@ -231,9 +237,9 @@ def compinit(func):
 
         if self.__cur_parent_class__ is None:
             
-            system[name] = self
+            sydsys()[name] = self
             
-            sys_conf = system.get_all_attrs(name)
+            sys_conf = sydsys().get_all_attrs(name)
             
             for name, val in sys_conf.items():
                 params[name] = val

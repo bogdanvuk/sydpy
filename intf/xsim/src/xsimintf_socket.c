@@ -10,6 +10,7 @@ int socket_open()
     struct sockaddr_in server;
     char message[1000] , server_reply[2000];
     int so_reuseaddr = 1;
+    struct timeval tv;
 
     //Create socket
     sock = socket(AF_INET , SOCK_STREAM , 0);
@@ -20,6 +21,12 @@ int socket_open()
     puts("Socket created");
 
     setsockopt(sock,SOL_SOCKET,SO_REUSEADDR, &so_reuseaddr, sizeof so_reuseaddr);
+
+
+    tv.tv_sec = 10;  /* 10 Secs Timeout */
+    tv.tv_usec = 0;  // Not init'ing this can cause strange errors
+
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(struct timeval));
 
     server.sin_addr.s_addr = inet_addr("127.0.0.1");
     server.sin_family = AF_INET;

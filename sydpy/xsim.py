@@ -1,4 +1,4 @@
-from sydpy.component import Component, compinit, RequiredFeature
+from sydpy.component import Component, compinit, sydsys
 import string
 import os
 import itertools
@@ -79,9 +79,6 @@ def shell(cmd):
 
 class XsimIntf(Component):
 
-    sim = RequiredFeature('sim')
-    server = RequiredFeature('server')
-    
     state_type = {0: "S_STARTED", 1: "S_CONNECTED", 2: "S_INITIALIZED", 3:"S_IMPORT", 4:"S_EXPORT", 5:"S_DELAY"};
     cmds = {'GET_STATE': {'type': 'GET', 'params': ['state']},
             'CONTINUE': {'type': 'CONTINUE', 'params': ['state']}
@@ -90,10 +87,10 @@ class XsimIntf(Component):
     @compinit
     def __init__(self, builddir='.', **kwargs):
         self.cosim_pool = []
-        self.sim.events['run_start'].append(self.sim_run_start)
-        self.sim.events['run_end'].append(self.sim_run_end)
-        self.sim.events['delta_settled'].append(self.sim_delta_settled)
-        self.sim.events['timestep_start'].append(self.sim_timestep_start)
+        sydsys().sim.events['run_start'].append(sydsys().sim_run_start)
+        sydsys().sim.events['run_end'].append(sydsys().sim_run_end)
+        sydsys().sim.events['delta_settled'].append(sydsys().sim_delta_settled)
+        sydsys().sim.events['timestep_start'].append(sydsys().sim_timestep_start)
         
     
     def render_module_inst(self, cosim):
@@ -144,10 +141,10 @@ class XsimIntf(Component):
         if params:
             msg += ',' + ','.join(params)
             
-        self.server.send(msg)
+        sydsys().server.send(msg)
         print(msg)
 
-        ret = self.server.recv().split(',')
+        ret = sydsys().server.recv().split(',')
         print(ret)
         if len(ret) > 1:
             params = ret[1:]
@@ -170,7 +167,7 @@ class XsimIntf(Component):
         for intf, p in zip(sorted(self.outputs.items()), params):
             intf[1].write('0x' + p.replace('x', 'u').replace('z', 'u'))
             
-        self.sim._update()
+        sydsys().sim._update()
 
                   
     def send_import(self):
@@ -205,7 +202,7 @@ class XsimIntf(Component):
 #         if files['sv']:
 #             _, _, ret = shell(cmd = ['xvlog', '-sv'] + files['sv'])
 #             if ret:
-#                 self.server.sock.close()
+#                 sydsys().server.sock.close()
 #                 raise Exception('Error in HDL source compilation!') 
 #          
 #         if files['v']:
@@ -214,7 +211,7 @@ class XsimIntf(Component):
 #         if files['vhd']:
 #             _,_,ret =shell(cmd = ['xvhdl'] + files['vhd'])
 #             if ret:
-#                 self.server.sock.close()
+#                 sydsys().server.sock.close()
 #                 raise Exception('Error in HDL source compilation!') 
 #  
 #          
@@ -239,8 +236,7 @@ class XsimIntf(Component):
             if xsim_state != 'S_DELAY':
                 self.send_command('CONTINUE')
             
-        self.send_command('SET', ['delay', '-1'])
-        self.send_command('CONTINUE')
+        self.send_command('CLOSE')
 #         self.xsim_proc.terminate()
     
     def sim_timestep_start(self, time, sim):
@@ -291,7 +287,7 @@ class XsimIntf(Component):
         
     def __del__(self):
         try:
-            self.server.send('$CLOSE')
+            sydsys().server.send('$CLOSE')
 #             self.xsim_proc.terminate()
         except:
             pass

@@ -1,4 +1,4 @@
-from sydpy.component import Component, system
+from sydpy.component import Component, sydsys
 from sydpy._util._util import class_load
 from sydpy.intfs.intf import Intf
 from sydpy.process import Process
@@ -7,7 +7,7 @@ class Cosim(Component):
     
     def __init__(self, cosim_intf, fileset = [], module_name=None, **kwargs):
         Component.__init__(self, **kwargs)
-        self.cosim_intf = system[cosim_intf]
+        self.cosim_intf = sydsys()[cosim_intf]
         self.module_name = module_name
         self.fileset = fileset
 

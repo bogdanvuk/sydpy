@@ -16,7 +16,7 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 from sydpy._event import EventSet, Event
-from sydpy.component import RequiredFeature
+from sydpy.component import sydsys
 import copy
 
 """Module implements Signal class"""
@@ -42,8 +42,6 @@ class SignalQueueEmpty(Exception):
 class Signal(object):
     """Signal is smallest unit that provides evaluate-update mechanism for data."""
     
-    sim = RequiredFeature('sim')
-    
     def __init__(self, val=None, event_set=None, trace=False): 
         """"Create a new Signal.
         
@@ -59,16 +57,20 @@ class Signal(object):
         self._next = copy.deepcopy(val)
         
         self.e = event_set
-        
+    
+    def get_queue(self):
+        return self.mem
+    
     def bpop(self):
         """Pop the value from the signal queue. If the queue is empty, wait 
         for the value to become available."""
         
         if not self.mem:
-            self.sim.wait(self.e.enqueued)
+            sydsys().sim.wait(self.e.enqueued)
         
-        self.sim.update(self)
-        self.sim.wait(self.e.updated)
+        self._next = self.mem.pop(0)
+        sydsys().sim.update(self)
+        sydsys().sim.wait(self.e.updated)
             
         return self._val
     
@@ -77,9 +79,9 @@ class Signal(object):
         SignalQueueEmpty exception. """
         
         if self.mem:
-            self.sim.update(self)
-                        
-            return self.mem[0]
+            self._next = self.mem.pop(0)
+            sydsys().sim.update(self)
+            return self._next
         else:
             raise SignalQueueEmpty
 
@@ -88,7 +90,7 @@ class Signal(object):
         trigger the update."""
         
         while self.mem:
-            self.sim.wait(self.e.updated)
+            sydsys().sim.wait(self.e.updated)
         
         self.push(val)
            
@@ -102,12 +104,12 @@ class Signal(object):
     def write(self, val):
         """Write a new value to the signal."""
         self._next = val
-        self.sim.update(self)
+        sydsys().sim.update(self)
         
     def write_after(self, val, delay):
         """Write a new value to the signal after a certain delay."""
         if delay:
-            self.sim.wait(Delay(delay))
+            sydsys().sim.wait(Delay(delay))
 
         self.write(val)
     
@@ -116,10 +118,7 @@ class Signal(object):
         
     def _update(self):
         """Callback called by simulator if signal registered for update cycle."""
-        if self.mem:
-            next_val = self.mem.pop(0)
-        else:
-            next_val = self._next
+        next_val = self._next
             
         val = self._val
         

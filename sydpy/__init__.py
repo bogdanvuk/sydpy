@@ -29,7 +29,7 @@ class ConversionError(Exception):
     def __init__(self, val=None):
         self.val = val
 
-from sydpy.component import system, compinit, Component
+from sydpy.component import restart_sydsys, sydsys, compinit, Component
 from sydpy.simulator import Simulator
 from sydpy.channel import Channel
 from sydpy.process import Process
@@ -47,7 +47,7 @@ from sydpy.types import *
 # from sydpy.verif import *
 # from sydpy.extens import *
     
-__all__ = ["system",
+__all__ = [
            "Simulator",
            "Component",
            "compinit",
@@ -59,6 +59,8 @@ __all__ = ["system",
            "Process",
            "isig",
            "iseq",
+           "sydsys",
+           "restart_sydsys",
 #            "tlm",
 #            "subintfs",
            "Bit",
@@ -67,7 +69,7 @@ __all__ = ["system",
            "bit16",
            "bit32",
            "bit64",
-#            "Array",
+           "Array",
 #            "Enum",
 #            "Struct",
 #            "Vector",

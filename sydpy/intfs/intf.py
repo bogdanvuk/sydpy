@@ -1,7 +1,7 @@
 from sydpy._event import Event
 from inspect import signature
 import types
-from sydpy.component import Component, compinit, system
+from sydpy.component import Component, compinit, sydsys
 
 def proxy_bioper(method):
     def wrapper(self, other):
@@ -111,7 +111,7 @@ class _IntfBase(object):
 
 #     @proxy_bioper
     def __lshift__(self, other):
-        if system.sim.running:
+        if sydsys().sim.running:
             try:
                 other = other.read()
             except AttributeError:
@@ -302,6 +302,9 @@ class Intf(Component, _IntfBase):
 #             if arch:
 #                 arch = types.MethodType(arch,self.get_module())
 #                 self.get_module().arch_inst(arch, data_i=other.master, data_o=self.slave, **cfg)
+
+    def _get_dtype(self):
+        return self._dtype
 
     def subscribe(self, proc, event=None):
         if event is None:

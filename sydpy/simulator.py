@@ -1,4 +1,4 @@
-from sydpy.component import Component, compinit, RequiredFeature, system
+from sydpy.component import Component, compinit, sydsys
 from sydpy.unit import Unit
 from sydpy._util._util import class_load, unif_enum
 
@@ -60,18 +60,14 @@ class SimEvent(list):
 class Scheduler(Component, greenlet):
     """Simulator scheduler kernel greenlet wrapper"""
     
-    sim = RequiredFeature('sim')
-    
     @compinit
     def __init__(self, log_task_switching = False, **kwargs):
         greenlet.__init__(self)
-    
-    def run(self, duration = 0, quiet = 0):
-        self.sim._run(duration, quiet)
-
-    def build(self):        
         if self.log_task_switching:
             self.settrace(self.callback)
+    
+    def run(self, duration = 0, quiet = 0):
+        sydsys().sim._run(duration, quiet)
     
     def callback(self, event, args):
         """Callback that monitors process switching for debuggin purposes"""
@@ -112,12 +108,12 @@ class Simulator(Component):
                        }
         
 #         self.inst('top', class_load(top))
-        self.inst('sched', Scheduler)
+        self.inst('sched', Scheduler, log_task_switching=False)
 
         #         Unit.__init__(self, parent, "sim")
     
     def gen_drivers(self):
-        for _, comp in system.findall(self.name + '.top*').items():
+        for _, comp in sydsys().findall(self.name + '.top*').items():
             if hasattr(comp, '_gen_drivers'):
                 comp._gen_drivers()
 
@@ -148,8 +144,9 @@ class Simulator(Component):
  
         self.running = True
         self.events['run_start'](self)
-         
-        while 1:
+        self._finished = False
+        
+        while not self._finished:
             self.delta_count = 0
             self.events['timestep_start'](self.time, self)
             # Perform delta cycle loop as long as the events are triggering
@@ -171,6 +168,7 @@ class Simulator(Component):
                     self._finalize()
                     self.events['run_end'](self)
                     self._finished = True
+                    raise greenlet.GreenletExit
                     raise Exception("Maximum number of delta cycles reached: {0}".format(self.max_delta_count))
                 
                 if not (self._ready_pool or self.trig_pool):
@@ -240,7 +238,6 @@ class Simulator(Component):
             proc = self._ready_pool.pop()
             self._unsubscribe(proc)
             events = proc.switch()
-
             if events is not None:
                 self._subscribe(proc, events)
             else:

@@ -17,7 +17,7 @@
 #  <http://www.gnu.org/licenses/>.
 """Module implements Event and EventSet classes"""
 
-from sydpy.component import RequiredFeature, Component, compinit
+from sydpy.component import Component, compinit, sydsys
 
 class EventSet(Component):
     """Container for events."""
@@ -45,8 +45,6 @@ class EventSet(Component):
             return self.missing_event(self, name)
 
 class Event(Component):
-    sim = RequiredFeature('sim')
-
     """Class that allows processes to register to it. When the Event is 
     triggered, it activates all processes that registered to it."""
     @compinit
@@ -70,7 +68,7 @@ class Event(Component):
         self.pool.add(obj)
         
     def trigger(self):
-        self.sim.trigger(self)
+        sydsys().sim.trigger(self)
     
     def resolve(self, pool):
 #         print(str(self))

@@ -15,21 +15,19 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
-from sydpy.component import RequiredFeature
-
+from sydpy.component import sydsys
 """Module implements Delay class"""
 
 # from sydpy._simulator import simdelay_add, simdelay_pop
 
 class Delay(object):
-    sim = RequiredFeature('sim')
     
     """Class to model delay events."""
     def unsubscribe(self, obj):
-        self.sim.delay_pop(obj)
+        sydsys().sim.delay_pop(obj)
         
     def subscribe(self, obj):
-        self.sim.delay_add(obj, self._time)
+        sydsys().sim.delay_add(obj, self._time)
 
     def toVerilog(self):
         return "#{0}".format(self._time)

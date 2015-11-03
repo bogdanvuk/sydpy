@@ -1,9 +1,10 @@
-from sydpy.component import Component, compinit
+from sydpy.component import Component, compinit, sydsys
 from sydpy._signal import Signal
 from sydpy.intfs.intf import Intf, SlicedIntf
 from sydpy.intfs.isig import isig
 from sydpy.types import bit
 from sydpy.process import Process
+from sydpy.types._type_base import convgen
 
 class iseq(Intf):
     _intf_type = 'iseq'
@@ -22,11 +23,19 @@ class iseq(Intf):
         self.inst('clk', isig, dtype=bit, dflt=0)
         self.inst('_dout', isig, dtype=dtype, dflt=0)
         self.inst('_p_ff_proc', Process, self._ff_proc, [self.clk.e.posedge])
+        self.inst('_p_fifo_proc', Process, self._fifo_proc, [])
         
         self.e = self._dout.e
+    
+    def _fifo_proc(self):
+        while(1):
+            self.data.bpop()
+            self.last <<= (self.data.get_queue() == False)
+            self.valid <<= True
+            sydsys().sim.wait(self._dout.e.updated)
         
     def _ff_proc(self):
-        if self.valid and self.ready:
+        if self.ready and self.valid:
             self._dout <<= self.data
         
     def con_driver(self, intf):
@@ -57,6 +66,38 @@ class iseq(Intf):
     def _to_isig(self, other):
         other._connect(self._dout)
         
+    def _from_itlm(self, other):
+        pass
+    
+#     def _pfunc_tlm_to_sig(self, other):
+#         data_fifo = []
+#         last_fifo = []
+# 
+#         while(1):
+#             data_recv = other.bpop()
+# 
+#             data_conv_gen = convgen(data_recv, self._dtype)
+#             data_fifo = []
+#             
+#             try:
+#                 while True:
+#                     data_fifo.append(next(data_conv_gen))
+#             except StopIteration as e:
+#                 remain = e.value
+#                 if remain is not None:
+#                     data_fifo.append(remain)
+#                     remain = None
+#                 
+#             for d in data_fifo:
+#                 
+#                 
+#                 if not data_o.valid.read(False):
+#                     data_o.data.next = data_fifo[0]
+#                     data_o.last.next = last_fifo[0]
+#                     data_o.valid.next = True
+# 
+#                 simwait(last_data_event)
+        
     def _from_iseq(self, intf):
         self._sig = intf._sig
         self.e = self._sig.e
@@ -72,12 +113,18 @@ class iseq(Intf):
     
     def write(self, val):
         self.data.write(val)
+        
+    def push(self, val):
+        self.data.push(val)
     
     def read_next(self):
         return self._dout._next
     
     def read(self):
         return self._dout.read()
+    
+    def get_queue(self):
+        return self._dout.get_queue()
     
     def deref(self, key):
         return SlicedIntf(self, key)

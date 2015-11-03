@@ -6,11 +6,9 @@ Created on Oct 17, 2014
 
 import GreenletProfiler
 import os
-from sydpy.component import Component, compinit, RequiredFeature
+from sydpy.component import Component, compinit, sydsys
 
 class Profiler(Component):
-    
-    sim = RequiredFeature('sim')
 
     def coverage_done(self, sim):
         GreenletProfiler.stop()
@@ -24,7 +22,7 @@ class Profiler(Component):
         if (not os.path.isdir(self.out_path)):
             os.makedirs(self.out_path, exist_ok=True)
         
-        self.sim.events['run_end'].append(self.coverage_done)
+        sydsys().sim.events['run_end'].append(self.coverage_done)
         GreenletProfiler.set_clock_type('cpu')
         GreenletProfiler.start()
         

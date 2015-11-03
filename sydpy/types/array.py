@@ -56,6 +56,10 @@ class array(TypeBase):
     
     def _full(self):
         return False
+    
+    @classmethod
+    def _from_NoneType(cls, other):
+        return cls([])
        
     @classmethod
     def _rnd(cls, rnd_gen):
