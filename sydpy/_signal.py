@@ -16,8 +16,8 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 from sydpy._event import EventSet, Event
-from sydpy.component import sydsys
 import copy
+from sydpy import ddic
 
 """Module implements Signal class"""
 
@@ -66,11 +66,11 @@ class Signal(object):
         for the value to become available."""
         
         if not self.mem:
-            sydsys().sim.wait(self.e.enqueued)
+            ddic['sim'].wait(self.e.enqueued)
         
         self._next = self.mem.pop(0)
-        sydsys().sim.update(self)
-        sydsys().sim.wait(self.e.updated)
+        ddic['sim'].update(self)
+        ddic['sim'].wait(self.e['updated'])
             
         return self._val
     
@@ -80,7 +80,7 @@ class Signal(object):
         
         if self.mem:
             self._next = self.mem.pop(0)
-            sydsys().sim.update(self)
+            ddic['sim'].update(self)
             return self._next
         else:
             raise SignalQueueEmpty
@@ -90,7 +90,7 @@ class Signal(object):
         trigger the update."""
         
         while self.mem:
-            sydsys().sim.wait(self.e.updated)
+            ddic['sim'].wait(self.e['updated'])
         
         self.push(val)
            
@@ -99,17 +99,17 @@ class Signal(object):
         
         self.mem.append(val)
         if 'enqueued' in self.e.comp:
-            self.e.enqueued.trigger()
+            self.e['enqueued'].trigger()
         
     def write(self, val):
         """Write a new value to the signal."""
         self._next = val
-        sydsys().sim.update(self)
+        ddic['sim'].update(self)
         
     def write_after(self, val, delay):
         """Write a new value to the signal after a certain delay."""
         if delay:
-            sydsys().sim.wait(Delay(delay))
+            ddic['sim'].wait(Delay(delay))
 
         self.write(val)
     
@@ -123,17 +123,17 @@ class Signal(object):
         val = self._val
         
         if 'updated' in self.e.comp:
-            self.e.updated.trigger()
+            self.e['updated'].trigger()
         
         if val != next_val:
             
             if 'changed' in self.e.comp:
-                self.e.changed.trigger()
+                self.e['changed'].trigger()
                 
             if 'event_def' in self.e.comp:
-                self.e.event_def.trigger()
+                self.e['event_def'].trigger()
                 
-                for _, sube in self.e.event_def.subevents.items():
+                for _, sube in self.e['event_def'].subevents.items():
                     key = sube.key
                     
                     if val.__getitem__(key) != next_val.__getitem__(key):
@@ -141,10 +141,10 @@ class Signal(object):
 
             if not val and next_val and (val is not None):
                 if 'posedge' in self.e.comp:
-                    self.e.posedge.trigger()
+                    self.e['posedge'].trigger()
             elif not next_val and val:
                 if 'negedge' in self.e.comp:
-                    self.e.negedge.trigger()
+                    self.e['negedge'].trigger()
 
             self._val = copy.deepcopy(next_val)
     

@@ -4,7 +4,7 @@ import copy
 from sydpy._signal import Signal
 from sydpy.component import sydsys
 
-class itlm(isig):
+class Itlm(isig):
     _intf_type = 'itlm'
     
 #     def _from_tlm(self, val):
@@ -12,6 +12,17 @@ class itlm(isig):
         
     def _to_isig(self, other):
         self.inst('_p_tlm_to_sig', Process, self._pfunc_tlm_to_sig, [], pargs=(other,))
+        
+    def _from_itlm(self, other):
+        if self._get_dtype() is other._get_dtype():
+            self._sig = other
+            for event in self.e.search(of_type=Event):
+                getattr(other.e, event).subscribe(event)
+            
+            self._sourced = True
+        else:
+            self.inst('_p_dtype_convgen', Process, self._pfunc_dtype_convgen, [], pargs=(other,))
+
     
     def _pfunc_tlm_to_sig(self, other):
         while(1):
@@ -22,7 +33,7 @@ class itlm(isig):
     
     def bpop(self):
         if not self._sourced:
-            sydsys().sim.wait(self.e.enqueued)
+            sydsys()['sim'].wait(self.e.enqueued)
             
         return self._sig.bpop()
 

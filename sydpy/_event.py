@@ -17,12 +17,15 @@
 #  <http://www.gnu.org/licenses/>.
 """Module implements Event and EventSet classes"""
 
-from sydpy.component import Component, compinit, sydsys
+from sydpy.component import Component
+from sydpy import compinit, ddic
 
 class EventSet(Component):
     """Container for events."""
     @compinit
-    def __init__(self, events = {}, missing_event_handle=None, dynamic=True, **kwargs):
+    def __init__(self, name, parent, events = {}, missing_event_handle=None, dynamic=True, **kwargs):
+        super().__init__(name, parent)
+        
         self.events = events.copy()
         
         if missing_event_handle:
@@ -33,22 +36,22 @@ class EventSet(Component):
             self.missing_event = self._missing_event_err
 
     def _missing_event(self, _, name):
-        return self.inst(name, Event)
+        return Event(name, self)
 
     def _missing_event_err(self, _, name):
         raise Exception("no such event")
     
-    def __getattr__(self, name):
+    def __getitem__(self, name):
         try:
-            return Component.__getattr__(self, name)
-        except AttributeError:
+            return Component.__getitem__(self, name)
+        except KeyError:
             return self.missing_event(self, name)
-
+    
 class Event(Component):
     """Class that allows processes to register to it. When the Event is 
     triggered, it activates all processes that registered to it."""
     @compinit
-    def __init__(self, parent=None, key=None, **kwargs):
+    def __init__(self, name, parent, key=None, **kwargs):
         """Create a new Event.
         
         parent  - The object that created the event
@@ -56,6 +59,8 @@ class Event(Component):
         key     - If the event should be triggered on changes of the part 
                   of the data, key is the index of that data part.
         """
+        super().__init__(name, parent)
+        
         self.parent = parent
         self.pool = set()
         self.key = key
@@ -68,7 +73,7 @@ class Event(Component):
         self.pool.add(obj)
         
     def trigger(self):
-        sydsys().sim.trigger(self)
+        ddic['sim'].trigger(self)
     
     def resolve(self, pool):
 #         print(str(self))

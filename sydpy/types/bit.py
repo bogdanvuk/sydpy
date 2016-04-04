@@ -20,7 +20,7 @@
 
 __bit_classes = {}
 
-from ._type_base import TypeBase
+from sydpy.types._type_base import TypeBase
 from sydpy import ConversionError
 
 def Bit(w):

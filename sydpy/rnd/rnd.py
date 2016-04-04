@@ -59,6 +59,9 @@ class rnd(object):
             pass
         
         return dtype._rnd(self)
+    
+    def __iter__(self):
+        return self
         
     def __next__(self):
         return self._rnd(self.dtype)

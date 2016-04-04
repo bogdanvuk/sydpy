@@ -35,6 +35,7 @@ def test_single(sydsys):
             self.inst('pclk', sydpy.Process, self.pclk, [sydpy.Delay(clk_period // 2)])
             self.inst('p_gen', sydpy.Process, self.gen, [sydpy.Delay(gen_period)])
             self.lstn = ChangeListener(self.dout, sydsys)
+            self['bla'] = self.inst()
 
         def gen(self):
             self.dout.data <<= self.dout.data + 1

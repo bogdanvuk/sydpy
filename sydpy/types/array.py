@@ -16,11 +16,13 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
+
 """Module that implements array sydpy type."""
 
 __array_classes = {}
 
-from ._type_base import TypeBase
+# from .type_base import TypeBase
+from sydpy.types._type_base import TypeBase
 from sydpy import ConversionError
 from sydpy.types import convgen
 

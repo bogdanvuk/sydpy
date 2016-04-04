@@ -20,7 +20,7 @@
 
 __vector_classes = {}
 
-from ._type_base import TypeBase
+from sydpy.types._type_base import TypeBase
 from sydpy import ConversionError
 
 def Vector(w, cls):

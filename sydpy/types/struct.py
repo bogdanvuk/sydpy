@@ -20,7 +20,7 @@
 
 __struct_classes = {}
 
-from ._type_base import TypeBase
+from sydpy.types._type_base import TypeBase
 from sydpy import ConversionError
 from collections import OrderedDict
 from itertools import islice
@@ -139,9 +139,18 @@ class struct(TypeBase):
     
     def __getattr__(self, key):
         try:
-            return self._val[list(self.dtype.keys()).index(key)]
+            if key in self.dtype.keys():
+                return self._val[list(self.dtype.keys()).index(key)]
+            else:
+                return super().__getattribute__(key)
         except ValueError:
             raise AttributeError
+        
+#     def __setattr__(self, key, val):
+#         try:
+#             self._val[list(self.dtype.keys()).index(key)] = val
+#         except ValueError:
+#             raise AttributeError        
     
     def __getitem__(self, key):
         if isinstance( key, slice ) :
@@ -152,6 +161,29 @@ class struct(TypeBase):
             return self._val[key]
         else:
             raise TypeError("Invalid argument type.")
+
+    def __setitem__(self, key):
+        return self._val[key]
+    
+    @classmethod
+    def _from_dict(cls, other):
+        s = cls()
+        for k,v in other.items():
+            try:
+                i = list(s.dtype.keys()).index(k)
+            except ValueError:
+                raise ConversionError
+            
+            s._val[i] = v
+            s._vld[i] = True
+            
+        return s
+            
+#             s[k] = v
+#         if cls.w == other.w:
+#             return other
+#         else:
+#             raise ConversionError
     
     @classmethod
     def _rnd(cls, rnd_gen):

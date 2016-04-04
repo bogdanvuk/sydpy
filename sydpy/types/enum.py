@@ -20,7 +20,7 @@
 
 __struct_classes = {}
 
-from ._type_base import TypeBase
+from sydpy.types._type_base import TypeBase
 
 def Enum(*args):
     if args not in __struct_classes:

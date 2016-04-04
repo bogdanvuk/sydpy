@@ -1,4 +1,4 @@
-from sydpy.component import Component, compinit, sydsys
+from sydpy import compinit, ddic
 from sydpy._signal import Signal
 from sydpy._event import EventSet, Event
 from sydpy.unit import Unit
@@ -11,7 +11,9 @@ class isig(Intf):
     _intf_type = 'isig'
 
     @compinit
-    def __init__(self, dtype, dflt=None, **kwargs):
+    def __init__(self, name, parent, dtype, dflt=None):
+        super().__init__(name, parent)
+        
         self._mch = None
         self._sch = None
         self._sig = None
@@ -19,7 +21,8 @@ class isig(Intf):
         self._dtype = dtype
         self._dflt = self._dtype.conv(dflt)
         self._sinks = set()
-        self.inst("e", EventSet, missing_event_handle=self._missing_event)
+#         self.inst("e", EventSet, missing_event_handle=self._missing_event)
+        self.e = EventSet('e', self, missing_event_handle=self._missing_event)
         
     def con_driver(self, intf):
         pass
@@ -97,7 +100,7 @@ class isig(Intf):
         
     def bpop(self):
         if not self._sourced:
-            sydsys().sim.wait(self.e.enqueued)
+            ddic['sim'].wait(self.e['enqueued'])
             
         return self._sig.bpop()
     
@@ -111,7 +114,7 @@ class isig(Intf):
             return self._sig.get_queue()
     
     def _missing_event(self, event_set, name):
-        event = self.e.inst(name, Event)
+        event = Event(name, self.e)
         
         if self._sourced:
             if self._sig.e is not event_set:

@@ -1,9 +1,12 @@
 import fnmatch
 import inspect
 import re
+from sydpy import ddic
 # from sydpy.sydpy import system
 
-class Component(object):
+sep = '/'
+
+class Component:
     """Component class is the base class for all objects that are part of the user 
     object hierarchy.    
     """
@@ -11,17 +14,41 @@ class Component(object):
     comp = {}
     __cur_parent_class__ = None
     
-    def __init__(self, name, **kwargs):
+    def __init__(self, name=None, parent=None, **kwargs):
         """Instantiate a new compinit
         
         name    -- The name of the compinit
         """
-
         self.name = name
+        self._parent = parent
+        if parent is not None:
+            self._parent.comp[name] = self
         self.comp = {}
+
+#     @property
+#     def qname(self):
+#         if self.name:
+#             if self._parent:
+#                 return sep.join([self._parent.qname, self.name])
+# 
+#         return self.name
 
     def __repr__(self):
         return self.name
+
+    def __setitem__(self, key, val):
+        try:
+            val = sydsys().get_config(self.name, key)
+        except KeyError: 
+            pass
+        
+        self.comp[key] = val
+        
+        return val
+    
+    def __getitem__(self, key):
+#         return ddic[sep.join([self.qname, key])]
+        return self.comp[key]
 
     def inst(self, name, cls, *args, **kwargs):
         try:
@@ -50,7 +77,7 @@ class Component(object):
         
         if pattern_relative:
             if self.name:
-                pattern = '.'.join([self.name, pattern])
+                pattern = sep.join([self.name, pattern])
 
         for _, c in self.comp.items():
             if fnmatch.fnmatch(c.name, pattern):
@@ -60,11 +87,11 @@ class Component(object):
                 if depth:
                     yield from c.search(pattern, pattern_relative=False, depth=depth-1)
     
-    def __getattr__(self, name):
-        try:
-            return self.comp[name]
-        except KeyError:
-            raise AttributeError(name)
+#     def __getattr__(self, name):
+#         try:
+#             return self.comp[name]
+#         except KeyError:
+#             raise AttributeError(name)
 
 
 class System(Component):
@@ -74,18 +101,19 @@ class System(Component):
         self._conf = {}
         self.providers = {}
         self.index = {}
-       
-    def __getitem__(self, path):
-        item = list(self.search(path, depth=1000))
-        if not item:
-            attr_name = path.split('.', 1)[0]
-#             val = self.get_config('', attr_name)
-            self.inst(attr_name, None)
-           
-        return self.index[path]
+        self.config = []
+        
+#     def __getitem__(self, path):
+#         item = list(self.search(path, depth=1000))
+#         if not item:
+#             attr_name = path.split('.', 1)[0]
+# #             val = self.get_config('', attr_name)
+#             self.inst(attr_name, None)
+#            
+#         return self.index[path]
     
-    def __setitem__(self, path, val):
-        self.index[path] = val
+#     def __setitem__(self, path, val):
+#         self.index[path] = val
     
     def __getattr__(self, name):
         if name not in sydsys().comp:
@@ -133,12 +161,12 @@ class System(Component):
 #         return comps
 
     def set_config(self, config):
-        self.comp.clear()
+#         self.comp.clear()
         self.config = config
-        params = self.get_all_attrs('')
-        for p,v in params.items():
-            if p not in self.comp:
-                self.inst(p, v)
+#         params = self.get_all_attrs('')
+#         for p,v in params.items():
+#             if p not in self.comp:
+#                 self.inst(p, v)
     
     def get_config(self, comp_qualified_name, attr_name):
         if comp_qualified_name:
@@ -228,31 +256,34 @@ def all2kwargs(func, *args, **kwargs):
 
 def compinit(func):
 
-    def wrapper(self, name, *args, **kwargs):
+    def wrapper(self, name=None, parent=None, *args, **kwargs):
         
         if func.__name__ != '__init__':
             raise Exception('Decorated function must be __init__().')
 
-        params = all2kwargs(func, self, *args, name=name, **kwargs)
-
+        params = all2kwargs(func, self, *args, name=name, parent=parent, **kwargs)
         if self.__cur_parent_class__ is None:
+            if (parent is not None) and (name is not None):    
             
-            sydsys()[name] = self
-            
-            sys_conf = sydsys().get_all_attrs(name)
-            
-            for name, val in sys_conf.items():
-                params[name] = val
+                parent[name] = self
+                qname = sep.join([parent.qname, name])
                 
-            arg_names, varargs, varkw, defaults = (
-                                                   inspect.getargspec(func))
-            
-            if defaults:
-                for arg_name, _ in zip(reversed(arg_names), reversed(defaults)):
-                    setattr(self, arg_name, params[arg_name])
-    
-            self.__cur_parent_class__ = self.__class__
+                sydsys()[qname] = self
+                
+                sys_conf = sydsys().get_all_attrs(qname)
+                
+                for n, v in sys_conf.items():
+                    params[n] = v
+                    
+    #             arg_names, varargs, varkw, defaults = (
+    #                                                    inspect.getargspec(func))
+    #             
+    #             if defaults:
+    #                 for arg_name, _ in zip(reversed(arg_names), reversed(defaults)):
+    #                     setattr(self, arg_name, params[arg_name])
         
+            self.__cur_parent_class__ = self.__class__
+            
         self.__cur_parent_class__ = self.__cur_parent_class__.__bases__[0] 
         self.__cur_parent_class__.__init__(**params)
 

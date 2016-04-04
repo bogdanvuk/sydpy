@@ -18,14 +18,15 @@
 
 """Module that implements the Channel class."""
 
-from sydpy.component import Component, compinit
+from sydpy.component import Component
+from sydpy import compinit
 
 class Channel(Component):
     """Instances of this class allow the information they carry to be read
     and written in various interfaces (by various protocols)"""
 
     @compinit    
-    def __init__(self, **kwargs):
+    def __init__(self, name, parent, **kwargs):
         self.slaves = []
         self.master = None
         self.master_connected = False

@@ -1,4 +1,5 @@
-from sydpy.component import Component, compinit, sydsys
+from sydpy.component import Component, sydsys
+from sydpy import compinit, Dependency, diinit
 from sydpy.unit import Unit
 from sydpy._util._util import class_load, unif_enum
 
@@ -57,17 +58,16 @@ class SimEvent(list):
     def __repr__(self):
         return "Event(%s)" % list.__repr__(self)
 
-class Scheduler(Component, greenlet):
+class Scheduler(greenlet):
     """Simulator scheduler kernel greenlet wrapper"""
     
-    @compinit
-    def __init__(self, log_task_switching = False, **kwargs):
+    def __init__(self, log_task_switching = False):
         greenlet.__init__(self)
-        if self.log_task_switching:
+        if log_task_switching:
             self.settrace(self.callback)
     
-    def run(self, duration = 0, quiet = 0):
-        sydsys().sim._run(duration, quiet)
+    def run(self, sim, duration = 0, quiet = 0):
+        sim._run(duration, quiet)
     
     def callback(self, event, args):
         """Callback that monitors process switching for debuggin purposes"""
@@ -85,14 +85,16 @@ class Scheduler(Component, greenlet):
 class Simulator(Component):
     '''Simulator kernel.'''
 
-    @compinit
-    def __init__(self, top=None, duration = 0, max_delta_count=1000, **kwargs):
+    def __init__(self, sched : Dependency('scheduler'), duration = 0, max_delta_count=1000, **kwargs):
         self.delay_pool = {}
         self.trig_pool = set()
         self.update_pool = set()     
         self._ready_pool = set()
         self._proc_pool = []
         self.running = False
+        self.duration = duration
+        self.sched = sched
+        self.max_delta_count = max_delta_count
 
         # Create events for Simulator extensions to hook to.
         self.events = {
@@ -108,7 +110,8 @@ class Simulator(Component):
                        }
         
 #         self.inst('top', class_load(top))
-        self.inst('sched', Scheduler, log_task_switching=False)
+#         self.sched = Scheduler(log_task_switching=False)
+#         self.inst('sched', Scheduler, log_task_switching=False)
 
         #         Unit.__init__(self, parent, "sim")
     
@@ -129,7 +132,7 @@ class Simulator(Component):
 #         return finished_all
     
     def run(self):
-        self.sched.switch(self.duration)
+        self.sched.switch(self, self.duration)
    
     def _run(self, duration=0, quiet=0):
         """Start the simulator scheduler loop."""
