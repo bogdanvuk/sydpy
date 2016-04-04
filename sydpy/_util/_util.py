@@ -107,7 +107,7 @@ class _SigNameVisitor(ast.NodeVisitor):
             self.store = False
     
     def visit_Name(self, node):
-        if node.id == 'self':
+        if (node.id == 'self') and (self.ref_path):
             self.ref_path = list(reversed(self.ref_path))
             
             if self.ref_path[0] in self.symdict:
