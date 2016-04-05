@@ -1,7 +1,7 @@
 from greenlet import greenlet
 from sydpy.unit import Unit
 from sydpy._util._util import getio_vars
-from sydpy.component import Component, sydsys
+from sydpy.component import Component #, sydsys
 from sydpy import compinit, Dependency
 from sydpy.intfs.intf import Intf
 

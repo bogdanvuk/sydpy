@@ -45,7 +45,7 @@ def test(sydpy):
         @sydpy.compinit
         def __init__(self, **kwargs):
             self.inst('ch_gen', sydpy.Channel) 
-            self.ch_gen <<= self.inst('dout', sydpy.isig, dtype=sydpy.bit32, dflt=0)
+            self.ch_gen <<= self.inst('dout', sydpy.Isig, dtype=sydpy.bit32, dflt=0)
             self.inst('p_gen', sydpy.Process, self.gen, [sydpy.Delay(1)])
             self.lstn = ChangeListener(self.dout)
             

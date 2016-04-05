@@ -9,9 +9,10 @@ class PackerTlAlgo(sydpy.Component, JesdPackerAlgo):
         self.csin = []
         self.din = []
         for i, d in enumerate(ch_samples):
-            self.din.append(sydpy.isig('din{}'.format(i), self, dtype=tSample, dflt={'d': 0, 'cs':0}))
+            self.din.append(sydpy.Itlm('din{}'.format(i), self, dtype=tSample, dflt={'d': 0, 'cs':0}))
             d >>= self.din[-1]
         
+        sydpy.Itlm('frame', self)
         sydpy.Process('pack', self, self.pack)
     
     def pack(self):
@@ -22,5 +23,11 @@ class PackerTlAlgo(sydpy.Component, JesdPackerAlgo):
                 for d in self.din:
                     samples.append(d.bpop())
             
-            JesdPackerAlgo.pack(self, samples)
+            frame = JesdPackerAlgo.pack(self, samples)
+            self['frame'].push(frame)
+            print()
+            print('Algo Output Frame:')
+            print()
+            for l in frame:
+                print(l)
             

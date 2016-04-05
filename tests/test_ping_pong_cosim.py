@@ -2,7 +2,7 @@ from sydpy.configurator import Configurator
 from sydpy.component import Component, system, compinit
 from sydpy.unit import Unit
 from sydpy.channel import Channel
-from sydpy.intfs.isig import isig
+from sydpy.intfs.isig import Isig
 from sydpy.types import bit8, bit, bit64, bit32
 from sydpy._delay import Delay
 from sydpy.module import proc, Module
@@ -17,7 +17,7 @@ class Generator(Component):
     
     @compinit 
     def __init__(self, chout, dtype=bit8, **kwargs):
-        chout <<= self.inst('sout', isig, dtype=dtype, dflt=0)
+        chout <<= self.inst('sout', Isig, dtype=dtype, dflt=0)
         self.inst('p_gen', Process, self.gen, [Delay(20)])
     def gen(self):
         print("GEN : ", system['sim'].time, ': ', self.sout.read() + 1)
@@ -26,15 +26,15 @@ class Generator(Component):
 class Pong(Cosim):
     @compinit
     def __init__(self, chin, chout, dtype=bit, **kwargs):
-        chin >>= self.inst('din', isig, dtype=dtype, dflt=0)
-        chout <<= self.inst('dout', isig, dtype=dtype, dflt=0)
+        chin >>= self.inst('din', Isig, dtype=dtype, dflt=0)
+        chout <<= self.inst('dout', Isig, dtype=dtype, dflt=0)
 
 class Ping(Component):
     @compinit
     def __init__(self, chin, chout, chgen, dtype=bit, **kwargs):
-        chin >>= self.inst('din', isig, dtype=dtype, dflt=0)
-        chout <<= self.inst('dout', isig, dtype=dtype, dflt=0)
-        chgen >>= self.inst('gen', isig, dtype=bit8, dflt=0)
+        chin >>= self.inst('din', Isig, dtype=dtype, dflt=0)
+        chout <<= self.inst('dout', Isig, dtype=dtype, dflt=0)
+        chgen >>= self.inst('gen', Isig, dtype=bit8, dflt=0)
         self.inst('p_ping', Process, self.ping)
         
     def ping(self):
@@ -44,8 +44,8 @@ class Ping(Component):
 # class Pong(Component):
 #     @compinit
 #     def __init__(self, chin, chout, dtype=bit, **kwargs):
-#         chin >>= self.inst('din', isig, dtype=dtype, dflt=0)
-#         chout <<= self.inst('dout', isig, dtype=dtype, dflt=0)
+#         chin >>= self.inst('din', Isig, dtype=dtype, dflt=0)
+#         chout <<= self.inst('dout', Isig, dtype=dtype, dflt=0)
 #         self.inst('p_pong', Process, self.pong)
 #         
 #     def pong(self):
@@ -55,7 +55,7 @@ class Ping(Component):
 # class Printout(Component):
 #     @compinit
 #     def __init__(self, chin, dtype=bit, **kwargs):
-#         chin >>= self.inst('sin', isig, dtype=dtype, dflt=0)
+#         chin >>= self.inst('sin', Isig, dtype=dtype, dflt=0)
 #         self.inst('p_sink', Process, self.psink)
 # 
 #     def psink(self):

@@ -99,12 +99,6 @@ class JesdPackerAlgo:
         print('NG: ', ng)
         frame = self.form_lane_groups(ng)
         
-        print()
-        print('Output Frame:')
-        print()
-        for l in frame:
-            print(l)
-            
         return frame
 
 def SymbolicBit(w):

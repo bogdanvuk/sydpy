@@ -36,7 +36,7 @@ def test_itlm2isig(sydpy):
     class Test(sydpy.Component):
         @sydpy.compinit
         def __init__(self, **kwargs):
-            self.inst('dout', sydpy.isig, dtype=sydpy.bit8) << \
+            self.inst('dout', sydpy.Isig, dtype=sydpy.bit8) << \
                 self.inst('din', sydpy.Itlm , dtype=sydpy.bit8)
             
             self.inst('p_gen', sydpy.Process, self.gen, [sydpy.Delay(gen_period)])

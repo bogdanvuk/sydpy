@@ -1,7 +1,7 @@
-from sydpy.component import Component, compinit, sydsys
+from sydpy.component import Component, compinit#, sydsys
 from sydpy._signal import Signal
 from sydpy.intfs.intf import Intf, SlicedIntf
-from sydpy.intfs.isig import isig
+from sydpy.intfs.isig import Isig
 from sydpy.types import bit
 from sydpy.process import Process
 from sydpy.types._type_base import convgen
@@ -16,12 +16,12 @@ class iseq(Intf):
         self._dtype = dtype
         self._dflt = dflt
         
-        self.inst('data', isig, dtype=dtype, dflt=dflt)
-        self.inst('valid', isig, dtype=bit, dflt=1)
-        self.inst('ready', isig, dtype=bit, dflt=1)
-        self.inst('last', isig, dtype=bit, dflt=0)
-        self.inst('clk', isig, dtype=bit, dflt=0)
-        self.inst('_dout', isig, dtype=dtype, dflt=0)
+        self.inst('data', Isig, dtype=dtype, dflt=dflt)
+        self.inst('valid', Isig, dtype=bit, dflt=1)
+        self.inst('ready', Isig, dtype=bit, dflt=1)
+        self.inst('last', Isig, dtype=bit, dflt=0)
+        self.inst('clk', Isig, dtype=bit, dflt=0)
+        self.inst('_dout', Isig, dtype=dtype, dflt=0)
         self.inst('_p_ff_proc', Process, self._ff_proc, [self.clk.e.posedge])
         self.inst('_p_fifo_proc', Process, self._fifo_proc, [])
         

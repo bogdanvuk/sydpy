@@ -58,9 +58,10 @@ class PackerTlMatrix(sydpy.Component, JesdPackerAlgo):
         self.csin = []
         self.din = []
         for i, d in enumerate(ch_samples):
-            self.din.append(sydpy.isig('din{}'.format(i), self, dtype=tSample, dflt={'d': 0, 'cs':0}))
+            self.din.append(sydpy.Itlm('din{}'.format(i), self, dtype=tSample, dflt={'d': 0, 'cs':0}))
             d >>= self.din[-1]
         
+        sydpy.Itlm('frame', self)
         sydpy.Process('pack', self, self.pack)
     
     def pack(self):
@@ -85,4 +86,10 @@ class PackerTlMatrix(sydpy.Component, JesdPackerAlgo):
                     
                 frame.append(f_lane)
                 
-            print(f_lane)
+            self['frame'].push(frame)
+                
+            print()
+            print('Matrix Output Frame:')
+            print()
+            for l in frame:
+                print(l)

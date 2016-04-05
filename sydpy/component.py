@@ -24,6 +24,7 @@ class Component:
         if parent is not None:
             self._parent.comp[name] = self
         self.comp = {}
+        ddic.provide(self.qname, self)
 
 #     @property
 #     def qname(self):
@@ -212,13 +213,13 @@ class System(Component):
             except KeyError:
                 pass
         
-_system = [System()]
+# _system = [System()]
 
-def sydsys(sid = 0):
-    return _system[sid]
-
-def restart_sydsys(sid = 0):
-    _system[sid] = System()
+# def sydsys(sid = 0):
+#     return _system[sid]
+# 
+# def restart_sydsys(sid = 0):
+#     _system[sid] = System()
 
 # def NoAssertion(obj): return True
 

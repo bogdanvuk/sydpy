@@ -33,7 +33,7 @@ class Hdlang: #(Enum):
 
 from ddi.ddi import compinit, ddic, Dependency, diinit
 
-from sydpy.component import restart_sydsys, Component
+from sydpy.component import Component #restart_sydsys
 from sydpy.simulator import Simulator, Scheduler
 from sydpy.channel import Channel
 from sydpy.process import Process
@@ -43,7 +43,7 @@ from sydpy.cosim import Cosim
 from sydpy.rnd import rnd
 # from sydpy._simulator import Simulator, simwait
 # from sydpy._process import always, always_acquire, always_comb
-from sydpy.intfs.isig import isig
+from sydpy.intfs.isig import Isig
 from sydpy.intfs.iseq import iseq
 from sydpy.intfs.itlm import Itlm
 from sydpy._delay import Delay
@@ -62,7 +62,7 @@ __all__ = [
            "Delay",
            "Cosim",
            "Process",
-           "isig",
+           "Isig",
            "iseq",
            "sydsys",
            "restart_sydsys",

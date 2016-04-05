@@ -1,4 +1,4 @@
-from sydpy.component import Component, compinit, sydsys
+from sydpy.component import Component, compinit#, sydsys
 import string
 import os
 import itertools

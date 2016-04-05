@@ -7,22 +7,27 @@ import copy
 from sydpy.types._type_base import convgen
 from sydpy.process import Process
 
-class isig(Intf):
+class Isig(Intf):
     _intf_type = 'isig'
 
     @compinit
-    def __init__(self, name, parent, dtype, dflt=None):
-        super().__init__(name, parent)
-        
+    def __init__(self, name, parent, dtype=None, dflt=None):
         self._mch = None
         self._sch = None
         self._sig = None
         self._sourced = False
         self._dtype = dtype
-        self._dflt = self._dtype.conv(dflt)
+
+        if self._dtype:
+            self._dflt = self._dtype.conv(dflt)
+        else:
+            self._dflt = dflt
+            
         self._sinks = set()
 #         self.inst("e", EventSet, missing_event_handle=self._missing_event)
         self.e = EventSet('e', self, missing_event_handle=self._missing_event)
+        
+        super().__init__(name, parent)
         
     def con_driver(self, intf):
         pass
@@ -30,12 +35,17 @@ class isig(Intf):
 #     def _connect(self, master):
 #         if not self._sourced:
 #             self._conn_to_intf(master)
-        
+    
+    def _subscribe(self, intf):
+        self._sinks.add(intf)
+    
     def _from_isig(self, other):
         if self._get_dtype() is other._get_dtype():
-            self._sig = other
-            for event in self.e.search(of_type=Event):
-                getattr(other.e, event).subscribe(event)
+            self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
+            other._subscribe(self)
+#             self._sig = other
+#             for event in self.e.search(of_type=Event):
+#                 getattr(other.e, event).subscribe(event)
             
             self._sourced = True
         else:
@@ -60,27 +70,23 @@ class isig(Intf):
     def _sink(self, channel):
         self._sch = channel
     
+    def _create_source_sig(self):
+        self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
+    
     def _prep_write(self, val):
         try:
             val = val.read()
         except AttributeError:
             pass
         
-        val = self._get_dtype().conv(val)
+        if self._get_dtype():
+            val = self._get_dtype().conv(val)
         
         if not self._sourced:
-            self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
+            self._create_source_sig()
             self._sourced = True
             
         return val
-    
-    def bpush(self, val):
-        val = self._prep_write(val)
-        self._sig.bpush(val)
-        
-    def push(self, val):
-        val = self._prep_write(val)
-        self._sig.push(val)
     
     def write(self, val):
         val = self._prep_write(val)
@@ -98,21 +104,9 @@ class isig(Intf):
         else:
             return self._sig.read()
         
-    def bpop(self):
-        if not self._sourced:
-            ddic['sim'].wait(self.e['enqueued'])
-            
-        return self._sig.bpop()
-    
     def deref(self, key):
         return SlicedIntf(self, key)
-    
-    def get_queue(self):
-        if not self._sourced:
-            return []
-        else:
-            return self._sig.get_queue()
-    
+   
     def _missing_event(self, event_set, name):
         event = Event(name, self.e)
         

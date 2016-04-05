@@ -31,12 +31,15 @@ def convgen(val, to_type, remain=None):
     For an example conversion of list of integers to integers.
     """
     
-    _convgen = to_type._convgen(val, remain)
-    while True:
-        data, _remain = next(_convgen)
+    if to_type:
+        _convgen = to_type._convgen(val, remain)
+        while True:
+            data, _remain = next(_convgen)
+            
+            yield data
+    else:
+        yield val
         
-        yield data
-
 class TypeBase(object):
     """Base type for all sydpy typles."""
     

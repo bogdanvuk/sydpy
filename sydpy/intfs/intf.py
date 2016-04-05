@@ -1,7 +1,7 @@
 from sydpy._event import Event
 from inspect import signature
 import types
-from sydpy.component import Component, compinit, sydsys
+from sydpy.component import Component#, compinit, sydsys
 
 def proxy_bioper(method):
     def wrapper(self, other):
@@ -16,8 +16,8 @@ def proxy_bioper(method):
 class _IntfBase(object):
     """Base class for all interfaces and sliced interfaces."""
     
-    def __getattr__(self, name):
-        return getattr(self.read(), name)
+#     def __getattr__(self, name):
+#         return getattr(self.read(), name)
     
     def __hash__(self):
         return id(self)

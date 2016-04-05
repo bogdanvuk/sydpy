@@ -6,9 +6,9 @@ class Stim(Component):
     def __init__(self, ch_logic_clk_i, ch_data_clk_i, ch_system_reset_i,
                  ch_din_i, ch_dout_i):
         
-        ch_logic_clk_i      << self.inst("logic_clk_i", isig, dtype=bit, dflt=0)
-        ch_data_clk_i       << self.inst("data_clk_i", isig, dtype=bit, dflt=0)
-        ch_system_reset_i   << self.inst("system_reset_i", isig, dtype=bit, dflt=1)
+        ch_logic_clk_i      << self.inst("logic_clk_i", Isig, dtype=bit, dflt=0)
+        ch_data_clk_i       << self.inst("data_clk_i", Isig, dtype=bit, dflt=0)
+        ch_system_reset_i   << self.inst("system_reset_i", Isig, dtype=bit, dflt=1)
         ch_din_i            << self.inst("din_i", iseq, dtype=Struct(('scr', bit),
                                                                      ('cs', Bit(2)),
                                                                      ('da', Bit(3)),
@@ -22,18 +22,18 @@ class Stimulus(Component):
              ch_data_o, ch_intrq_o, ch_dior_i, ch_diow_i, ch_diordy_o,
              logic_clk_period=10, data_clk_period=20, **kwargs):
 
-        ch_logic_clk_i      <<= self.inst("logic_clk_i", isig, dtype=bit, dflt=0)
-        ch_data_clk_i       <<= self.inst("data_clk_i", isig, dtype=bit, dflt=0)
-        ch_system_reset_i   <<= self.inst("system_reset_i", isig, dtype=bit, dflt=1)
-        ch_scr_i            <<= self.inst("scr_i", isig, dtype=bit)
-        ch_cs_i             <<= self.inst("cs_i", isig, dtype=Bit(2))
-        ch_da_i             <<= self.inst("da_i", isig, dtype=Bit(3))
-        ch_data_i           <<= self.inst("data_i", isig, dtype=bit32, dflt=0)
-        ch_data_o           >>= self.inst("data_o", isig, dtype=bit32)
-        ch_intrq_o          >>= self.inst("intrq_o", isig, dtype=bit)
-        ch_dior_i           <<= self.inst("dior_i", isig, dtype=bit)
-        ch_diow_i           <<= self.inst("diow_i", isig, dtype=bit)
-        ch_diordy_o         >>= self.inst("diordy_o", isig, dtype=bit)
+        ch_logic_clk_i      <<= self.inst("logic_clk_i", Isig, dtype=bit, dflt=0)
+        ch_data_clk_i       <<= self.inst("data_clk_i", Isig, dtype=bit, dflt=0)
+        ch_system_reset_i   <<= self.inst("system_reset_i", Isig, dtype=bit, dflt=1)
+        ch_scr_i            <<= self.inst("scr_i", Isig, dtype=bit)
+        ch_cs_i             <<= self.inst("cs_i", Isig, dtype=Bit(2))
+        ch_da_i             <<= self.inst("da_i", Isig, dtype=Bit(3))
+        ch_data_i           <<= self.inst("data_i", Isig, dtype=bit32, dflt=0)
+        ch_data_o           >>= self.inst("data_o", Isig, dtype=bit32)
+        ch_intrq_o          >>= self.inst("intrq_o", Isig, dtype=bit)
+        ch_dior_i           <<= self.inst("dior_i", Isig, dtype=bit)
+        ch_diow_i           <<= self.inst("diow_i", Isig, dtype=bit)
+        ch_diordy_o         >>= self.inst("diordy_o", Isig, dtype=bit)
         
         self.inst("p_logic_clk", Process, self.p_logic_clk, [Delay(logic_clk_period // 2)])
         self.inst("p_data_clk", Process, self.p_data_clk, [Delay(data_clk_period // 2)])
@@ -80,18 +80,18 @@ class Sata(Cosim):
                  ch_scr_i, ch_cs_i, ch_da_i, ch_data_i, 
                  ch_data_o, ch_intrq_o, ch_dior_i, ch_diow_i, ch_diordy_o,  **kwargs):
 
-        ch_logic_clk_i >>= self.inst("logic_clk_i", isig, dtype=bit)
-        ch_data_clk_i >>= self.inst("data_clk_i", isig, dtype=bit)
-        ch_system_reset_i >>= self.inst("system_reset_i", isig, dtype=bit)
-        ch_scr_i >>= self.inst("scr_i", isig, dtype=bit)
-        ch_cs_i >>= self.inst("cs_i", isig, dtype=Bit(2))
-        ch_da_i >>= self.inst("da_i", isig, dtype=Bit(3))
-        ch_data_i >>= self.inst("data_i", isig, dtype=bit32)
-        ch_data_o <<= self.inst("data_o", isig, dtype=bit32)
-        ch_intrq_o <<= self.inst("intrq_o", isig, dtype=bit)
-        ch_dior_i >>= self.inst("dior_i", isig, dtype=bit)
-        ch_diow_i >>= self.inst("diow_i", isig, dtype=bit)
-        ch_diordy_o <<= self.inst("diordy_o", isig, dtype=bit)
+        ch_logic_clk_i >>= self.inst("logic_clk_i", Isig, dtype=bit)
+        ch_data_clk_i >>= self.inst("data_clk_i", Isig, dtype=bit)
+        ch_system_reset_i >>= self.inst("system_reset_i", Isig, dtype=bit)
+        ch_scr_i >>= self.inst("scr_i", Isig, dtype=bit)
+        ch_cs_i >>= self.inst("cs_i", Isig, dtype=Bit(2))
+        ch_da_i >>= self.inst("da_i", Isig, dtype=Bit(3))
+        ch_data_i >>= self.inst("data_i", Isig, dtype=bit32)
+        ch_data_o <<= self.inst("data_o", Isig, dtype=bit32)
+        ch_intrq_o <<= self.inst("intrq_o", Isig, dtype=bit)
+        ch_dior_i >>= self.inst("dior_i", Isig, dtype=bit)
+        ch_diow_i >>= self.inst("diow_i", Isig, dtype=bit)
+        ch_diordy_o <<= self.inst("diordy_o", Isig, dtype=bit)
 
 class TestSata(Component):
     @compinit

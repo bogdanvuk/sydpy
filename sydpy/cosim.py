@@ -1,4 +1,4 @@
-from sydpy.component import Component, sydsys
+from sydpy.component import Component#, sydsys
 from sydpy._util._util import class_load
 from sydpy.intfs.intf import Intf
 from sydpy.process import Process

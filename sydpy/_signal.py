@@ -66,7 +66,7 @@ class Signal(object):
         for the value to become available."""
         
         if not self.mem:
-            ddic['sim'].wait(self.e.enqueued)
+            ddic['sim'].wait(self.e['enqueued'])
         
         self._next = self.mem.pop(0)
         ddic['sim'].update(self)

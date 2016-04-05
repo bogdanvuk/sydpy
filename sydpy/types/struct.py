@@ -46,6 +46,9 @@ class struct(TypeBase):
     
     def __init__(self, val=[]):
         
+        if not val:
+            val = []
+        
         self._val = []
         self._vld = []
         
@@ -164,6 +167,22 @@ class struct(TypeBase):
 
     def __setitem__(self, key):
         return self._val[key]
+    
+#     @classmethod
+#     def _from_NoneType(cls, other):
+#         return cls()
+    
+    @classmethod
+    def _from_struct(cls, other):
+        if cls.dtype is other.dtype:
+            s = cls()
+            for i, (val, vld) in enumerate(zip(other._val, other._vld)):
+                s._val[i] = val
+                s._vld[i] = vld
+                
+            return s
+        else:
+            raise ConversionError
     
     @classmethod
     def _from_dict(cls, other):

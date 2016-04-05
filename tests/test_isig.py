@@ -35,8 +35,8 @@ def test_convgen(system):
     class Test(Component):
         @compinit
         def __init__(self, **kwargs):
-            self.inst('dout', isig, dtype=bit8) << \
-                self.inst('gen', isig, dtype=Array(bit8)) 
+            self.inst('dout', Isig, dtype=bit8) << \
+                self.inst('gen', Isig, dtype=Array(bit8)) 
             
             self.inst('p_gen', Process, self.p_gen, [Delay(gen_period)])
             self.inst('p_sink', Process, self.p_sink, [])

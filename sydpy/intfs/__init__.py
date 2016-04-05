@@ -16,14 +16,11 @@
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
 
-from .sig import sig
-from .seq import seq
-from .tlm import tlm
-from .strm import strm
-from ._intf import subintfs
-
-__all__ = ["sig",
-           "seq",
-           "tlm",
-           "subintfs"
-           ]
+# from .seq import seq
+# from .tlm import tlm
+# from .strm import strm
+# 
+# __all__ = ["sig",
+#            "seq",
+#            "tlm",
+#            ]

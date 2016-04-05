@@ -1,6 +1,8 @@
 import sydpy
 from tests.packer_algo_tl import PackerTlAlgo
 from tests.packer_tl_matrix import PackerTlMatrix
+from sydpy.verif.scoreboard import Scoreboard
+from ddi.ddi import Dependency
 
 class Converter(sydpy.Component):
     @sydpy.compinit
@@ -9,7 +11,7 @@ class Converter(sydpy.Component):
         
         self.N = N
         self.CS = CS
-        ch_sample <<= sydpy.isig('sample', self, dtype=tSample, dflt={'d': 0, 'cs':0})
+        ch_sample <<= sydpy.Itlm('sample', self, dtype=tSample, dflt={'d': 0, 'cs':0})
 
         sydpy.Process('p_gen', self, self.gen)
         self.rnd_gen = sydpy.rnd(sydpy.Bit(N + CS))
@@ -17,7 +19,15 @@ class Converter(sydpy.Component):
     def gen(self):
         for r in self.rnd_gen:
             self['sample'].bpush({'d': r[0:self.N-1], 'cs': r[self.N:self.N+self.CS-1]})
-            
+
+class FrameScoreboard(Scoreboard):
+    
+    def __init__(self, 
+                 pack_algo_frame: Dependency('top/pack_algo/frame'),
+                 pack_matrix_frame: Dependency('top/pack_matrix/frame')
+                 ):
+        super().__init__('frame_scoreboard', None, [pack_algo_frame, pack_matrix_frame])
+         
 class JesdPacking(sydpy.Component):
     @sydpy.compinit
     def __init__ (self, name, parent, M=1, **kwargs):
@@ -45,7 +55,7 @@ conf = [
         ('top/*.L'     , 7),
         ('top/*.S'     , 1),
         ('top/*.N'     , N),
-        ('sim.duration', 10)
+        ('sim.duration', 1000)
         ]
 
 sydpy.ddic.configure('top/*.tSample', sydpy.Struct(('d', sydpy.Bit(N)), 
@@ -57,5 +67,12 @@ for c, v in conf:
 
 sydpy.ddic.provide_on_demand('cls/sim', sydpy.Simulator, 'sim')
 sydpy.ddic.provide('scheduler', sydpy.Scheduler())
+sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard)#, 'verif/inst/')
 JesdPacking('top', None)
-sydpy.ddic['sim'].run()
+
+#sydpy.ddic['sim'].run()
+
+import cProfile
+cProfile.run("sydpy.ddic['sim'].run()", sort='tottime')
+
+
