@@ -2,6 +2,8 @@ import fnmatch
 import inspect
 import re
 from sydpy import ddic
+from ddi.ddi import anonymous
+import random
 # from sydpy.sydpy import system
 
 sep = '/'
@@ -11,20 +13,29 @@ class Component:
     object hierarchy.    
     """
     
-    comp = {}
-    __cur_parent_class__ = None
+#     comp = {}
+#     __cur_parent_class__ = None
     
-    def __init__(self, name=None, parent=None, **kwargs):
+    def __init__(self, name=None):
         """Instantiate a new compinit
-        
+         
         name    -- The name of the compinit
         """
         self.name = name
-        self._parent = parent
-        if parent is not None:
-            self._parent.comp[name] = self
-        self.comp = {}
-        ddic.provide(self.qname, self)
+        self._comp = {}
+#         ddic.provide(self.qname, self)
+
+#     def __init__(self, name=None, parent=None, **kwargs):
+#         """Instantiate a new compinit
+#         
+#         name    -- The name of the compinit
+#         """
+#         self.name = name
+#         self._parent = parent
+#         if parent is not None:
+#             self._parent.comp[name] = self
+#         self.comp = {}
+
 
 #     @property
 #     def qname(self):
@@ -37,42 +48,39 @@ class Component:
     def __repr__(self):
         return self.name
 
-    def __setitem__(self, key, val):
-        try:
-            val = sydsys().get_config(self.name, key)
-        except KeyError: 
-            pass
-        
-        self.comp[key] = val
-        
-        return val
+#     def __setitem__(self, key, val):
+#         try:
+#             val = sydsys().get_config(self.name, key)
+#         except KeyError: 
+#             pass
+#         
+#         self.comp[key] = val
+#         
+#         return val
     
     def __getitem__(self, key):
-#         return ddic[sep.join([self.qname, key])]
-        return self.comp[key]
+#         return ddic[sep.join([self.name, key])]
+        return self._comp[key]
+    
+    def __contains__(self, key):
+        return key in self._comp
 
-    def inst(self, name, cls, *args, **kwargs):
-        try:
-            val = sydsys().get_config(self.name, name)
-            if not inspect.isclass(val):
-                setattr(self, name, val)
-                return val
-            else:
-                cls = val
-        except KeyError: 
-            pass
+    def inst(self, cls, name, *args, **kwargs):
+        c_name = name
+        name = sep.join([self.name, name])
         
+        if anonymous(name):
+            name += str(random.randint(0, 1e8))
         
-        if self.name:
-            qname = self.name + '.' + name
+        ddic.provide_on_demand(sep.join(['cls', name]), cls, name, inst_args = (name,) + args, inst_kwargs = kwargs)
+        
+        if name in ddic:
+            c = ddic[name]
+            self._comp[c_name] = c
+            return c
         else:
-            qname = name
-        
-        obj = cls(qname, *args , **kwargs)
-        
-        self.comp[name] = obj
-        
-        return obj
+            return None
+
     
     def search(self, pattern='*', of_type=None, depth=0, pattern_relative=True):
         
@@ -80,7 +88,7 @@ class Component:
             if self.name:
                 pattern = sep.join([self.name, pattern])
 
-        for _, c in self.comp.items():
+        for _, c in self._comp.items():
             if fnmatch.fnmatch(c.name, pattern):
                 if (of_type is None) or isinstance(c, of_type):
                     yield c
@@ -94,6 +102,16 @@ class Component:
 #         except KeyError:
 #             raise AttributeError(name)
 
+def inst(cls, name, *args, **kwargs):
+    if anonymous(name):
+        name += str(random.randint(0, 1e8))
+
+    ddic.provide_on_demand(sep.join(['cls', name]), cls, name, inst_args = (name,) + args, inst_kwargs = kwargs)
+    
+    if name in ddic:
+        return ddic[name]
+    else:
+        return None
 
 class System(Component):
     
@@ -116,15 +134,15 @@ class System(Component):
 #     def __setitem__(self, path, val):
 #         self.index[path] = val
     
-    def __getattr__(self, name):
-        if name not in sydsys().comp:
-            sydsys().inst(name, None)
-            
-        try:
-            return self.comp[name]
-        except KeyError:
-            raise AttributeError(name)
-    
+#     def __getattr__(self, name):
+#         if name not in sydsys().comp:
+#             sydsys().inst(name, None)
+#             
+#         try:
+#             return self.comp[name]
+#         except KeyError:
+#             raise AttributeError(name)
+#     
         
 
     
@@ -255,39 +273,39 @@ def all2kwargs(func, *args, **kwargs):
 
     return params
 
-def compinit(func):
-
-    def wrapper(self, name=None, parent=None, *args, **kwargs):
-        
-        if func.__name__ != '__init__':
-            raise Exception('Decorated function must be __init__().')
-
-        params = all2kwargs(func, self, *args, name=name, parent=parent, **kwargs)
-        if self.__cur_parent_class__ is None:
-            if (parent is not None) and (name is not None):    
-            
-                parent[name] = self
-                qname = sep.join([parent.qname, name])
-                
-                sydsys()[qname] = self
-                
-                sys_conf = sydsys().get_all_attrs(qname)
-                
-                for n, v in sys_conf.items():
-                    params[n] = v
-                    
-    #             arg_names, varargs, varkw, defaults = (
-    #                                                    inspect.getargspec(func))
-    #             
-    #             if defaults:
-    #                 for arg_name, _ in zip(reversed(arg_names), reversed(defaults)):
-    #                     setattr(self, arg_name, params[arg_name])
-        
-            self.__cur_parent_class__ = self.__class__
-            
-        self.__cur_parent_class__ = self.__cur_parent_class__.__bases__[0] 
-        self.__cur_parent_class__.__init__(**params)
-
-        func(**params)
-        
-    return wrapper
+# def compinit(func):
+# 
+#     def wrapper(self, name=None, parent=None, *args, **kwargs):
+#         
+#         if func.__name__ != '__init__':
+#             raise Exception('Decorated function must be __init__().')
+# 
+#         params = all2kwargs(func, self, *args, name=name, parent=parent, **kwargs)
+#         if self.__cur_parent_class__ is None:
+#             if (parent is not None) and (name is not None):    
+#             
+#                 parent[name] = self
+#                 qname = sep.join([parent.qname, name])
+#                 
+#                 sydsys()[qname] = self
+#                 
+#                 sys_conf = sydsys().get_all_attrs(qname)
+#                 
+#                 for n, v in sys_conf.items():
+#                     params[n] = v
+#                     
+#     #             arg_names, varargs, varkw, defaults = (
+#     #                                                    inspect.getargspec(func))
+#     #             
+#     #             if defaults:
+#     #                 for arg_name, _ in zip(reversed(arg_names), reversed(defaults)):
+#     #                     setattr(self, arg_name, params[arg_name])
+#         
+#             self.__cur_parent_class__ = self.__class__
+#             
+#         self.__cur_parent_class__ = self.__cur_parent_class__.__bases__[0] 
+#         self.__cur_parent_class__.__init__(**params)
+# 
+#         func(**params)
+#         
+#     return wrapper

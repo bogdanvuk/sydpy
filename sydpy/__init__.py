@@ -31,7 +31,7 @@ class Hdlang: #(Enum):
     SystemC = 3
 
 
-from ddi.ddi import compinit, ddic, Dependency, diinit
+from ddi.ddi import ddic, Dependency, diinit
 
 from sydpy.component import Component #restart_sydsys
 from sydpy.simulator import Simulator, Scheduler
@@ -44,7 +44,7 @@ from sydpy.rnd import rnd
 # from sydpy._simulator import Simulator, simwait
 # from sydpy._process import always, always_acquire, always_comb
 from sydpy.intfs.isig import Isig
-from sydpy.intfs.iseq import iseq
+# from sydpy.intfs.iseq import iseq
 from sydpy.intfs.itlm import Itlm
 from sydpy._delay import Delay
 from sydpy.types import *

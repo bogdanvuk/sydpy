@@ -265,8 +265,8 @@ class SlicedIntf(_IntfBase):
 
 class Intf(Component, _IntfBase):
 
-    def __init__(self, name, parent):
-        Component.__init__(self, name, parent)
+    def __init__(self, name):
+        Component.__init__(self, name)
         self._sliced_intfs = {}
 
     def _connect(self, other):

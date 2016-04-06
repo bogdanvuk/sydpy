@@ -18,13 +18,13 @@
 """Module implements Event and EventSet classes"""
 
 from sydpy.component import Component
-from sydpy import compinit, ddic
+from sydpy import ddic
 
 class EventSet(Component):
     """Container for events."""
-    @compinit
-    def __init__(self, name, parent, events = {}, missing_event_handle=None, dynamic=True, **kwargs):
-        super().__init__(name, parent)
+#     @compinit
+    def __init__(self, name, events = {}, missing_event_handle=None, dynamic=True):
+        super().__init__(name)
         
         self.events = events.copy()
         
@@ -50,18 +50,17 @@ class EventSet(Component):
 class Event(Component):
     """Class that allows processes to register to it. When the Event is 
     triggered, it activates all processes that registered to it."""
-    @compinit
-    def __init__(self, name, parent, key=None, **kwargs):
+#     @compinit
+    def __init__(self, name, key=None):
         """Create a new Event.
         
-        parent  - The object that created the event
         name    - The name of the event
         key     - If the event should be triggered on changes of the part 
                   of the data, key is the index of that data part.
         """
-        super().__init__(name, parent)
+        super().__init__(name)
         
-        self.parent = parent
+#         self.parent = parent
         self.pool = set()
         self.key = key
         self.subevents = {}

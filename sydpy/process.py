@@ -2,7 +2,7 @@ from greenlet import greenlet
 from sydpy.unit import Unit
 from sydpy._util._util import getio_vars
 from sydpy.component import Component #, sydsys
-from sydpy import compinit, Dependency
+from sydpy import Dependency
 from sydpy.intfs.intf import Intf
 
 class Process(Component, greenlet):
@@ -10,8 +10,8 @@ class Process(Component, greenlet):
     
     Class turns function in the greenlet task.""" 
 
-    @compinit
-    def __init__(self, name, parent, func, sim : Dependency('sim'), senslist=None, pargs = (), pkwargs = {}, **kwargs):
+    def __init__(self, name, func, sim : Dependency('sim'), senslist=None, pargs = (), pkwargs = {}, **kwargs):
+        Component.__init__(self, name)
         self.func = func
 
         self.senslist = senslist
@@ -26,7 +26,7 @@ class Process(Component, greenlet):
                 qname_intfs = {c.name: c for c in func.__self__.search(of_type=Intf)}
                 intfs = {}
                 for k,v in qname_intfs.items():
-                    intfs[k.rsplit('.', 1)[1]] = v
+                    intfs[k.rsplit('/', 1)[1]] = v
                  
                 (inputs, outputs) = getio_vars(func, intfs=intfs)
             

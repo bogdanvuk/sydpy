@@ -1,5 +1,5 @@
 from sydpy.component import Component#, sydsys
-from sydpy import compinit, Dependency, diinit
+from sydpy import Dependency, diinit
 from sydpy.unit import Unit
 from sydpy._util._util import class_load, unif_enum
 

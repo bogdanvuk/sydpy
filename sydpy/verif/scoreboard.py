@@ -20,15 +20,14 @@ from sydpy.process import Process
 
 """Module implements the basic scoreboard module."""
 
-from sydpy import Component, compinit
+from sydpy import Component
 
 class Scoreboard(Component):
     """Basic scoreboard class that listens with two TLM interfaces and compares 
     the received transactions."""
 
-    @compinit
-    def __init__(self, name, parent, intfs = []):
-        super().__init__(name, parent)
+    def __init__(self, name, intfs = []):
+        super().__init__(name)
         
         self.scoreboard_results = {
                     'intfs': intfs,
@@ -39,10 +38,10 @@ class Scoreboard(Component):
         self.recv_intfs = []
         
         for i in intfs:
-            self.recv_intfs.append(Itlm(str(i), self, dtype=i._get_dtype()))
+            self.recv_intfs.append(self.inst(Itlm, str(i), dtype=i._get_dtype()))
             self.recv_intfs[-1]._connect(i)
             
-        Process('dflt', self, self.dflt)
+        self.inst(Process, 'dflt', self.dflt)
 
     def compare(self, ref_trans, dut_trans):
         return (ref_trans == dut_trans)

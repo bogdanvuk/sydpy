@@ -40,9 +40,8 @@ class SymbolicBitABC:
         return SymbolicBit(high-low+1)(val = self.val[low:(high+1)])
 
 class PackerTlMatrix(sydpy.Component, JesdPackerAlgo):
-    @sydpy.compinit
-    def __init__(self, name, parent, ch_samples, tSample = None, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0, **kwargs):
-        sydpy.Component.__init__(self, name, parent)
+    def __init__(self, name, ch_samples, tSample = None, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0, **kwargs):
+        sydpy.Component.__init__(self, name)
         dtype = SymbolicBit
         M = len(ch_samples)
         JesdPackerAlgo.__init__(self, dtype=dtype, M=M, N=N, S=S, CS=CS, CF=CF, L=L, F=F, HD=HD)
@@ -58,11 +57,11 @@ class PackerTlMatrix(sydpy.Component, JesdPackerAlgo):
         self.csin = []
         self.din = []
         for i, d in enumerate(ch_samples):
-            self.din.append(sydpy.Itlm('din{}'.format(i), self, dtype=tSample, dflt={'d': 0, 'cs':0}))
+            self.din.append(self.inst(sydpy.Itlm, 'din{}'.format(i), dtype=tSample, dflt={'d': 0, 'cs':0}))
             d >>= self.din[-1]
         
-        sydpy.Itlm('frame', self)
-        sydpy.Process('pack', self, self.pack)
+        self.inst(sydpy.Itlm, 'frame')
+        self.inst(sydpy.Process, 'pack', self.pack)
     
     def pack(self):
         while(1):

@@ -2,16 +2,15 @@ from sydpy.intfs.isig import Isig
 from sydpy.process import Process
 import copy
 from sydpy._signal import Signal
-from sydpy import compinit, ddic
+from sydpy import ddic
 from sydpy.types._type_base import convgen
 
 class Itlm(Isig):
     _intf_type = 'itlm'
 
-    @compinit
-    def __init__(self, name, parent, dtype=None, dflt=None):
+    def __init__(self, name, dtype=None, dflt=None):
         self._tlm_sinks = set()
-        super().__init__(name, parent, dtype, dflt)
+        super().__init__(name, dtype, dflt)
     
     def _to_isig(self, other):
         self.inst('_p_tlm_to_sig', Process, self._pfunc_tlm_to_sig, [], pargs=(other,))
@@ -50,7 +49,7 @@ class Itlm(Isig):
     
     def _create_source_sig(self):
         self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
-        Process('_pfunc_tlm_to_tlm', self, self._pfunc_tlm_to_tlm)
+        self.inst(Process, '_pfunc_tlm_to_tlm', self._pfunc_tlm_to_tlm)
     
     def bpush(self, val):
         val = self._prep_write(val)

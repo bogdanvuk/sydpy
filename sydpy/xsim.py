@@ -1,4 +1,4 @@
-from sydpy.component import Component, compinit#, sydsys
+from sydpy.component import Component#, compinit#, sydsys
 import string
 import os
 import itertools
@@ -84,7 +84,7 @@ class XsimIntf(Component):
             'CONTINUE': {'type': 'CONTINUE', 'params': ['state']}
             }
 
-    @compinit
+    #@compinit
     def __init__(self, builddir='.', **kwargs):
         self.cosim_pool = []
         sydsys().sim.events['run_start'].append(sydsys().sim_run_start)

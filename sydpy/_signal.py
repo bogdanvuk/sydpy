@@ -98,7 +98,7 @@ class Signal(object):
         """Push value to signal queue without triggering the update."""
         
         self.mem.append(val)
-        if 'enqueued' in self.e.comp:
+        if 'enqueued' in self.e:
             self.e['enqueued'].trigger()
         
     def write(self, val):
@@ -122,15 +122,15 @@ class Signal(object):
             
         val = self._val
         
-        if 'updated' in self.e.comp:
+        if 'updated' in self.e:
             self.e['updated'].trigger()
         
         if val != next_val:
             
-            if 'changed' in self.e.comp:
+            if 'changed' in self.e:
                 self.e['changed'].trigger()
                 
-            if 'event_def' in self.e.comp:
+            if 'event_def' in self.e:
                 self.e['event_def'].trigger()
                 
                 for _, sube in self.e['event_def'].subevents.items():
@@ -140,10 +140,10 @@ class Signal(object):
                         sube.trigger()
 
             if not val and next_val and (val is not None):
-                if 'posedge' in self.e.comp:
+                if 'posedge' in self.e:
                     self.e['posedge'].trigger()
             elif not next_val and val:
-                if 'negedge' in self.e.comp:
+                if 'negedge' in self.e:
                     self.e['negedge'].trigger()
 
             self._val = copy.deepcopy(next_val)

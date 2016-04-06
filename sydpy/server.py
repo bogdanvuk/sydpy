@@ -9,7 +9,7 @@ import pexpect
 import sys
 import logging
 from sydpy.unit import Unit
-from sydpy.component import Component, compinit
+from sydpy.component import Component#, compinit
 
 def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=1, max_fails=3):
     """Set TCP keepalive on an open socket.
@@ -26,7 +26,6 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=1, max_fails=3):
 class Server(Component):
     '''Simulator kernel.'''
 
-    @compinit
     def __init__(self, host = '', port=60000, **kwargs):
         self.client = None
         self.sock = None

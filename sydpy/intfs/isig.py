@@ -1,4 +1,4 @@
-from sydpy import compinit, ddic
+from sydpy import ddic
 from sydpy._signal import Signal
 from sydpy._event import EventSet, Event
 from sydpy.unit import Unit
@@ -10,8 +10,8 @@ from sydpy.process import Process
 class Isig(Intf):
     _intf_type = 'isig'
 
-    @compinit
-    def __init__(self, name, parent, dtype=None, dflt=None):
+    def __init__(self, name, dtype=None, dflt=None):
+        super().__init__(name)
         self._mch = None
         self._sch = None
         self._sig = None
@@ -25,9 +25,7 @@ class Isig(Intf):
             
         self._sinks = set()
 #         self.inst("e", EventSet, missing_event_handle=self._missing_event)
-        self.e = EventSet('e', self, missing_event_handle=self._missing_event)
-        
-        super().__init__(name, parent)
+        self.e = self.inst(EventSet, 'e', missing_event_handle=self._missing_event)
         
     def con_driver(self, intf):
         pass
@@ -108,7 +106,7 @@ class Isig(Intf):
         return SlicedIntf(self, key)
    
     def _missing_event(self, event_set, name):
-        event = Event(name, self.e)
+        event = self.e.inst(Event, name)
         
         if self._sourced:
             if self._sig.e is not event_set:

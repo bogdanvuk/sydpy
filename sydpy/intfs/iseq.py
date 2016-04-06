@@ -1,7 +1,7 @@
-from sydpy.component import Component, compinit#, sydsys
+from sydpy.component import Component#, compinit#, sydsys
 from sydpy._signal import Signal
 from sydpy.intfs.intf import Intf, SlicedIntf
-from sydpy.intfs.isig import Isig
+from sydpy.intfs.isig import isig
 from sydpy.types import bit
 from sydpy.process import Process
 from sydpy.types._type_base import convgen
