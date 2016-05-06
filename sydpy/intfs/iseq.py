@@ -5,6 +5,8 @@ from sydpy.intfs.isig import Isig
 from sydpy.types import bit
 from sydpy.process import Process
 from sydpy.types._type_base import convgen
+from ddi.ddi import ddic
+from sydpy.intfs.itlm import Itlm
 
 class Iseq(Intf):
     _intf_type = 'iseq'
@@ -17,28 +19,28 @@ class Iseq(Intf):
         self._dtype = dtype
         self._dflt = dflt
         
-        Isig('data', self, dtype=dtype, dflt=dflt)
-        Isig('valid', self, dtype=bit, dflt=1)
-        Isig('ready', self, dtype=bit, dflt=1)
-        Isig('last', self, dtype=bit, dflt=0)
-        Isig('_dout', self, dtype=dtype, dflt=0)
+        self.inst(Isig, 'data', dtype=dtype, dflt=dflt)
+        self.inst(Isig, 'valid', dtype=bit, dflt=1)
+        self.inst(Isig, 'ready', dtype=bit, dflt=1)
+        self.inst(Isig, 'last', dtype=bit, dflt=0)
+        self.inst(Isig, '_dout', dtype=dtype, dflt=0)
         self.c['clk'] = clk
         
-#         self.inst('_p_ff_proc', Process, self._ff_proc, [self.clk.e.posedge])
-#         self.inst('_p_fifo_proc', Process, self._fifo_proc, [])
+        self.inst(Process, '_p_ff_proc', self._ff_proc, senslist=[self.c['clk'].e['posedge']])
+#        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
         
         self.e = self.c['_dout'].e
     
     def _fifo_proc(self):
         while(1):
-            self.data.bpop()
-            self.last <<= (self.data.get_queue() == False)
-            self.valid <<= True
-            sydsys().sim.wait(self._dout.e.updated)
+            self.c['data'].bpop()
+            self.c['last'] <<= (self.c['data'].get_queue() == False)
+            self.c['valid'] <<= True
+            ddic['sim'].wait(self.c['_dout'].e['updated'])
         
     def _ff_proc(self):
-        if self.ready and self.valid:
-            self._dout <<= self.data
+        if self.c['ready'] and self.c['valid']:
+            self.c['_dout'] <<= self.c['data']
         
     def con_driver(self, intf):
         pass
@@ -63,13 +65,19 @@ class Iseq(Intf):
         
     
     def _from_isig(self, other):
-        self.data._connect(other)
+        self.c['data']._connect(other)
     
     def _to_isig(self, other):
-        other._connect(self._dout)
+        other._connect(self.c['_dout'])
         
     def _from_itlm(self, other):
-        pass
+        sig = other._subscribe(self, self._get_dtype())
+        self.inst(Itlm,  'data', dtype=self._get_dtype(), dflt=sig.read())
+        self.c['data']._sig = sig
+        self.c['data']._sig.e = self.c['data'].e
+        self.c['data']._sourced = True
+        
+        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
     
 #     def _pfunc_tlm_to_sig(self, other):
 #         data_fifo = []
@@ -106,7 +114,7 @@ class Iseq(Intf):
     
     def _drive(self, channel):
         self._mch = channel
-        self._dout._drive(channel)
+        self.c['_dout']._drive(channel)
 #         self._sig = Signal(val=self._dtype.conv(self._dflt))
 #         self.e = self._sig.e
         
@@ -114,19 +122,19 @@ class Iseq(Intf):
         self._sch = channel
     
     def write(self, val):
-        self.data.write(val)
+        self.c['data'].write(val)
         
     def push(self, val):
-        self.data.push(val)
+        self.c['data'].push(val)
     
     def read_next(self):
-        return self._dout._next
+        return self.c['_dout']._next
     
     def read(self):
-        return self._dout.read()
+        return self.c['_dout'].read()
     
     def get_queue(self):
-        return self._dout.get_queue()
+        return self.c['_dout'].get_queue()
     
     def deref(self, key):
         return SlicedIntf(self, key)

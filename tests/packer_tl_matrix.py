@@ -65,8 +65,8 @@ class PackerTlMatrix(sydpy.Component, JesdPackerAlgo):
             self.inst(sydpy.Itlm, 'frame')
             self.inst(sydpy.Process, 'pack', self.pack)
         elif arch == 'seq':
-            sydpy.Iseq('frame', self)
-            sydpy.Process('pack_seq', self, self.pack_seq, senslist=[self.c['frame'].c['clk']])
+            self.inst(sydpy.Iseq, 'frame')
+            self.inst(sydpy.Process, 'pack_seq', self.pack_seq, senslist=[self.c['frame'].c['clk']])
             for i, d in enumerate(ch_samples):
                 self.inst(sydpy.Iseq, 'din{}'.format(i), dtype=tSample, dflt={'d': 0, 'cs':0}, clk=self.c['frame'].c['clk'])
                 d >>= self.c['din{}'.format(i)]

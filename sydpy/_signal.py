@@ -73,7 +73,8 @@ class Signal(object):
         
         if not self.mem:
             ddic['sim'].wait(self.e['enqueued'])
-
+            
+#         print('BPOP DONE: {}, eid={}'.format(id(self), id(self.e)))
         self._next = self.mem.pop(0)
         ddic['sim'].update(self)
         ddic['sim'].wait(self.e['updated'])

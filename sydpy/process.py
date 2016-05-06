@@ -20,7 +20,7 @@ class Process(Component, greenlet):
         self.sim = sim
 
         if self.senslist is None:
-            if func.__self__:
+            if func.__self__ is not None:
 #                 parent_name = '.'.join(self.name.split('.')[:-1])
 #                 qname_intfs = {c.name: c for c in system.search(parent_name + '.*', of_type=Intf)}
                 qname_intfs = {c.name: c for c in func.__self__.search(of_type=Intf)}
