@@ -10,8 +10,14 @@ from sydpy.process import Process
 class Isig(Intf):
     _intf_type = 'isig'
 
+<<<<<<< HEAD
     def __init__(self, name, dtype=None, dflt=None):
         super().__init__(name)
+=======
+    @compinit
+    def __init__(self, name, parent, dtype=None, dflt=None):
+        super().__init__(name, parent)
+>>>>>>> 24fb66fa204b92561074a3242bec0bcae88830e3
         self._mch = None
         self._sch = None
         self._sig = None
@@ -25,7 +31,13 @@ class Isig(Intf):
             
         self._sinks = set()
 #         self.inst("e", EventSet, missing_event_handle=self._missing_event)
+<<<<<<< HEAD
         self.e = self.inst(EventSet, 'e', missing_event_handle=self._missing_event)
+=======
+        self.e = EventSet('e', self, missing_event_handle=self._missing_event)
+        
+
+>>>>>>> 24fb66fa204b92561074a3242bec0bcae88830e3
         
     def con_driver(self, intf):
         pass
