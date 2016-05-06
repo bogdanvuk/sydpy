@@ -18,7 +18,7 @@ class Converter(sydpy.Component):
         
     def gen(self):
         for r in self.rnd_gen:
-            self['sample'].bpush({'d': r[0:self.N-1], 'cs': r[self.N:self.N+self.CS-1]})
+            self.c['sample'].bpush({'d': r[0:self.N-1], 'cs': r[self.N:self.N+self.CS-1]})
 
 class FrameScoreboard(Scoreboard):
     
@@ -45,34 +45,28 @@ class JesdPacking(sydpy.Component):
 
 N = 11
 CS = 2
+M = 16
 
-conf = [
-        ('top.M'       , 16),
-        ('top/*.CF'    , 1),
-        ('top/*.CS'    , CS),
-        ('top/*.F'     , 4),
-        ('top/*.HD'    , 1),
-        ('top/*.L'     , 7),
-        ('top/*.S'     , 1),
-        ('top/*.N'     , N),
-        ('sim.duration', 1000)
-        ]
-
-sydpy.ddic.configure('top/*.tSample', sydpy.Struct(('d', sydpy.Bit(N)), 
-                                             ('cs', sydpy.Bit(CS))))
-
-
-for c, v in conf:
-    sydpy.ddic.configure(c, v)
+sydpy.ddic.configure('sim.duration'         , 100)
+sydpy.ddic.configure('top/pack_matrix.arch' , 'seq')
+sydpy.ddic.configure('top/*.jesd_params'    , dict(M=M, CF=1, CS=CS, F=4, HD=1, L=7, S=1, N=N))
+sydpy.ddic.configure('top.M'                , M)
+sydpy.ddic.configure('top/*.tSample'        , sydpy.Struct(('d', sydpy.Bit(N)), 
+                                                           ('cs', sydpy.Bit(CS))))
+# for c, v in conf:
+#     sydpy.ddic.configure(c, v)
 
 sydpy.ddic.provide_on_demand('cls/sim', sydpy.Simulator, 'sim')
-sydpy.ddic.provide('scheduler', sydpy.Scheduler())
-sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard)#, 'verif/inst/')
-JesdPacking('top', None)
+sydpy.ddic.provide('scheduler', sydpy.Scheduler(log_task_switching=True))
+#sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard)#, 'verif/inst/')
 
-#sydpy.ddic['sim'].run()
+clk = sydpy.Clocking('clocking', None)
+sydpy.ddic.configure('top/*.clk', clk.c['clk'])
+top = JesdPacking('top', None)
 
-import cProfile
-cProfile.run("sydpy.ddic['sim'].run()", sort='tottime')
+sydpy.ddic['sim'].run()
+
+# import cProfile
+# cProfile.run("sydpy.ddic['sim'].run()", sort='tottime')
 
 

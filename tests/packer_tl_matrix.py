@@ -41,34 +41,44 @@ class SymbolicBitABC:
 
 class PackerTlMatrix(sydpy.Component, JesdPackerAlgo):
     @sydpy.compinit
-    def __init__(self, name, parent, ch_samples, tSample = None, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0, **kwargs):
+    def __init__(self, name, parent, ch_samples, tSample = None, arch='tlm', jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), **kwargs):
         sydpy.Component.__init__(self, name, parent)
         dtype = SymbolicBit
-        M = len(ch_samples)
-        JesdPackerAlgo.__init__(self, dtype=dtype, M=M, N=N, S=S, CS=CS, CF=CF, L=L, F=F, HD=HD)
-    
+        JesdPackerAlgo.__init__(self, dtype=dtype, jesd_params=jesd_params)
+        self.jesd_params = jesd_params
+            
         sym_samples = []
-        for i in range(M):
-            sym_samples.append((dtype(N)([(i, 0, j) for j in range(N)]), 
-                            dtype(CS)([(i, 1, j) for j in range(CS)])))    
+        for i in range(jesd_params['M']):
+            sym_samples.append((dtype(jesd_params['N'])([(i, 0, j) for j in range(jesd_params['N'])]), 
+                            dtype(jesd_params['CS'])([(i, 1, j) for j in range(jesd_params['CS'])])))    
     
         print('Samples: ', sym_samples)
         self.pack_m = JesdPackerAlgo.pack(self, sym_samples)
-        
-        self.csin = []
-        self.din = []
-        for i, d in enumerate(ch_samples):
-            self.din.append(sydpy.Itlm('din{}'.format(i), self, dtype=tSample, dflt={'d': 0, 'cs':0}))
-            d >>= self.din[-1]
-        
-        sydpy.Itlm('frame', self)
-        sydpy.Process('pack', self, self.pack)
+
+        if arch == 'tlm':        
+            self.csin = []
+            self.din = []
+            for i, d in enumerate(ch_samples):
+                self.din.append(sydpy.Itlm('din{}'.format(i), self, dtype=tSample, dflt={'d': 0, 'cs':0}))
+                d >>= self.din[-1]
+            
+            sydpy.Itlm('frame', self)
+            sydpy.Process('pack', self, self.pack)
+        elif arch == 'seq':
+            sydpy.Iseq('frame', self)
+            sydpy.Process('pack_seq', self, self.pack_seq, senslist=[self.c['frame'].c['clk']])
+            for i, d in enumerate(ch_samples):
+                sydpy.Iseq('din{}'.format(i), self, dtype=tSample, dflt={'d': 0, 'cs':0}, clk=self.c['frame'].c['clk'])
+                d >>= self.c['din{}'.format(i)]
+    
+    def pack_seq(self):
+        self.c['frame'] <<= 0 
     
     def pack(self):
         while(1):
             sydpy.ddic['sim'].wait(sydpy.Delay(10))
             samples = []
-            for _ in range(self.S):
+            for _ in range(self.jesd_params['S']):
                 for d in self.din:
                     samples.append(d.bpop())
             

@@ -308,15 +308,15 @@ class Intf(Component, _IntfBase):
 
     def subscribe(self, proc, event=None):
         if event is None:
-            return self.e.event_def.subscribe(proc)
+            return self.e['event_def'].subscribe(proc)
         else:
-            return getattr(self.e, event).subscribe(proc)
+            return self.e[event].subscribe(proc)
 
     def unsubscribe(self, proc, event=None):
         if event is None:
-            return self.e.event_def.unsubscribe(proc)
+            return self.e['event_def'].unsubscribe(proc)
         else:
-            return getattr(self.e, event).subscribe(proc)
+            return self.e[event].subscribe(proc)
 
     def __str__(self):
         return str(self.read())

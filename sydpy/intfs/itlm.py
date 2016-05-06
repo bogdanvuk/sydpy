@@ -11,10 +11,12 @@ class Itlm(Isig):
     @compinit
     def __init__(self, name, parent, dtype=None, dflt=None):
         self._tlm_sinks = set()
+        self._isig_sinks = set()
         super().__init__(name, parent, dtype, dflt)
     
     def _to_isig(self, other):
-        self.inst('_p_tlm_to_sig', Process, self._pfunc_tlm_to_sig, [], pargs=(other,))
+        if self._get_dtype() is other._get_dtype():
+            self._isig_sinks.add(other)
         
     def _from_itlm(self, other):
         if self._get_dtype() is other._get_dtype():
@@ -28,7 +30,7 @@ class Itlm(Isig):
         else:
             self.inst('_p_dtype_convgen', Process, self._pfunc_dtype_convgen, [], pargs=(other,))
 
-    def _pfunc_tlm_to_tlm(self):
+    def _pfunc_tlm_dispatch(self):
         while(1):
             data_recv = self._sig.bpop()
             for s in self._tlm_sinks:
@@ -40,21 +42,24 @@ class Itlm(Isig):
                 except StopIteration as e:
                     if e.value is not None:
                         s.bpush(e.value)
-    
-    def _pfunc_tlm_to_sig(self, other):
-        while(1):
-            other <<= self.bpop()
-    
-#     def _from_sig(self, val):
-#         pass
+                        
+            for s in self._isig_sinks:
+                data_conv_gen = convgen(data_recv, s._get_dtype())
+                try:
+                    while True:
+                        s <<= next(data_conv_gen)
+                except StopIteration as e:
+                    if e.value is not None:
+                        s <<= e.value
     
     def _create_source_sig(self):
         self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
-        Process('_pfunc_tlm_to_tlm', self, self._pfunc_tlm_to_tlm)
+        Process('_pfunc_tlm_dispatch', self, self._pfunc_tlm_dispatch)
     
     def bpush(self, val):
         val = self._prep_write(val)
         self._sig.bpush(val)
+        print('PUSHED: {0}'.format(self.qname))
         
     def push(self, val):
         val = self._prep_write(val)

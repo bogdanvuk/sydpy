@@ -44,10 +44,11 @@ from sydpy.rnd import rnd
 # from sydpy._simulator import Simulator, simwait
 # from sydpy._process import always, always_acquire, always_comb
 from sydpy.intfs.isig import Isig
-from sydpy.intfs.iseq import iseq
+from sydpy.intfs.iseq import Iseq
 from sydpy.intfs.itlm import Itlm
 from sydpy._delay import Delay
 from sydpy.types import *
+from sydpy.procs.clk import Clocking
 # from sydpy.procs import Clocking
 # from sydpy.verif import *
 # from sydpy.extens import *
@@ -66,6 +67,7 @@ __all__ = [
            "iseq",
            "sydsys",
            "restart_sydsys",
+           "Clocking",
 #            "tlm",
 #            "subintfs",
            "Bit",

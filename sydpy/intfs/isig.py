@@ -12,6 +12,7 @@ class Isig(Intf):
 
     @compinit
     def __init__(self, name, parent, dtype=None, dflt=None):
+        super().__init__(name, parent)
         self._mch = None
         self._sch = None
         self._sig = None
@@ -27,7 +28,7 @@ class Isig(Intf):
 #         self.inst("e", EventSet, missing_event_handle=self._missing_event)
         self.e = EventSet('e', self, missing_event_handle=self._missing_event)
         
-        super().__init__(name, parent)
+
         
     def con_driver(self, intf):
         pass

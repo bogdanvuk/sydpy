@@ -11,7 +11,7 @@ class Component:
     object hierarchy.    
     """
     
-    comp = {}
+#    comp = {}
     __cur_parent_class__ = None
     
     def __init__(self, name=None, parent=None, **kwargs):
@@ -22,9 +22,9 @@ class Component:
         self.name = name
         self._parent = parent
         if parent is not None:
-            self._parent.comp[name] = self
-        self.comp = {}
-        ddic.provide(self.qname, self)
+            self._parent.c[name] = self
+        self.c = {}
+#         ddic.provide(self.qname, self)
 
 #     @property
 #     def qname(self):
@@ -37,54 +37,47 @@ class Component:
     def __repr__(self):
         return self.name
 
-    def __setitem__(self, key, val):
-        try:
-            val = sydsys().get_config(self.name, key)
-        except KeyError: 
-            pass
-        
-        self.comp[key] = val
-        
-        return val
-    
-    def __getitem__(self, key):
-#         return ddic[sep.join([self.qname, key])]
-        return self.comp[key]
+#     def __setitem__(self, key, val):
+#         self.comp[key] = val
+#     
+#     def __getitem__(self, key):
+# #         return ddic[sep.join([self.qname, key])]
+#         return self.comp[key]
 
-    def inst(self, name, cls, *args, **kwargs):
-        try:
-            val = sydsys().get_config(self.name, name)
-            if not inspect.isclass(val):
-                setattr(self, name, val)
-                return val
-            else:
-                cls = val
-        except KeyError: 
-            pass
-        
-        
-        if self.name:
-            qname = self.name + '.' + name
-        else:
-            qname = name
-        
-        obj = cls(qname, *args , **kwargs)
-        
-        self.comp[name] = obj
-        
-        return obj
-    
+#     def inst(self, name, cls, *args, **kwargs):
+#         try:
+#             val = sydsys().get_config(self.name, name)
+#             if not inspect.isclass(val):
+#                 setattr(self, name, val)
+#                 return val
+#             else:
+#                 cls = val
+#         except KeyError: 
+#             pass
+#         
+#         
+#         if self.name:
+#             qname = self.name + '.' + name
+#         else:
+#             qname = name
+#         
+#         obj = cls(qname, *args , **kwargs)
+#         
+#         self.comp[name] = obj
+#         
+#         return obj
+#     
     def search(self, pattern='*', of_type=None, depth=0, pattern_relative=True):
-        
+         
         if pattern_relative:
             if self.name:
                 pattern = sep.join([self.name, pattern])
-
-        for _, c in self.comp.items():
+ 
+        for _, c in self.c.items():
             if fnmatch.fnmatch(c.name, pattern):
                 if (of_type is None) or isinstance(c, of_type):
                     yield c
-                    
+                     
                 if depth:
                     yield from c.search(pattern, pattern_relative=False, depth=depth-1)
     

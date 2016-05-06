@@ -42,9 +42,9 @@ class EventSet(Component):
         raise Exception("no such event")
     
     def __getitem__(self, name):
-        try:
-            return Component.__getitem__(self, name)
-        except KeyError:
+        if name in self.c:
+            return self.c[name]
+        else:
             return self.missing_event(self, name)
     
 class Event(Component):

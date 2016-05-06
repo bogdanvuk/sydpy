@@ -1,4 +1,4 @@
-from sydpy.component import Component, compinit#, sydsys
+from sydpy import compinit, ddic
 from sydpy._signal import Signal
 from sydpy.intfs.intf import Intf, SlicedIntf
 from sydpy.intfs.isig import Isig
@@ -6,26 +6,29 @@ from sydpy.types import bit
 from sydpy.process import Process
 from sydpy.types._type_base import convgen
 
-class iseq(Intf):
+class Iseq(Intf):
     _intf_type = 'iseq'
 
     @compinit
-    def __init__(self, dtype, dflt, **kwargs):
+    def __init__(self, name, parent, dtype=None, dflt=None, clk=None):
+        super().__init__(name, parent)
+        
         self._mch = None
         self._sch = None
         self._dtype = dtype
         self._dflt = dflt
         
-        self.inst('data', Isig, dtype=dtype, dflt=dflt)
-        self.inst('valid', Isig, dtype=bit, dflt=1)
-        self.inst('ready', Isig, dtype=bit, dflt=1)
-        self.inst('last', Isig, dtype=bit, dflt=0)
-        self.inst('clk', Isig, dtype=bit, dflt=0)
-        self.inst('_dout', Isig, dtype=dtype, dflt=0)
-        self.inst('_p_ff_proc', Process, self._ff_proc, [self.clk.e.posedge])
-        self.inst('_p_fifo_proc', Process, self._fifo_proc, [])
+        Isig('data', self, dtype=dtype, dflt=dflt)
+        Isig('valid', self, dtype=bit, dflt=1)
+        Isig('ready', self, dtype=bit, dflt=1)
+        Isig('last', self, dtype=bit, dflt=0)
+        Isig('_dout', self, dtype=dtype, dflt=0)
+        self.c['clk'] = clk
         
-        self.e = self._dout.e
+#         self.inst('_p_ff_proc', Process, self._ff_proc, [self.clk.e.posedge])
+#         self.inst('_p_fifo_proc', Process, self._fifo_proc, [])
+        
+        self.e = self.c['_dout'].e
     
     def _fifo_proc(self):
         while(1):
