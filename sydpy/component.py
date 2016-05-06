@@ -13,8 +13,8 @@ class Component:
     object hierarchy.    
     """
     
-#     comp = {}
-#     __cur_parent_class__ = None
+#    comp = {}
+#    __cur_parent_class__ = None
     
     def __init__(self, name=None):
         """Instantiate a new compinit
@@ -36,6 +36,11 @@ class Component:
 #             self._parent.comp[name] = self
 #         self.comp = {}
 
+#         self._parent = parent
+#         if parent is not None:
+#             self._parent.c[name] = self
+#         self.c = {}
+#         ddic.provide(self.qname, self)
 
 #     @property
 #     def qname(self):
@@ -58,12 +63,12 @@ class Component:
 #         
 #         return val
     
-    def __getitem__(self, key):
-#         return ddic[sep.join([self.name, key])]
-        return self._comp[key]
+#     def __getitem__(self, key):
+# #         return ddic[sep.join([self.name, key])]
+#         return self._comp[key]
     
-    def __contains__(self, key):
-        return key in self._comp
+#     def __contains__(self, key):
+#         return key in self._comp
 
     def inst(self, cls, name, *args, **kwargs):
         c_name = name
@@ -82,17 +87,46 @@ class Component:
             return None
 
     
+#         self.comp[key] = val
+#     
+#     def __getitem__(self, key):
+# #         return ddic[sep.join([self.qname, key])]
+#         return self.comp[key]
+
+#     def inst(self, name, cls, *args, **kwargs):
+#         try:
+#             val = sydsys().get_config(self.name, name)
+#             if not inspect.isclass(val):
+#                 setattr(self, name, val)
+#                 return val
+#             else:
+#                 cls = val
+#         except KeyError: 
+#             pass
+#         
+#         
+#         if self.name:
+#             qname = self.name + '.' + name
+#         else:
+#             qname = name
+#         
+#         obj = cls(qname, *args , **kwargs)
+#         
+#         self.comp[name] = obj
+#         
+#         return obj
+#     
     def search(self, pattern='*', of_type=None, depth=0, pattern_relative=True):
-        
+         
         if pattern_relative:
             if self.name:
                 pattern = sep.join([self.name, pattern])
-
-        for _, c in self._comp.items():
+ 
+        for _, c in self.c.items():
             if fnmatch.fnmatch(c.name, pattern):
                 if (of_type is None) or isinstance(c, of_type):
                     yield c
-                    
+                     
                 if depth:
                     yield from c.search(pattern, pattern_relative=False, depth=depth-1)
     

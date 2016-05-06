@@ -18,7 +18,7 @@ class Converter(sydpy.Component):
         
     def gen(self):
         for r in self.rnd_gen:
-            self['sample'].bpush({'d': r[0:self.N-1], 'cs': r[self.N:self.N+self.CS-1]})
+            self.c['sample'].bpush({'d': r[0:self.N-1], 'cs': r[self.N:self.N+self.CS-1]})
 
 class FrameScoreboard(Scoreboard):
     def __init__(self, 
@@ -42,31 +42,24 @@ class JesdPacking(sydpy.Component):
 
 N = 11
 CS = 2
+M = 16
 
-conf = [
-        ('top.M'       , 16),
-        ('top/*.CF'    , 1),
-        ('top/*.CS'    , CS),
-        ('top/*.F'     , 4),
-        ('top/*.HD'    , 1),
-        ('top/*.L'     , 7),
-        ('top/*.S'     , 1),
-        ('top/*.N'     , N),
-        ('sim.duration', 10)
-        ]
-
-sydpy.ddic.configure('top/*.tSample', sydpy.Struct(('d', sydpy.Bit(N)), 
-                                             ('cs', sydpy.Bit(CS))))
-
-
-for c, v in conf:
-    sydpy.ddic.configure(c, v)
+sydpy.ddic.configure('sim.duration'         , 100)
+sydpy.ddic.configure('top/pack_matrix.arch' , 'seq')
+sydpy.ddic.configure('top/*.jesd_params'    , dict(M=M, CF=1, CS=CS, F=4, HD=1, L=7, S=1, N=N))
+sydpy.ddic.configure('top.M'                , M)
+sydpy.ddic.configure('top/*.tSample'        , sydpy.Struct(('d', sydpy.Bit(N)), 
+                                                           ('cs', sydpy.Bit(CS))))
+# for c, v in conf:
+#     sydpy.ddic.configure(c, v)
 
 sydpy.ddic.provide_on_demand('cls/sim', sydpy.Simulator, 'sim')
-sydpy.ddic.provide('scheduler', sydpy.Scheduler())
-inst(FrameScoreboard, 'verif/inst/')
+sydpy.ddic.provide('scheduler', sydpy.Scheduler(log_task_switching=True))
+#sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard)#, 'verif/inst/')
+
+clk = inst(sydpy.Clocking, 'clocking')
+sydpy.ddic.configure('top/*.clk', clk.c['clk'])
 inst(JesdPacking, 'top')
-# sydpy.ddic.provide_on_demand('cls/top', JesdPacking, 'top', inst_args=('top', ))
 
 sydpy.ddic['sim'].run()
 

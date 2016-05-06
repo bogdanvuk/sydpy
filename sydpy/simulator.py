@@ -75,11 +75,11 @@ class Scheduler(greenlet):
             origin, target = args
             if target == self:
                 if hasattr(origin, 'events'):
-                    print("Process {0} run, and waits for: ".format(origin, origin.events))
+                    print("Process {0} run, and waits for: {1}".format(origin.qname, [getattr(e, 'qname', e) for e in origin.events]))
             return
         if event == 'throw':
             origin, target = args
-            print("I Threw!")
+            print("I Threw! Process {0}".format(origin.qname))
             return
             
 class Simulator(Component):
