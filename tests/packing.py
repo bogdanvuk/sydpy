@@ -45,7 +45,7 @@ CS = 2
 M = 16
 
 sydpy.ddic.configure('sim.duration'         , 100)
-sydpy.ddic.configure('top/pack_matrix.arch' , 'seq')
+sydpy.ddic.configure('top/pack_matrix.arch' , 'tlm')
 sydpy.ddic.configure('top/*.jesd_params'    , dict(M=M, CF=1, CS=CS, F=4, HD=1, L=7, S=1, N=N))
 sydpy.ddic.configure('top.M'                , M)
 sydpy.ddic.configure('top/*.tSample'        , sydpy.Struct(('d', sydpy.Bit(N)), 

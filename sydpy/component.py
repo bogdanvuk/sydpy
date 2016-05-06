@@ -22,7 +22,7 @@ class Component:
         name    -- The name of the compinit
         """
         self.name = name
-        self._comp = {}
+        self.c = {}
 #         ddic.provide(self.qname, self)
 
 #     def __init__(self, name=None, parent=None, **kwargs):
@@ -81,7 +81,7 @@ class Component:
         
         if name in ddic:
             c = ddic[name]
-            self._comp[c_name] = c
+            self.c[c_name] = c
             return c
         else:
             return None

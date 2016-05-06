@@ -61,16 +61,19 @@ class Signal(object):
     def get_queue(self):
         return self.mem
     
+    def empty(self):
+        return len(self.mem) == 0
+    
+    def top(self):
+        return self.mem[0]
+    
     def bpop(self):
         """Pop the value from the signal queue. If the queue is empty, wait 
         for the value to become available."""
         
         if not self.mem:
             ddic['sim'].wait(self.e['enqueued'])
-        
-        if not self.mem:
-            pass
-        
+
         self._next = self.mem.pop(0)
         ddic['sim'].update(self)
         ddic['sim'].wait(self.e['updated'])

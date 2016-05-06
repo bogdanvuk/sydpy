@@ -20,7 +20,6 @@ from sydpy.types import bit
 from sydpy._delay import Delay
 from sydpy.process import Process
 from sydpy.component import Component
-from ddi.ddi import compinit
 
 """Module implements the Clocking helper module."""
 # 
@@ -33,11 +32,10 @@ from ddi.ddi import compinit
 #     Process(proc_name, comp, func=clk_proc, senslist=[Delay(int(period/2))], pargs=(comp,))
 
 class Clocking(Component):
-    @compinit
-    def __init__(self, name, parent, period=100, clk_name='clk'):
-        super().__init__(name, parent)
-        Itlm(clk_name, self, dtype=bit, dflt=0)
-        Process('clk_proc', self, func=self.clk_proc, senslist=[Delay(int(period/2))])
+    def __init__(self, name, period=100, clk_name='clk'):
+        super().__init__(name)
+        self.inst(Itlm, clk_name, dtype=bit, dflt=0)
+        self.inst(Process, 'clk_proc', func=self.clk_proc, senslist=[Delay(int(period/2))])
         self.period = period
         self.clk_name = clk_name
         

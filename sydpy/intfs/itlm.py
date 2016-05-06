@@ -4,6 +4,7 @@ import copy
 from sydpy._signal import Signal
 from sydpy import ddic
 from sydpy.types._type_base import convgen
+from sydpy._event import Event
 
 class Itlm(Isig):
     _intf_type = 'itlm'
@@ -11,15 +12,23 @@ class Itlm(Isig):
     def __init__(self, name, dtype=None, dflt=None):
         self._tlm_sinks = set()
         super().__init__(name, dtype, dflt)
+        self.bpop_requests = set()
+        self.bpop_requests_cleared = self.inst(Event, 'bpop_requests_cleared')
     
     def _to_isig(self, other):
         if self._get_dtype() is other._get_dtype():
             self._isig_sinks.add(other)
         
+    def _subscribe(self, intf):
+        sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
+        self._sinks.add(sig)
+        return sig
+        
     def _from_itlm(self, other):
         if self._get_dtype() is other._get_dtype():
-            other._tlm_sinks.add(self)
-            self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
+#             other._tlm_sinks.add(self)
+#            self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
+            self._sig = other._subscribe(self)
 #             self._sig = other
 #             for event in self.e.search(of_type=Event):
 #                 getattr(other.e, event).subscribe(event)
@@ -30,41 +39,53 @@ class Itlm(Isig):
 
     def _pfunc_tlm_dispatch(self):
         while(1):
-            data_recv = self._sig.bpop()
-            for s in self._tlm_sinks:
-                data_conv_gen = convgen(data_recv, s._get_dtype())
-                 
-                try:
-                    while True:
-                        s.bpush(next(data_conv_gen))
-                except StopIteration as e:
-                    if e.value is not None:
-                        s.bpush(e.value)
-                        
-            for s in self._isig_sinks:
-                data_conv_gen = convgen(data_recv, s._get_dtype())
-                try:
-                    while True:
-                        s <<= next(data_conv_gen)
-                except StopIteration as e:
-                    if e.value is not None:
-                        s <<= e.value
+            if self._sig.empty():
+                ddic['sim'].wait(self.e['enqueued'])
+                
+            data_recv = self._sig.top()
+            for s in self._sinks:
+                s.push(data_recv)
+                
+            while not all([s.empty() for s in self._sinks]):
+                ddic['sim'].wait(*[s.e['enqueued'] for s in self._sinks])
+            
+            self._sig.pop()
+#             for s in self._sinks:
+#                 data_conv_gen = convgen(data_recv, s._get_dtype())
+#                  
+#                 try:
+#                     while True:
+#                         s.bpush(next(data_conv_gen))
+#                 except StopIteration as e:
+#                     if e.value is not None:
+#                         s.bpush(e.value)
+#                         
+#             for s in self._isig_sinks:
+#                 data_conv_gen = convgen(data_recv, s._get_dtype())
+#                 try:
+#                     while True:
+#                         s <<= next(data_conv_gen)
+#                 except StopIteration as e:
+#                     if e.value is not None:
+#                         s <<= e.value
     
     def _create_source_sig(self):
         self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
-#         self.inst(Process, '_pfunc_tlm_to_tlm', self._pfunc_tlm_to_tlm)
+        self.inst(Process, '_pfunc_tlm_dispatch', self._pfunc_tlm_dispatch)
 #         Process('_pfunc_tlm_dispatch', self, self._pfunc_tlm_dispatch)
     
     def bpush(self, val):
         val = self._prep_write(val)
         self._sig.bpush(val)
-        print('PUSHED: {0}'.format(self.qname))
         
     def push(self, val):
         val = self._prep_write(val)
         self._sig.push(val)
         
     def bpop(self):
+        if self.bpop_requests:
+            ddic['sim'].wait(self.bpop_requests_cleared)
+            
         if not self._sourced:
             ddic['sim'].wait(self.e['enqueued'])
             
