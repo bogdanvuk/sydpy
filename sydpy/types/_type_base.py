@@ -24,21 +24,33 @@ def conv(val, to_type):
     """Converts a value to specified type."""
     return to_type.conv(val)
 
-def convgen(val, to_type, remain=None):
+def convlist(dtype, din):
+    return [d for d, _ in convgen(dtype(), din)]
+
+def convgen(dout, din):
     """Generator conversion function. It can output multiple converted values 
     from a single source value.
     
     For an example conversion of list of integers to integers.
     """
     
-    if to_type:
-        _convgen = to_type._convgen(val, remain)
-        while True:
-            data, _remain = next(_convgen)
+    while (din is not None) and (not din._empty()):
+        din = dout._iconcat(din)
+        if dout._full():
+            yield dout, din
+            dout = dout.__class__()
             
-            yield data
-    else:
-        yield val
+    if not dout._empty():
+        yield dout, din
+    
+#     if to_type:
+#         _convgen = to_type._convgen(val, remain)
+#         while True:
+#             data, _remain = next(_convgen)
+#             
+#             yield data
+#     else:
+#         yield val
         
 class TypeBase(object):
     """Base type for all sydpy typles."""

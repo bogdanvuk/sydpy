@@ -103,6 +103,43 @@ class bit(TypeBase):
             self.val = val & self._mask
             self.vld = vld & self._mask
 
+    def _iconcat(self, other):
+        try:
+            for last_unset in reversed(range(self.w)):
+                if (self.vld & (1 << last_unset)):
+                    last_unset += 1
+                    break
+            else:
+                last_unset = 0
+    
+            space_left = self.w - last_unset
+            
+            oth_val = other.val & ((1 << space_left) - 1)
+            oth_vld = other.vld & ((1 << space_left) - 1)
+            
+            if other.w > space_left:
+            
+                oth_left_val = other.val >> space_left
+                oth_left_vld = other.vld >> space_left
+                
+                new_other = Bit(other.w - space_left)(oth_left_val, oth_left_vld)
+        
+            else:
+                new_other = None
+    
+            vld_mask = (1 << last_unset) - 1
+            
+            self.val = (oth_val << last_unset) | (vld_mask & self.val)
+            self.vld = (oth_vld << last_unset) | self.vld
+    
+            return new_other
+        
+        except:
+            raise ConversionError
+
+    def _empty(self):
+        return self.vld == 0
+
     def _replace(self, key, val):
         if isinstance( key, slice ) :
             #Get the start, stop, and step from the slice

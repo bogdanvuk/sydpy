@@ -56,9 +56,6 @@ class array(TypeBase):
         else:
             raise TypeError("Invalid argument type.")
     
-    def _full(self):
-        return False
-    
     @classmethod
     def _from_NoneType(cls, other):
         return cls([])
@@ -126,7 +123,7 @@ class array(TypeBase):
         try:
             if len(self) == len(other):
                 try:
-                    for s, o in zip(self._val, other._val):
+                    for s, o in zip(self, other):
                         if s != o:
                             return False
                     return True
@@ -136,6 +133,32 @@ class array(TypeBase):
                 return False
         except TypeError:
             return False
+
+    def _full(self):
+        if (len(self._val) == self.max_size) and (self._val[-1]._full):
+            return True
+        else:
+            return False
+
+    def _empty(self):
+        return len(self._val) == 0
+
+    def _iconcat(self, other):
+
+        dt_remain = None
+            
+        if (self._val) and (not self._val[-1]._full):
+            dt_remain = self._val[-1]
+            self._val.pop()
+        else:
+            dt_remain = self.dtype()
+
+        for d, r in convgen(dt_remain, other):
+            self._val.append(d)
+            if self._full():
+                return r
+
+        return r
     
     def _icon(self, other):
 
