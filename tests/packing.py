@@ -44,7 +44,7 @@ N = 11
 CS = 2
 M = 16
 
-sydpy.ddic.configure('sim.duration'         , 100)
+sydpy.ddic.configure('sim.duration'         , 300)
 sydpy.ddic.configure('top/pack_matrix.arch' , 'seq')
 sydpy.ddic.configure('top/*.jesd_params'    , dict(M=M, CF=1, CS=CS, F=4, HD=1, L=7, S=1, N=N))
 sydpy.ddic.configure('top.M'                , M)
@@ -55,8 +55,8 @@ sydpy.ddic.configure('top/*.tSample'        , sydpy.Struct(('d', sydpy.Bit(N)),
 
 sydpy.ddic.provide_on_demand('cls/sim', sydpy.Simulator, 'sim')
 sydpy.ddic.provide('scheduler', sydpy.Scheduler(log_task_switching=False))
-sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard, 'verif/inst/')#, 'verif/inst/')
-
+# sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard, 'verif/inst/', inst_args=('verif'))#, 'verif/inst/')
+inst(FrameScoreboard, 'verif/inst/')
 clk = inst(sydpy.Clocking, 'clocking')
 sydpy.ddic.configure('top/*.clk', clk.c['clk'])
 inst(JesdPacking, 'top')

@@ -30,6 +30,7 @@ class Iseq(Intf):
 #        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
         
         self.e = self.c['_dout'].e
+        self._itlm_sinks = set()
     
     def _fifo_proc(self):
         while(1):
@@ -39,8 +40,13 @@ class Iseq(Intf):
             ddic['sim'].wait(self.c['_dout'].e['updated'])
         
     def _ff_proc(self):
-        if self.c['ready'] and self.c['valid']:
+        print('ISEQ CLK:', self.name)
+        if (self.c['ready'] and self.c['valid'] and
+            all([i.empty() for i in self._itlm_sinks])):
+            
             self.c['_dout'] <<= self.c['data']
+            for i in self._itlm_sinks:
+                i.push(self.c['data'])
         
     def con_driver(self, intf):
         pass
@@ -69,7 +75,10 @@ class Iseq(Intf):
     
     def _to_isig(self, other):
         other._connect(self.c['_dout'])
-        
+    
+    def _to_itlm(self, other):
+        self._itlm_sinks.add(other)
+    
     def _from_itlm(self, other):
         sig = other._subscribe(self, self._get_dtype())
         self.inst(Itlm,  'data', dtype=self._get_dtype(), dflt=sig.read())

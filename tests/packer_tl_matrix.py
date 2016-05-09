@@ -77,7 +77,8 @@ class PackerTlMatrix(sydpy.Component, JesdPackerAlgo):
             self.pack_m = JesdPackerAlgo.pack(self, sym_samples)
             
             self.inst(sydpy.Iseq, 'frame')
-            self.inst(sydpy.Process, 'pack_seq', self.pack_seq, senslist=[self.c['frame'].c['clk']])
+            self.c['frame'].c['valid'] <<= False
+            self.inst(sydpy.Process, 'pack_seq', self.pack_seq, senslist=[self.c['frame'].c['clk'].e['posedge']])
             self.idin = []
             for i, d in enumerate(ch_samples):
 #                 idin = self.inst(sydpy.Iseq, 'din{}'.format(i), dtype=tSample, dflt={'d': 0, 'cs':0}, clk=self.c['frame'].c['clk'])
@@ -101,6 +102,7 @@ class PackerTlMatrix(sydpy.Component, JesdPackerAlgo):
                 
             frame.append(f_lane)
         
+        self.c['frame'].c['valid'] <<= True
         self.c['frame'] <<= frame
         
         print()

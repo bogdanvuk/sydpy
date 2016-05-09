@@ -95,7 +95,10 @@ class Itlm(Isig):
         return self._sig.bpop()
     
     def empty(self):
-        return self._sig.empty()
+        if not self._sourced:
+            return True
+        else:
+            return self._sig.empty()
     
     def get_queue(self):
         if not self._sourced:
