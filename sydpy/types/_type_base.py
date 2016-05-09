@@ -20,12 +20,20 @@
 
 from sydpy import ConversionError
 
-def conv(val, to_type):
-    """Converts a value to specified type."""
-    return to_type.conv(val)
+# def conv(val, to_type):
+#     """Converts a value to specified type."""
+#     return to_type.conv(val)
 
 def convlist(din, dtype):
     return [d for d, _ in convgen(din, dtype)]
+
+
+def conv(val, dtype):
+    l = convlist(val, dtype)
+    if l:
+        return l[0]
+    else:
+        return dtype()
 
 def convgen(din, dtype, dout=None):
     """Generator conversion function. It can output multiple converted values 
@@ -37,7 +45,10 @@ def convgen(din, dtype, dout=None):
     if dout is None:
         dout = dtype()
     
-    while (din is not None) and (not din._empty()):
+    def is_empty_dflt():
+        return din is None
+        
+    while (din is not None) and (not getattr(din, '_empty', is_empty_dflt)()):
         try:
             din = dout._iconcat(din)
         except (ConversionError, AttributeError):
@@ -79,11 +90,17 @@ class TypeBase:
     
     @classmethod
     def _convfrom(cls, cls_other, other):
-        getattr(cls, '_from_' + cls_other.__name__)(other)
+        if not hasattr(cls, '_from_' + cls_other.__name__):
+            raise ConversionError
+        
+        return getattr(cls, '_from_' + cls_other.__name__)(other)
 
     @classmethod
-    def _convto(cls, cls_other, other):
-        getattr(cls, '_to_' + cls_other.__name__)(other)
+    def _convto(cls, cls_other, val):
+        if not hasattr(cls, '_to_' + cls_other.__name__):
+            raise ConversionError
+        
+        return getattr(cls, '_to_' + cls_other.__name__)(val)
 
     @classmethod
     def _conv_direct(cls, other):

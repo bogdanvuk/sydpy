@@ -37,11 +37,19 @@ def test_array_to_array():
 
 def test_bit_to_struct():
     assert convlist(bit16(0xabcd), Struct(('f1', bit8), ('f2', bit8))) == [(0xcd,0xab)]
-    print(convlist(bit16(0xabcd), Struct(('f1', bit8), ('f2', bit8))))
+    assert convlist(bit16(0xabcd), Struct(('f1', Bit(3)), ('f2', Bit(13)))) == [(0x5,0x1579)]
+    assert convlist(bit16(0xabcd), Struct(('f1', Bit(3)), ('f2', Bit(5)), ('f3', Bit(7)))) == [(0x5,0x19,0x2b), (Bit(3)(0x1, 0x1), Bit(5)(), Bit(7)())]
+#    print(convlist(bit16(0xabcd), Struct(('f1', Bit(3)), ('f2', Bit(5)), ('f3', Bit(7)))))
+
+def test_struct_to_bit():
+    assert convlist(Struct(('f1', bit8), ('f2', bit8))((0xcd, 0xab)), bit16) == [0xabcd]
+    
+    print(convlist(Struct(('f1', bit8), ('f2', bit8))((0xcd, 0xab)), bit16))
+    #assert convlist(bit16(0xabcd), Struct(('f1', bit8), ('f2', bit8))) == [(0xcd,0xab)]
 
 # test_bit_to_bit()
 # test_bit_to_array()
 # test_array_to_bit()
 # test_array_to_array()
-
-test_bit_to_struct()
+# test_bit_to_struct()
+test_struct_to_bit()

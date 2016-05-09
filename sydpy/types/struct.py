@@ -20,7 +20,7 @@
 
 __struct_classes = {}
 
-from sydpy.types._type_base import TypeBase, convgen
+from sydpy.types._type_base import TypeBase, convgen, convlist, conv
 from sydpy import ConversionError
 from collections import OrderedDict
 from itertools import islice
@@ -89,13 +89,13 @@ class struct(TypeBase):
         
         return self.__class__(val)
     
-    def _hdl_gen_ref(self, conv):
-        s = conv._hdl_gen_ref(self._val[0])
+    def _hdl_gen_ref(self, val):
+        s = val._hdl_gen_ref(self._val[0])
 
         if len(self._val) > 1:
             s += ", "
             for e in self._val[1:]:
-                s += conv._hdl_gen_ref(e)
+                s += val._hdl_gen_ref(e)
                 
             s = "'{" + s + "}"
             
@@ -106,14 +106,14 @@ class struct(TypeBase):
         pass
         
     @classmethod
-    def _hdl_gen_call(cls, conv=None, node=None):
+    def _hdl_gen_call(cls, val=None, node=None):
         args = []
         for a in node.args:
-            args.append(conv.obj_by_node(a))
+            args.append(val.obj_by_node(a))
             
         a = cls(*args)
         
-        return a._hdl_gen_ref(conv)
+        return a._hdl_gen_ref(val)
     
     @classmethod
     def deref(self, key):
@@ -215,12 +215,19 @@ class struct(TypeBase):
         dt_remain = other
         for i, v in enumerate(self._val):
             if not v._full():
-                for d, r in convgen(dt_remain, self.dtype, v):
+                for d, r in convgen(dt_remain, v.__class__, v):
                     if d._full():
                         self._val[i] = d
                         self._vld[i] = 1
-                        dt_remain = r
                         break
+
+                dt_remain = r
+                                    
+                if dt_remain is None:
+                    self._val[i] = d
+                    self._vld[i] = 1 
+                    break
+                
 #         for d, r in convgen(other, self.dtype, dt_remain):
 #             self._val[pos] = d
 #             pos += 1
@@ -234,6 +241,11 @@ class struct(TypeBase):
    
     @classmethod
     def _convto(cls, cls_other, val):
+        try:
+            TypeBase._convto(cls_other, val)
+        except ConversionError:
+            pass
+        
         convlist = []
         remain = cls_other()
         for item in val:
@@ -286,7 +298,31 @@ class struct(TypeBase):
         new_self = self.__class__(val)
 
         return (new_self, remain)
-                
-    
 
+    @classmethod
+    def _to_tuple(cls, val):
+        dout = []
+        for val,vld in zip(val._val, val._vld):
+            if not vld:
+                break
+            
+            dout.append(val)
+
+        return tuple(dout)
+
+    @classmethod
+    def _from_tuple(cls, other):
+        dout = cls()
+        for i, (item, dtype) in enumerate(zip(other, cls.dtype.values())):
+            dout._val[i] = conv(item, dtype)
+            dout._vld[i] = 1
+            
+        return dout
+                
+    def __eq__(self, other):
+        other = convlist(other, self.__class__)
+        if len(other) != 1:
+            return False
+
+        return (self._val == other[0]._val) and (self._vld == other[0]._vld)
     
