@@ -29,11 +29,14 @@ def convlist(din, dtype):
 
 
 def conv(val, dtype):
-    l = convlist(val, dtype)
-    if l:
-        return l[0]
+    if val.__class__ == dtype:
+        return val
     else:
-        return dtype()
+        l = convlist(val, dtype)
+        if l:
+            return l[0]
+        else:
+            return dtype()
 
 def convgen(din, dtype, dout=None):
     """Generator conversion function. It can output multiple converted values 

@@ -55,7 +55,7 @@ sydpy.ddic.configure('top/*.tSample'        , sydpy.Struct(('d', sydpy.Bit(N)),
 
 sydpy.ddic.provide_on_demand('cls/sim', sydpy.Simulator, 'sim')
 sydpy.ddic.provide('scheduler', sydpy.Scheduler(log_task_switching=False))
-#sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard)#, 'verif/inst/')
+sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard, 'verif/inst/')#, 'verif/inst/')
 
 clk = inst(sydpy.Clocking, 'clocking')
 sydpy.ddic.configure('top/*.clk', clk.c['clk'])

@@ -1,5 +1,6 @@
 import sydpy
 from tests.packer_coef_calc import JesdPackerAlgo
+from sydpy.types.bit import Bit
 
 def SymbolicBit(w):
     return type('symbit', (SymbolicBitABC,), dict(w=w))
@@ -47,15 +48,16 @@ class PackerTlMatrix(sydpy.Component, JesdPackerAlgo):
         JesdPackerAlgo.__init__(self, dtype=dtype, jesd_params=jesd_params)
         self.jesd_params = jesd_params
             
-        sym_samples = []
-        for i in range(jesd_params['M']):
-            sym_samples.append((dtype(jesd_params['N'])([(i, 0, j) for j in range(jesd_params['N'])]), 
-                            dtype(jesd_params['CS'])([(i, 1, j) for j in range(jesd_params['CS'])])))    
-    
-        print('Samples: ', sym_samples)
-        self.pack_m = JesdPackerAlgo.pack(self, sym_samples)
-
         if arch == 'tlm':        
+            
+            sym_samples = []
+            for i in range(jesd_params['M']):
+                sym_samples.append((dtype(jesd_params['N'])([(i, 0, j) for j in range(jesd_params['N'])]), 
+                                dtype(jesd_params['CS'])([(i, 1, j) for j in range(jesd_params['CS'])])))    
+        
+            print('Samples: ', sym_samples)
+            self.pack_m = JesdPackerAlgo.pack(self, sym_samples)
+            
             self.csin = []
             self.din = []
             for i, d in enumerate(ch_samples):
@@ -65,14 +67,47 @@ class PackerTlMatrix(sydpy.Component, JesdPackerAlgo):
             self.inst(sydpy.Itlm, 'frame')
             self.inst(sydpy.Process, 'pack', self.pack)
         elif arch == 'seq':
+            
+            sym_samples = []
+            for i in range(jesd_params['M']):
+                sym_samples.append((dtype(jesd_params['N'])([(i, j) for j in range(jesd_params['N'])]), 
+                                dtype(jesd_params['CS'])([(i, j + jesd_params['N']) for j in range(jesd_params['CS'])])))  
+
+            print('Samples: ', sym_samples)
+            self.pack_m = JesdPackerAlgo.pack(self, sym_samples)
+            
             self.inst(sydpy.Iseq, 'frame')
             self.inst(sydpy.Process, 'pack_seq', self.pack_seq, senslist=[self.c['frame'].c['clk']])
+            self.idin = []
             for i, d in enumerate(ch_samples):
-                self.inst(sydpy.Iseq, 'din{}'.format(i), dtype=tSample, dflt={'d': 0, 'cs':0}, clk=self.c['frame'].c['clk'])
+#                 idin = self.inst(sydpy.Iseq, 'din{}'.format(i), dtype=tSample, dflt={'d': 0, 'cs':0}, clk=self.c['frame'].c['clk'])
+                idin = self.inst(sydpy.Iseq, 'din{}'.format(i), dtype=Bit(tSample.dtype['d'].w + tSample.dtype['cs'].w), dflt=0, clk=self.c['frame'].c['clk'])
+                self.idin.append(idin)
                 d >>= self.c['din{}'.format(i)]
     
     def pack_seq(self):
-        self.c['frame'] <<= 0 
+        
+        frame = []
+        for m_lane in self.pack_m:
+            f_lane = []
+            for m_byte in m_lane:
+                f_byte = sydpy.Bit(8)(0)
+                for i, m_bit in enumerate(m_byte.val):
+                    if m_bit:
+                        f_byte[i] = self.idin[m_bit[0]].c['data'][m_bit[1]]
+                    else:
+                        f_byte[i] = 0
+                f_lane.append(f_byte)
+                
+            frame.append(f_lane)
+        
+        self.c['frame'] <<= frame
+        
+        print()
+        print('Matrix Output Frame:')
+        print()
+        for l in frame:
+            print(l)
     
     def pack(self):
         while(1):

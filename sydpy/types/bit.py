@@ -401,6 +401,11 @@ class bit(TypeBase):
     def _from_int(cls, other):
         return cls(other)
     
+    @classmethod    
+    def _from_bool(cls, other):
+        return cls._from_int(int(other))
+
+    
     
 #     def __nonzero__(self):
 #         if self.read():

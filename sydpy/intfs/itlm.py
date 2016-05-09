@@ -10,7 +10,7 @@ class Itlm(Isig):
     _intf_type = 'itlm'
 
     def __init__(self, name, dtype=None, dflt=None):
-        self._tlm_sinks = set()
+        self._tlm_sinks = {}
         super().__init__(name, dtype, dflt)
     
     def _to_isig(self, other):
@@ -49,14 +49,8 @@ class Itlm(Isig):
                 if self._get_dtype() is s._dtype:
                     s.push(data_recv)
                 else:
-                    data_conv_gen = convgen(data_recv, s._get_dtype())
-                  
-                    try:
-                        while True:
-                            s.push(next(data_conv_gen))
-                    except StopIteration as e:
-                        if e.value is not None:
-                            s.push(e.value)
+                    for d, _ in convgen(data_recv, s._dtype):
+                        s.push(d)
                 
             while not all([s.empty() for s in self._sinks]):
                 ddic['sim'].wait(*[s.e['enqueued'] for s in self._sinks])
@@ -99,6 +93,9 @@ class Itlm(Isig):
         
 #         print('BPOP: {}, sigid={}, eid={}'.format(self.name, id(self._sig), id(self._sig.e)))
         return self._sig.bpop()
+    
+    def empty(self):
+        return self._sig.empty()
     
     def get_queue(self):
         if not self._sourced:
