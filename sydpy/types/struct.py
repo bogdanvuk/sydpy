@@ -20,7 +20,7 @@
 
 __struct_classes = {}
 
-from sydpy.types._type_base import TypeBase
+from sydpy.types._type_base import TypeBase, convgen
 from sydpy import ConversionError
 from collections import OrderedDict
 from itertools import islice
@@ -209,6 +209,49 @@ class struct(TypeBase):
         val = [rnd_gen._rnd(cls.dtype[t]) for t in cls.dtype] 
         
         return cls(val)
+    
+    
+    def _iconcat(self, other):
+        dt_remain = other
+        for i, v in enumerate(self._val):
+            if not v._full():
+                for d, r in convgen(dt_remain, self.dtype, v):
+                    if d._full():
+                        self._val[i] = d
+                        self._vld[i] = 1
+                        dt_remain = r
+                        break
+#         for d, r in convgen(other, self.dtype, dt_remain):
+#             self._val[pos] = d
+#             pos += 1
+#             if self._full():
+#                 return r
+
+        return dt_remain
+   
+    def _empty(self):
+        return sum(self._vld) == 0
+   
+    @classmethod
+    def _convto(cls, cls_other, val):
+        convlist = []
+        remain = cls_other()
+        for item in val:
+            for d, r in convgen(item, cls_other, remain):
+                if d._full():
+                    convlist.append(d)
+                    remain = r
+                else:
+                    remain = d
+        
+        if (remain is not None) and (not remain._empty()):
+            convlist.append(remain)
+         
+        conval = convlist[0]
+        for item in convlist[1:]:
+            conval = item._concat(conval)
+        
+        return conval
     
     def _icon(self, other):
         

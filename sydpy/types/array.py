@@ -22,7 +22,7 @@
 __array_classes = {}
 
 # from .type_base import TypeBase
-from sydpy.types._type_base import TypeBase
+from sydpy.types._type_base import TypeBase, convlist
 from sydpy import ConversionError
 from sydpy.types import convgen
 
@@ -143,8 +143,7 @@ class array(TypeBase):
     def _empty(self):
         return len(self._val) == 0
 
-    def _iconcat(self, other):
-
+    def _iconcat_item(self, other):
         dt_remain = None
             
         if (self._val) and (not self._val[-1]._full):
@@ -153,12 +152,55 @@ class array(TypeBase):
         else:
             dt_remain = self.dtype()
 
-        for d, r in convgen(dt_remain, other):
+        for d, r in convgen(other, self.dtype, dt_remain):
             self._val.append(d)
             if self._full():
                 return r
 
         return r
+        
+    def _iconcat(self, other):
+        if other is Array:
+            for item in other:
+                self._iconcat_item(item)
+        else:
+            self._iconcat_item(other)
+    
+    @classmethod
+    def _convto(cls, cls_other, val):
+        convlist = []
+        remain = cls_other()
+        for item in val:
+            for d, r in convgen(item, cls_other, remain):
+                if d._full():
+                    convlist.append(d)
+                    remain = r
+                else:
+                    remain = d
+        
+        if (remain is not None) and (not remain._empty()):
+            convlist.append(remain)
+         
+        conval = convlist[0]
+        for item in convlist[1:]:
+            conval = item._concat(conval)
+        
+        return conval    
+#             print(convlist(cls, item))
+#             for d, r in convgen(remain, item):
+#                 conval._concat()
+#                 self._val.append(d)
+#                 if self._full():
+#                     return r
+#             
+#             convgen(dtype(), item)
+#             for item = convlist(cls, item)
+#             if conval is None:
+#                 conval = item
+#             else:
+#                 conval._concat(item)
+        
+        
     
     def _icon(self, other):
 

@@ -24,21 +24,33 @@ def conv(val, to_type):
     """Converts a value to specified type."""
     return to_type.conv(val)
 
-def convlist(dtype, din):
-    return [d for d, _ in convgen(dtype(), din)]
+def convlist(din, dtype):
+    return [d for d, _ in convgen(din, dtype)]
 
-def convgen(dout, din):
+def convgen(din, dtype, dout=None):
     """Generator conversion function. It can output multiple converted values 
     from a single source value.
     
     For an example conversion of list of integers to integers.
     """
     
+    if dout is None:
+        dout = dtype()
+    
     while (din is not None) and (not din._empty()):
-        din = dout._iconcat(din)
+        try:
+            din = dout._iconcat(din)
+        except (ConversionError, AttributeError):
+            try:
+                din = dout._convfrom(din.__class__, din)
+            except (ConversionError, AttributeError):
+                din = din._convto(dout.__class__, din)
+
+            din = dout._iconcat(din)
+        
         if dout._full():
             yield dout, din
-            dout = dout.__class__()
+            dout = dtype()
             
     if not dout._empty():
         yield dout, din
@@ -52,7 +64,7 @@ def convgen(dout, din):
 #     else:
 #         yield val
         
-class TypeBase(object):
+class TypeBase:
     """Base type for all sydpy typles."""
     
     @classmethod
@@ -60,6 +72,19 @@ class TypeBase(object):
         """Check if the types are of the same class."""
         return object.__eq__(cls, other)
     
+    
+    @classmethod
+    def _from_NoneType(cls, other):
+        return cls([])
+    
+    @classmethod
+    def _convfrom(cls, cls_other, other):
+        getattr(cls, '_from_' + cls_other.__name__)(other)
+
+    @classmethod
+    def _convto(cls, cls_other, other):
+        getattr(cls, '_to_' + cls_other.__name__)(other)
+
     @classmethod
     def _conv_direct(cls, other):
         try:

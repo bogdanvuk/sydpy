@@ -104,38 +104,37 @@ class bit(TypeBase):
             self.vld = vld & self._mask
 
     def _iconcat(self, other):
-        try:
-            for last_unset in reversed(range(self.w)):
-                if (self.vld & (1 << last_unset)):
-                    last_unset += 1
-                    break
-            else:
-                last_unset = 0
-    
-            space_left = self.w - last_unset
-            
-            oth_val = other.val & ((1 << space_left) - 1)
-            oth_vld = other.vld & ((1 << space_left) - 1)
-            
-            if other.w > space_left:
-            
-                oth_left_val = other.val >> space_left
-                oth_left_vld = other.vld >> space_left
-                
-                new_other = Bit(other.w - space_left)(oth_left_val, oth_left_vld)
-        
-            else:
-                new_other = None
-    
-            vld_mask = (1 << last_unset) - 1
-            
-            self.val = (oth_val << last_unset) | (vld_mask & self.val)
-            self.vld = (oth_vld << last_unset) | self.vld
-    
-            return new_other
-        
-        except:
+        if not isinstance(other, bit):
             raise ConversionError
+
+        for last_unset in reversed(range(self.w)):
+            if (self.vld & (1 << last_unset)):
+                last_unset += 1
+                break
+        else:
+            last_unset = 0
+
+        space_left = self.w - last_unset
+        
+        oth_val = other.val & ((1 << space_left) - 1)
+        oth_vld = other.vld & ((1 << space_left) - 1)
+        
+        if other.w > space_left:
+        
+            oth_left_val = other.val >> space_left
+            oth_left_vld = other.vld >> space_left
+            
+            new_other = Bit(other.w - space_left)(oth_left_val, oth_left_vld)
+    
+        else:
+            new_other = None
+
+        vld_mask = (1 << last_unset) - 1
+        
+        self.val = (oth_val << last_unset) | (vld_mask & self.val)
+        self.vld = (oth_vld << last_unset) | self.vld
+
+        return new_other
 
     def _empty(self):
         return self.vld == 0
@@ -312,9 +311,10 @@ class bit(TypeBase):
     def __str__(self):
         val = self.val
         vld = self.vld
+        mask = self._mask
         hexstr = ''
         for i in range(-(int(-self.w//4))):
-            if vld & 0xf:
+            if vld & 0xf == 0xf & mask:
                 hexstr += '{0:1x}'.format(int(val & 0xf))
             else:
                 if (vld & 0xf) == 0:
@@ -323,6 +323,7 @@ class bit(TypeBase):
                     hexstr += 'u'
             vld >>= 4
             val >>= 4
+            mask >>= 4
             
         return '0x' + hexstr[::-1]
 
@@ -370,14 +371,14 @@ class bit(TypeBase):
         except:
             raise ConversionError
     
-    def __concat__(self, other):
+    def _concat(self, other):
         if isinstance(other, bit):
             return Bit(self.w + other.w)((self.val << other.w) + other.val, (self.vld << other.w) + other.vld)
         else:
             raise TypeError('unsupported operand type(s) for +'+
                             ': \''+ self.__class__.__name__ +'\' and \''+ other.__class__.__name__ +'\'')
     
-    concat = __concat__
+    concat = _concat
 #     __mod__ = __concat__
 
     def __mod__(self, other):
