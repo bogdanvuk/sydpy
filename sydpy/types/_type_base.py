@@ -50,7 +50,8 @@ def convgen(din, dtype, dout=None):
     
     def is_empty_dflt():
         return din is None
-        
+    
+    started_new_dout = False
     while (din is not None) and (not getattr(din, '_empty', is_empty_dflt)()):
         try:
             din = dout._iconcat(din)
@@ -65,8 +66,11 @@ def convgen(din, dtype, dout=None):
         if dout._full():
             yield dout, din
             dout = dtype()
+            started_new_dout = False
+        else:
+            started_new_dout = True
             
-    if not dout._empty():
+    if started_new_dout:
         yield dout, din
     
 #     if to_type:

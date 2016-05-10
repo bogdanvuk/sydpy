@@ -286,7 +286,8 @@ class bit(TypeBase):
         w_slice = high - low + 1
         
         if high >= self.w:
-            raise IndexError("The index ({0}) is out of range.".format(key))
+            return Bit(0)()
+#            raise IndexError("The index ({0}) is out of range.".format(key))
         
         val = self.val >> low
         vld = self.vld >> low
@@ -333,7 +334,7 @@ class bit(TypeBase):
         return self.w
     
     def _full(self):
-        if self.vld == self._mask:
+        if (self.vld == self._mask) or (self.w == 0):
             return True
         else:
             return False

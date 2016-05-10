@@ -75,23 +75,31 @@ class Scheduler(greenlet):
             origin, target = args
             if target == self:
                 if hasattr(origin, 'events'):
-                    print("Process {0} run, and waits for: {1}".format(origin.name, [getattr(e, 'name', e) for e in origin.events]))
+                    print("SCHEDULER: Process Out: {0}, and waits for: {1}".format(origin.name, [getattr(e, 'name', e) for e in origin.events]))
+            else:
+                print("SCHEDULER: Process In: {0}".format(target.name))
+                
             return
         if event == 'throw':
             origin, target = args
-            print("I Threw! Process {0}".format(getattr(origin, 'name', origin)))
+            print("SCHEDULER: I Threw! Process {0}".format(getattr(origin, 'name', origin)))
             return
             
 class Simulator(Component):
     '''Simulator kernel.'''
 
-    def __init__(self, sched : Dependency('scheduler'), duration = 0, max_delta_count=1000, **kwargs):
+    def __init__(self, sched : Dependency('scheduler'), duration = 0, max_delta_count=1000,
+                 log_signal_updates=False, log_event_triggers=False, log_task_switching=False):
+        super().__init__(self)
         self.delay_pool = {}
         self.trig_pool = set()
         self.update_pool = set()     
         self._ready_pool = set()
         self._proc_pool = []
         self.running = False
+        self.log_signal_updates=log_signal_updates
+        self.log_event_triggers=log_event_triggers
+        self.log_task_switching=log_task_switching
         self.duration = duration
         self.sched = sched
         self.max_delta_count = max_delta_count
@@ -240,9 +248,13 @@ class Simulator(Component):
         while self._ready_pool:
             proc = self._ready_pool.pop()
             self._unsubscribe(proc)
+            if self.log_task_switching:
+                print("SCHEDULER: Process In: {0}".format(proc.name))
             events = proc.switch()
             if events is not None:
                 self._subscribe(proc, events)
+                if self.log_task_switching:
+                    print("SCHEDULER: Process Out: {0}, and waits for: {1}".format(proc.name, [getattr(e, 'name', e) for e in events]))
             else:
                 # If process supplied no waiting events, it is to be terminated
                 self._proc_pool.remove(proc)
@@ -251,12 +263,16 @@ class Simulator(Component):
         # Resolve all triggered events          
         while self.trig_pool:
             trig = self.trig_pool.pop()
+            if self.log_event_triggers:
+                print('SIMULATOR: Event: {}'.format(trig.name))
             trig.resolve(self._ready_pool)
 
     def _update(self):
         """Ask all signals to _update their values, and trigger new events. """
         
         for s in self.update_pool:
+            if self.log_signal_updates:
+                print('SIMULATOR: Update: {}, e={}'.format(id(s), s.e.name))
             s._update()
             
         self.update_pool.clear()
@@ -301,7 +317,7 @@ class Simulator(Component):
         self._ready_pool.add(proc)
         self._proc_pool.append(proc)
     
-    def update (self, sig):
+    def update(self, sig):
         self.update_pool.add(sig)
     
     def wait(self, *events):

@@ -55,15 +55,18 @@ class struct(TypeBase):
         for t, a in zip(self.dtype, val):
             val = self.dtype[t](a)
             self._val.append(val)
-            
             try:
                 self._vld.append(val._full())
             except AttributeError:
                 self._vld.append(True)
             
-        for (_,t) in islice(self.dtype.items(), len(self._val), len(self.dtype)):    
-            self._val.append(t())
-            self._vld.append(False)
+        for (_,t) in islice(self.dtype.items(), len(self._val), len(self.dtype)):
+            d = t()    
+            self._val.append(d)
+            try:
+                self._vld.append(d._full())
+            except AttributeError:
+                self._vld.append(False)
 
     def _replace(self, key, val):
         if isinstance( key, slice ) :

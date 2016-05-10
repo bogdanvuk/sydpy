@@ -234,7 +234,7 @@ class SlicedIntf(_IntfBase):
                 return member
     
     def read(self):
-        return self.__parent.read().__getitem__(self.__keys)
+        return self.__parent.read()[self.__keys]
     
     def write(self, val):
         next_val = self.__parent.read_next()

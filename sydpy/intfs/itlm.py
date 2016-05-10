@@ -57,7 +57,7 @@ class Itlm(Isig):
                         s.push(d)
                 
             while not all([s.empty() for s in self._sinks]):
-                ddic['sim'].wait(*[s.e['enqueued'] for s in self._sinks])
+                ddic['sim'].wait(*[s.e['updated'] for s in self._sinks])
                 
 #             for s in self._sinks:
 #                 data_conv_gen = convgen(data_recv, s._get_dtype())
@@ -96,7 +96,7 @@ class Itlm(Isig):
         if not self._sourced:
             ddic['sim'].wait(self.e['enqueued'])
         
-#         print('BPOP: {}, sigid={}, eid={}'.format(self.name, id(self._sig), id(self._sig.e)))
+        #print('BPOP: {}, sigid={}, eid={}'.format(self.name, id(self._sig), id(self._sig.e)))
         return self._sig.bpop()
     
     def empty(self):

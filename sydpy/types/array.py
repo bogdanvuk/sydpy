@@ -26,16 +26,16 @@ from sydpy.types._type_base import TypeBase, convlist
 from sydpy import ConversionError
 from sydpy.types import convgen
 
-def Array(cls, max_size=((1 << 16) - 1)):
-    if (cls, max_size) not in __array_classes:
-        __array_classes[(cls, max_size)] = type('array', (array,), dict(dtype=cls,max_size=max_size))
+def Array(cls, w=((1 << 16) - 1)):
+    if (cls, w) not in __array_classes:
+        __array_classes[(cls, w)] = type('array', (array,), dict(dtype=cls,w=w))
         
-    return __array_classes[(cls, max_size)] 
+    return __array_classes[(cls, w)] 
 
 class array(TypeBase):
     
     dtype = None
-    max_size = (1 << 16) - 1
+    w = (1 << 16) - 1
     
     def __init__(self, val=[]):
         
@@ -62,7 +62,7 @@ class array(TypeBase):
        
     @classmethod
     def _rnd(cls, rnd_gen):
-        size = rnd_gen.rnd_int(1, cls.max_size)
+        size = rnd_gen.rnd_int(1, cls.w)
         
         val = [rnd_gen._rnd(cls.dtype) for _ in range(size)] 
         
@@ -82,6 +82,9 @@ class array(TypeBase):
     
     def __len__(self):
         return len(self._val)
+    
+    def __getitem__(self, key):
+        return self._val[key]
     
     def __iadd__(self, other):
         for v in other:
@@ -135,7 +138,7 @@ class array(TypeBase):
             return False
 
     def _full(self):
-        if (len(self._val) == self.max_size) and (self._val[-1]._full):
+        if (len(self._val) == self.w) and (self._val[-1]._full):
             return True
         else:
             return False

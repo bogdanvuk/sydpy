@@ -1,10 +1,11 @@
 import sydpy
-from tests.packer_coef_calc import JesdPackerAlgo
+from tests.jesd_packer_algo import JesdPackerAlgo
 
-class PackerTlAlgo(sydpy.Component, JesdPackerAlgo):
+class PackerTlAlgo(sydpy.Component):
     def __init__(self, name, ch_samples, tSample = None, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), **kwargs):
         sydpy.Component.__init__(self, name)
-        JesdPackerAlgo.__init__(self, dtype = sydpy.Bit, jesd_params=jesd_params)
+        self.jesd_params = jesd_params
+        self.packer = JesdPackerAlgo(dtype = sydpy.Bit, jesd_params=jesd_params)
 
         self.csin = []
         self.din = []
@@ -19,11 +20,11 @@ class PackerTlAlgo(sydpy.Component, JesdPackerAlgo):
         while(1):
             sydpy.ddic['sim'].wait(sydpy.Delay(10))
             samples = []
-            for _ in range(self.S):
+            for _ in range(self.jesd_params['S']):
                 for d in self.din:
                     samples.append(d.bpop())
             
-            frame = JesdPackerAlgo.pack(self, samples)
+            frame = self.packer.pack(samples)
             self.c['frame'].push(frame)
             print()
             print('Algo Output Frame:')
