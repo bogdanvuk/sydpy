@@ -40,7 +40,6 @@ class Iseq(Intf):
             ddic['sim'].wait(self.c['_dout'].e['updated'])
         
     def _ff_proc(self):
-        print('ISEQ CLK:', self.name)
         if (self.c['ready'] and self.c['valid'] and
             all([i.empty() for i in self._itlm_sinks])):
             

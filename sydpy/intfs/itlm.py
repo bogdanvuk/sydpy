@@ -23,6 +23,10 @@ class Itlm(Isig):
             dtype = self._get_dtype()
         sig._dtype = dtype
         self._sinks.add(sig)
+        
+        if self._sourced and ('_pfunc_tlm_dispatch' not in self.c):
+            self.inst(Process, '_pfunc_tlm_dispatch', self._pfunc_tlm_dispatch)
+        
         return sig
         
     def _from_itlm(self, other):
@@ -76,7 +80,8 @@ class Itlm(Isig):
     
     def _create_source_sig(self):
         self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
-        self.inst(Process, '_pfunc_tlm_dispatch', self._pfunc_tlm_dispatch)
+        if self._sinks:
+            self.inst(Process, '_pfunc_tlm_dispatch', self._pfunc_tlm_dispatch)
 #         Process('_pfunc_tlm_dispatch', self, self._pfunc_tlm_dispatch)
     
     def bpush(self, val):

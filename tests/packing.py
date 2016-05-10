@@ -44,7 +44,7 @@ N = 11
 CS = 2
 M = 16
 
-sydpy.ddic.configure('sim.duration'         , 300)
+sydpy.ddic.configure('sim.duration'         , 100)
 sydpy.ddic.configure('top/pack_matrix.arch' , 'seq')
 sydpy.ddic.configure('top/*.jesd_params'    , dict(M=M, CF=1, CS=CS, F=4, HD=1, L=7, S=1, N=N))
 sydpy.ddic.configure('top.M'                , M)
@@ -62,6 +62,9 @@ sydpy.ddic.configure('top/*.clk', clk.c['clk'])
 inst(JesdPacking, 'top')
 
 sydpy.ddic['sim'].run()
+
+for s in sydpy.ddic.search('verif/inst/*', assertion=lambda obj: isinstance(obj, Scoreboard)):
+    assert len(sydpy.ddic[s].scoreboard_results['fail']) == 0
 
 # import cProfile
 # cProfile.run("sydpy.ddic['sim'].run()", sort='tottime')
