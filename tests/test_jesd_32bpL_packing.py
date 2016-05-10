@@ -8,6 +8,20 @@ from tests.jesd_32bpL_lookup_packer import Jesd32bpLLookupPacker
 from sydpy.intfs.itlm import Itlm
 from sydpy.types.array import Array
 from sydpy.types._type_base import convgen
+from tests.jesd_packer_lookup_gen import create_lookup
+
+jesd_params = dict(M=3, N=8, S=2, CS=2, CF=0, L=1, F=8, HD=0)
+frame_lookup = create_lookup(jesd_params, sample_flatten=True)
+
+# print()
+# print('Matrix Output Frame:')
+# print()
+# for l in frame_lookup:
+#     print(l)
+# 
+# 
+# import sys
+# sys.exit(0)
 
 class FrameScoreboard(Scoreboard):
     def __init__(self, 
@@ -62,15 +76,16 @@ class JesdPacking(sydpy.Component):
             
             self.inst(Converter, 'conv{}'.format(i), ch_sample=self.ch_samples[-1], N=jesd_params['N'], CS=jesd_params['CS'])
         
+        self.inst(sydpy.Channel, 'frame_out')
 #        self.inst(PackerTlAlgo, 'pack_algo', ch_samples=ch_gen)
         self.inst(Oversampler, 'oversampler', ch_samples=self.ch_samples, ch_oversamples=self.ch_oversamples) 
-        self.inst(Jesd32bpLLookupPacker, 'pack_lookup', ch_samples=self.ch_oversamples)
+        self.inst(Jesd32bpLLookupPacker, 'pack_lookup', frame_out=self.c['frame_out'], ch_samples=self.ch_oversamples)
 
 N = 16
 CS = 0
 M = 2
 
-sydpy.ddic.configure('sim.duration'         , 100)
+sydpy.ddic.configure('sim.duration'         , 200)
 #sydpy.ddic.configure('top/pack_matrix.arch' , 'tlm')
 sydpy.ddic.configure('*.jesd_params'    , dict(M=M, CF=0, CS=CS, F=1, HD=1, L=4, S=1, N=N))
 sydpy.ddic.configure('top/*.tSample'    , sydpy.Struct(('d', sydpy.Bit(N)), 
