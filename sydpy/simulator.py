@@ -115,6 +115,7 @@ class Simulator(Component):
                        'delta_settled'  : SimEvent(),
                        'timestep_start' : SimEvent(),
                        'timestep_end'   : SimEvent(),
+                       'update'         : SimEvent(),
                        }
         
 #         self.inst('top', class_load(top))
@@ -273,6 +274,7 @@ class Simulator(Component):
         for s in self.update_pool:
             if self.log_signal_updates:
                 print('SIMULATOR: Update: {}, e={}'.format(id(s), s.e.name))
+            self.events['update'](s, self)
             s._update()
             
         self.update_pool.clear()

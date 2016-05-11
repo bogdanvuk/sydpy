@@ -2,17 +2,18 @@ from sydpy.component import Component#, sydsys
 from sydpy._util._util import class_load
 from sydpy.intfs.intf import Intf
 from sydpy.process import Process
+from ddi.ddi import Dependency
 
 class Cosim(Component):
     
-    def __init__(self, cosim_intf, fileset = [], module_name=None, **kwargs):
-        Component.__init__(self, **kwargs)
-        self.cosim_intf = sydsys()[cosim_intf]
+    def __init__(self, name, cosim_intf: Dependency('xsimintf'), fileset = [], module_name=None, **kwargs):
+        super().__init__(name)
+        self.cosim_intf = cosim_intf
         self.module_name = module_name
         self.fileset = fileset
 
         if self.module_name is None:
-            self.module_name = self.name.rsplit('.', 1)[-1]
+            self.module_name = self.name.rsplit('/', 1)[-1]
         
         self.cosim_intf.register(self)
     

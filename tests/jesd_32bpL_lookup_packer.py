@@ -41,6 +41,9 @@ class Jesd32bpLLookupPacker(sydpy.Component):
         self.idin = []
         for i, d in enumerate(ch_samples):
             idin = self.inst(sydpy.Iseq, 'din{}'.format(i), dtype=Bit(self.input_vector_w), dflt=0)
+            if self.segments_32b_num == 1:
+                idin.c['ready'] <<= True 
+
             self.idin.append(idin)
             d >>= idin
             
@@ -49,6 +52,13 @@ class Jesd32bpLLookupPacker(sydpy.Component):
 
     
     def pack(self):
+        
+        for intf in self.idin:
+            if (self.segments_32b_num > 1) and (self.c['segments_32b_cnt'].read() == self.segments_32b_num - 2):
+                intf.c['ready'] <<= True
+            else:
+                intf.c['ready'] <<= False
+        
         self.c['segments_32b_cnt'] <<= self.c['segments_32b_cnt'] + 1
         if self.c['segments_32b_cnt'].read() == self.segments_32b_num - 1:
             self.c['segments_32b_cnt'] <<= 0
@@ -83,16 +93,18 @@ class Jesd32bpLLookupPacker(sydpy.Component):
     def dispatch(self):
 
         if self.c['cur_frame_out'].read() == 0:
+            print('frame0 output')
             frame = self.c['frame0'].read()
         else:
+            print('frame1 output')
             frame = self.c['frame1'].read()        
 
         out_word = []
 
         if frame:        
             for l in range(self.jesd_params['L']):
-                for i in range(self.c['segments_32b_cnt']*4,(self.c['segments_32b_cnt']+1)*4):
-                    out_word.append(frame[l][i])
-                    self.c['frame_out'][l*32+(i+1)*8 - 1:l*32+i*8] <<= frame[l][i]
+                for i in range(4):
+                    out_word.append(frame[l][self.c['segments_32b_cnt']*4 + i])
+                    self.c['frame_out'][l*32+(i+1)*8 - 1:l*32+i*8] <<= frame[l][self.c['segments_32b_cnt']*4 + i]
                 
-        print('32bpL out: {}, {}', self.c['frame_out'].read_next(), out_word)
+        print('32bpL out: {}, {}'.format(self.c['frame_out'].read_next(), out_word))

@@ -26,7 +26,9 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=1, max_fails=3):
 class Server(Component):
     '''Simulator kernel.'''
 
-    def __init__(self, host = '', port=60000, **kwargs):
+    def __init__(self, name, host = '', port=60000, **kwargs):
+        super().__init__(name)
+        
         self.client = None
         self.sock = None
         backlog = 0

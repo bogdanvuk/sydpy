@@ -3,6 +3,7 @@ import string
 import os
 import itertools
 from subprocess import Popen, PIPE
+from ddi.ddi import ddic, Dependency
 
 wrapper_tmpl = string.Template("""
 module wrap();
@@ -85,13 +86,13 @@ class XsimIntf(Component):
             }
 
     #@compinit
-    def __init__(self, builddir='.', **kwargs):
+    def __init__(self, name, server: Dependency('xsimserver'), builddir='.', **kwargs):
         self.cosim_pool = []
-        sydsys().sim.events['run_start'].append(sydsys().sim_run_start)
-        sydsys().sim.events['run_end'].append(sydsys().sim_run_end)
-        sydsys().sim.events['delta_settled'].append(sydsys().sim_delta_settled)
-        sydsys().sim.events['timestep_start'].append(sydsys().sim_timestep_start)
-        
+        ddic['sim'].events['run_start'].append(self.sim_run_start)
+        ddic['sim'].events['run_end'].append(self.sim_run_end)
+        ddic['sim'].events['delta_settled'].append(self.sim_delta_settled)
+        ddic['sim'].events['timestep_start'].append(self.sim_timestep_start)
+        self.server = server
     
     def render_module_inst(self, cosim):
         port_map = []
@@ -141,10 +142,10 @@ class XsimIntf(Component):
         if params:
             msg += ',' + ','.join(params)
             
-        sydsys().server.send(msg)
+        self.server.send(msg)
         print(msg)
 
-        ret = sydsys().server.recv().split(',')
+        ret = self.server.recv().split(',')
         print(ret)
         if len(ret) > 1:
             params = ret[1:]
@@ -167,7 +168,7 @@ class XsimIntf(Component):
         for intf, p in zip(sorted(self.outputs.items()), params):
             intf[1].write('0x' + p.replace('x', 'u').replace('z', 'u'))
             
-        sydsys().sim._update()
+        ddic['sim']._update()
 
                   
     def send_import(self):
@@ -287,7 +288,7 @@ class XsimIntf(Component):
         
     def __del__(self):
         try:
-            sydsys().server.send('$CLOSE')
+            self.server.send('$CLOSE')
 #             self.xsim_proc.terminate()
         except:
             pass
