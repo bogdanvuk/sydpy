@@ -7,6 +7,7 @@ from sydpy.process import Process
 from sydpy.types._type_base import convgen
 from ddi.ddi import ddic
 from sydpy.intfs.itlm import Itlm
+from sydpy._event import EventSet
 
 class Iseq(Intf):
     _intf_type = 'iseq'
@@ -23,13 +24,17 @@ class Iseq(Intf):
         self.inst(Isig, 'valid', dtype=bit, dflt=1)
         self.inst(Isig, 'ready', dtype=bit, dflt=1)
         self.inst(Isig, 'last', dtype=bit, dflt=0)
-        self.inst(Isig, '_dout', dtype=dtype, dflt=0)
+#         self.inst(Isig, '_dout', dtype=dtype, dflt=0)
+        
         self.c['clk'] = clk
+        
+        self.e = self.inst(EventSet, 'e')
+        self._dout = Signal(val=dtype(dflt), event_set=self.e)
         
         self.inst(Process, '_p_ff_proc', self._ff_proc, senslist=[self.c['clk'].e['posedge']])
 #        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
         
-        self.e = self.c['_dout'].e
+#         self.e = self._dout.e
         self._itlm_sinks = set()
     
     def _fifo_proc(self):
@@ -37,13 +42,13 @@ class Iseq(Intf):
             self.c['data'].bpop()
             self.c['last'] <<= (self.c['data'].get_queue() == False)
             self.c['valid'] <<= True
-            ddic['sim'].wait(self.c['_dout'].e['updated'])
+            ddic['sim'].wait(self.e['updated'])
         
     def _ff_proc(self):
         if (self.c['ready'] and self.c['valid'] and
             all([i.empty() for i in self._itlm_sinks])):
             
-            self.c['_dout'] <<= self.c['data']
+            self._dout.write(self.c['data'].read())
             for i in self._itlm_sinks:
                 i.push(self.c['data'])
         
@@ -73,7 +78,7 @@ class Iseq(Intf):
         self.c['data']._connect(other)
     
     def _to_isig(self, other):
-        other._connect(self.c['_dout'])
+        other._connect(self._dout)
     
     def _to_itlm(self, other):
         self._itlm_sinks.add(other)
@@ -122,7 +127,7 @@ class Iseq(Intf):
     
     def _drive(self, channel):
         self._mch = channel
-        self.c['_dout']._drive(channel)
+        self._dout._drive(channel)
 #         self._sig = Signal(val=self._dtype.conv(self._dflt))
 #         self.e = self._sig.e
         
@@ -136,13 +141,13 @@ class Iseq(Intf):
         self.c['data'].push(val)
     
     def read_next(self):
-        return self.c['_dout']._next
+        return self._dout._next
     
     def read(self):
-        return self.c['_dout'].read()
+        return self._dout.read()
     
     def get_queue(self):
-        return self.c['_dout'].get_queue()
+        return self._dout.get_queue()
     
     def deref(self, key):
         return SlicedIntf(self, key)

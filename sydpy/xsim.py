@@ -78,7 +78,7 @@ def shell(cmd):
     print("Return code: ", p.returncode)
     return out, err, p.returncode
 
-class XsimIntf(Component):
+class XsimIntf:
 
     state_type = {0: "S_STARTED", 1: "S_CONNECTED", 2: "S_INITIALIZED", 3:"S_IMPORT", 4:"S_EXPORT", 5:"S_DELAY"};
     cmds = {'GET_STATE': {'type': 'GET', 'params': ['state']},
@@ -86,13 +86,15 @@ class XsimIntf(Component):
             }
 
     #@compinit
-    def __init__(self, name, server: Dependency('xsimserver'), builddir='.', **kwargs):
+    def __init__(self, server: Dependency('xsimserver'), builddir='./xsimintf'):
+        self.builddir = builddir
+        self.server = server
         self.cosim_pool = []
         ddic['sim'].events['run_start'].append(self.sim_run_start)
         ddic['sim'].events['run_end'].append(self.sim_run_end)
         ddic['sim'].events['delta_settled'].append(self.sim_delta_settled)
         ddic['sim'].events['timestep_start'].append(self.sim_timestep_start)
-        self.server = server
+        
     
     def render_module_inst(self, cosim):
         port_map = []
