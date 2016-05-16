@@ -37,12 +37,26 @@ class Iseq(Intf):
 #         self.e = self._dout.e
         self._itlm_sinks = set()
     
-    def _fifo_proc(self):
+    def _fifo_proc(self, srcsig, keys):
         while(1):
-            self.c['data'].bpop()
-            self.c['last'] <<= (self.c['data'].get_queue() == False)
-            self.c['valid'] <<= True
-            ddic['sim'].wait(self.e['updated'])
+            if not srcsig.mem:
+                ddic['sim'].wait(srcsig.e['enqueued'])
+            
+            data = []
+            while not srcsig.empty():
+                val = srcsig.pop()
+                for d, _ in convgen(val, self._dtype.deref(keys[-1])):
+                    data.append(d)
+                    
+            for i, d in enumerate(data):
+                data_sig = self.c['data']
+                for k in keys:
+                    data_sig = data_sig[k]
+                        
+                data_sig <<= d
+                self.c['last'] <<= (i == (len(data) - 1))
+                self.c['valid'] <<= True
+                ddic['sim'].wait(self.e['updated'])
         
     def _ff_proc(self):
         if (self.c['ready'] and self.c['valid'] and
@@ -51,6 +65,9 @@ class Iseq(Intf):
             self._dout.write(self.c['data'].read())
             for i in self._itlm_sinks:
                 i.push(self.c['data'])
+                
+        self.c['last'] <<= False
+        self.c['valid'] <<= False
         
     def con_driver(self, intf):
         pass
@@ -83,14 +100,14 @@ class Iseq(Intf):
     def _to_itlm(self, other):
         self._itlm_sinks.add(other)
     
-    def _from_itlm(self, other):
+    def _from_itlm(self, other, keys=[]):
         sig = other._subscribe(self, self._get_dtype())
-        self.inst(Itlm,  'data', dtype=self._get_dtype(), dflt=sig.read())
-        self.c['data']._sig = sig
-        self.c['data']._sig.e = self.c['data'].e
-        self.c['data']._sourced = True
+#         self.inst(Itlm,  'data', dtype=self._get_dtype(), dflt=sig.read())
+#         self.c['data']._sig = sig
+#         self.c['data']._sig.e = self.c['data'].e
+#         self.c['data']._sourced = True
         
-        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
+        self.inst(Process, '', self._fifo_proc, senslist=[], pkwargs=dict(srcsig=sig, keys=keys))
     
 #     def _pfunc_tlm_to_sig(self, other):
 #         data_fifo = []

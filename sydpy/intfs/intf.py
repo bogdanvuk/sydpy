@@ -210,48 +210,53 @@ class _IntfBase(object):
 
 class SlicedIntf(_IntfBase):
     """Provides access to the parent interface via a key."""
-    def __init__(self, intf, keys=None):
+    def __init__(self, intf, keys=()):
         """"Create SlicedIntf of a parent with specific key."""
         _IntfBase.__init__(self)
         
-        self.__dtype = intf._get_dtype().deref(keys)
-        self.__keys = keys
-        self.__parent = intf
+        self._dtype = intf._get_dtype()
+        for k in keys:
+            self._dtype = self._dtype.deref(k)
+        self._keys = keys
+        self._parent = intf
 
     def _get_dtype(self):
-        return self.__dtype
+        return self._dtype
 
     def __getattr__(self, name):
         try:
             return _IntfBase.__getattr__(self, name)
         except AttributeError:
-            member = getattr(self.__parent, name)
+            member = getattr(self._parent, name)
             
             if isinstance(member, types.MethodType) and ('keys' in signature(member).parameters):
-                keys = self.__keys
+                keys = self._keys
                 return lambda *args, **kwargs: member(*args, keys=keys, **kwargs)
             else:
                 return member
     
     def read(self):
-        return self.__parent.read()[self.__keys]
+        return self._parent.read()[self._keys]
     
     def write(self, val):
-        next_val = self.__parent.read_next()
-        next_val[self.__keys] = val
-        return self.__parent.write(next_val)
+        next_val = self._parent.read_next()
+        for k in self._keys[:-1]:
+            next_val = next_val[k]
+            
+        next_val[self._keys[-1]] = val
+        return self._parent.write(next_val)
     
     def unsubscribe(self, proc, event=None):
         if event is None:
-            self.__parent.e.event_def[self.__keys].unsubscribe(proc)
+            self._parent.e.event_def[self._keys].unsubscribe(proc)
         else:
-            getattr(self.__parent.e, event)[self.__keys].unsubscribe(proc)
+            getattr(self._parent.e, event)[self._keys].unsubscribe(proc)
         
     def subscribe(self, proc, event=None):
         if event is None:
-            return self.__parent.e.event_def[self.__keys].subscribe(proc)
+            return self._parent.e.event_def[self._keys].subscribe(proc)
         else:
-            getattr(self.__parent.e, event)[self.__keys].subscribe(proc)
+            getattr(self._parent.e, event)[self._keys].subscribe(proc)
 #     def _hdl_gen_decl(self, lang=Hdlang.Verilog):
 #         raise Exception("Subproxy cannot declare a _signal!")
 #             
@@ -269,13 +274,17 @@ class Intf(Component, _IntfBase):
         Component.__init__(self, name)
         self._sliced_intfs = {}
 
-    def _connect(self, other):
+    @property
+    def val(self):
+        return self.read()
+
+    def _connect(self, other, keys=[]):
 #         if self._intf_eq(other):
 #             self._add_source(other)
         if hasattr(self, '_from_' + other._intf_type):
-            getattr(self, '_from_' + other._intf_type)(other)
+            getattr(self, '_from_' + other._intf_type)(other, keys)
         elif hasattr(other, '_to_' + self._intf_type):
-            getattr(other, '_to_' + self._intf_type)(self)
+            getattr(other, '_to_' + self._intf_type)(self, keys)
         else:
             raise Exception('Cannot connect to master interface!')
             
@@ -325,6 +334,7 @@ class Intf(Component, _IntfBase):
         pass
 
     def __getitem__(self, key):
+        key = (key,)
         if repr(key) not in self._sliced_intfs:
             sliced_intf = self.deref(key)
             self._sliced_intfs[repr(key)] = sliced_intf

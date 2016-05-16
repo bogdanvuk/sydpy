@@ -15,11 +15,11 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
-from sydpy.intfs.itlm import Itlm
 from sydpy.types import bit
 from sydpy._delay import Delay
 from sydpy.process import Process
 from sydpy.component import Component
+from sydpy.intfs.isig import Isig
 
 """Module implements the Clocking helper module."""
 # 
@@ -34,7 +34,7 @@ from sydpy.component import Component
 class Clocking(Component):
     def __init__(self, name, period=100, clk_name='clk'):
         super().__init__(name)
-        self.inst(Itlm, clk_name, dtype=bit, dflt=0)
+        self.inst(Isig, clk_name, dtype=bit, dflt=0)
         self.inst(Process, 'clk_proc', func=self.clk_proc, senslist=[Delay(int(period/2))])
         self.period = period
         self.clk_name = clk_name

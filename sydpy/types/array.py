@@ -86,6 +86,9 @@ class array(TypeBase):
     def __getitem__(self, key):
         return self._val[key]
     
+    def append(self, val):
+        self._val.append(self.dtype(val))
+    
     def __iadd__(self, other):
         for v in other:
             self._val.append(self.dtype(v))

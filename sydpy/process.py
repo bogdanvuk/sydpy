@@ -11,7 +11,7 @@ class Process(Component, greenlet):
     
     Class turns function in the greenlet task.""" 
 
-    def __init__(self, name, func, senslist=None, pargs = (), pkwargs = {}, sim : Dependency('sim')=None):
+    def __init__(self, name, func, sim : Dependency('sim'), senslist=None, pargs = (), pkwargs = {}):
         Component.__init__(self, name)
         self.func = func
 

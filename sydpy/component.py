@@ -70,7 +70,7 @@ class Component:
 #     def __contains__(self, key):
 #         return key in self._comp
 
-    def inst(self, cls, name, *args, **kwargs):
+    def inst(self, cls, name='', *args, **kwargs):
         c_name = name
         name = sep.join([self.name, name])
         

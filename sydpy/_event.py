@@ -36,7 +36,8 @@ class EventSet(Component):
             self.missing_event = self._missing_event_err
 
     def _missing_event(self, _, name):
-        return Event(name, self)
+        self.c[name] = Event(name, self)
+        return self.c[name]
 
     def _missing_event_err(self, _, name):
         raise Exception("no such event")
