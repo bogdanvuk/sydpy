@@ -1,42 +1,56 @@
 from sydpy.component import Component#, compinit#, sydsys
 from sydpy._signal import Signal
 from sydpy.intfs.intf import Intf, SlicedIntf
-from sydpy.intfs.isig import isig
+from sydpy.intfs.isig import Isig
 from sydpy.types import bit
 from sydpy.process import Process
 from sydpy.types._type_base import convgen
+from ddi.ddi import ddic
+from sydpy.intfs.itlm import Itlm
+from sydpy._event import EventSet
 
-class iseq(Intf):
+class Iseq(Intf):
     _intf_type = 'iseq'
 
-    @compinit
-    def __init__(self, dtype, dflt, **kwargs):
+    def __init__(self, name, dtype=None, dflt=None, clk=None):
+        super().__init__(name)
+        
         self._mch = None
         self._sch = None
         self._dtype = dtype
         self._dflt = dflt
         
-        self.inst('data', Isig, dtype=dtype, dflt=dflt)
-        self.inst('valid', Isig, dtype=bit, dflt=1)
-        self.inst('ready', Isig, dtype=bit, dflt=1)
-        self.inst('last', Isig, dtype=bit, dflt=0)
-        self.inst('clk', Isig, dtype=bit, dflt=0)
-        self.inst('_dout', Isig, dtype=dtype, dflt=0)
-        self.inst('_p_ff_proc', Process, self._ff_proc, [self.clk.e.posedge])
-        self.inst('_p_fifo_proc', Process, self._fifo_proc, [])
+        self.inst(Isig, 'data', dtype=dtype, dflt=dflt)
+        self.inst(Isig, 'valid', dtype=bit, dflt=1)
+        self.inst(Isig, 'ready', dtype=bit, dflt=1)
+        self.inst(Isig, 'last', dtype=bit, dflt=0)
+#         self.inst(Isig, '_dout', dtype=dtype, dflt=0)
         
-        self.e = self._dout.e
+        self.c['clk'] = clk
+        
+        self.e = self.inst(EventSet, 'e')
+        self._dout = Signal(val=dtype(dflt), event_set=self.e)
+        
+        self.inst(Process, '_p_ff_proc', self._ff_proc, senslist=[self.c['clk'].e['posedge']])
+#        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
+        
+#         self.e = self._dout.e
+        self._itlm_sinks = set()
     
     def _fifo_proc(self):
         while(1):
-            self.data.bpop()
-            self.last <<= (self.data.get_queue() == False)
-            self.valid <<= True
-            sydsys().sim.wait(self._dout.e.updated)
+            self.c['data'].bpop()
+            self.c['last'] <<= (self.c['data'].get_queue() == False)
+            self.c['valid'] <<= True
+            ddic['sim'].wait(self.e['updated'])
         
     def _ff_proc(self):
-        if self.ready and self.valid:
-            self._dout <<= self.data
+        if (self.c['ready'] and self.c['valid'] and
+            all([i.empty() for i in self._itlm_sinks])):
+            
+            self._dout.write(self.c['data'].read())
+            for i in self._itlm_sinks:
+                i.push(self.c['data'])
         
     def con_driver(self, intf):
         pass
@@ -61,13 +75,22 @@ class iseq(Intf):
         
     
     def _from_isig(self, other):
-        self.data._connect(other)
+        self.c['data']._connect(other)
     
     def _to_isig(self, other):
         other._connect(self._dout)
-        
+    
+    def _to_itlm(self, other):
+        self._itlm_sinks.add(other)
+    
     def _from_itlm(self, other):
-        pass
+        sig = other._subscribe(self, self._get_dtype())
+        self.inst(Itlm,  'data', dtype=self._get_dtype(), dflt=sig.read())
+        self.c['data']._sig = sig
+        self.c['data']._sig.e = self.c['data'].e
+        self.c['data']._sourced = True
+        
+        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
     
 #     def _pfunc_tlm_to_sig(self, other):
 #         data_fifo = []
@@ -112,10 +135,10 @@ class iseq(Intf):
         self._sch = channel
     
     def write(self, val):
-        self.data.write(val)
+        self.c['data'].write(val)
         
     def push(self, val):
-        self.data.push(val)
+        self.c['data'].push(val)
     
     def read_next(self):
         return self._dout._next

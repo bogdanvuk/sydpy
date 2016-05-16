@@ -10,6 +10,7 @@ import sys
 import logging
 from sydpy.unit import Unit
 from sydpy.component import Component#, compinit
+import atexit
 
 def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=1, max_fails=3):
     """Set TCP keepalive on an open socket.
@@ -23,13 +24,16 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=1, max_fails=3):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
-class Server(Component):
+class Server:
     '''Simulator kernel.'''
 
     def __init__(self, host = '', port=60000, **kwargs):
         self.client = None
         self.sock = None
+        self.host = host
+        self.port = port
         backlog = 0
+        atexit.register(self.close)
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.bind((self.host,self.port))
@@ -43,6 +47,9 @@ class Server(Component):
 #             set_keepalive_linux(self.sock)
         except:
             self.sock.close()
+    
+    def close(self):
+        self.sock.close()
     
     def connect(self):
         print("Waiting for XSIM connection...")
@@ -70,8 +77,8 @@ class Server(Component):
         
         return data.decode()
             
-    def __del__(self):
-        try:
-            self.sock.close()
-        except:
-            pass
+#     def __del__(self):
+#         try:
+#             self.sock.close()
+#         except:
+#             pass

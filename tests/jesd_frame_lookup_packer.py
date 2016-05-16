@@ -1,12 +1,14 @@
 import sydpy
-from tests.jesd_packer_algo import JesdPackerAlgo
+from sydpy.types.bit import Bit
+from tests.jesd_packer_lookup_gen import create_lookup
 
-class PackerTlAlgo(sydpy.Component):
+class JesdFrameLookupPacker(sydpy.Component):
+
     def __init__(self, name, ch_samples, tSample = None, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), **kwargs):
         sydpy.Component.__init__(self, name)
         self.jesd_params = jesd_params
-        self.packer = JesdPackerAlgo(dtype = sydpy.Bit, jesd_params=jesd_params)
-
+            
+        self.lookup = create_lookup(jesd_params)
         self.csin = []
         self.din = []
         for i, d in enumerate(ch_samples):
@@ -15,7 +17,7 @@ class PackerTlAlgo(sydpy.Component):
         
         self.inst(sydpy.Itlm, 'frame')
         self.inst(sydpy.Process, 'pack', self.pack)
-    
+
     def pack(self):
         while(1):
             sydpy.ddic['sim'].wait(sydpy.Delay(10))
@@ -24,11 +26,24 @@ class PackerTlAlgo(sydpy.Component):
                 for d in self.din:
                     samples.append(d.bpop())
             
-            frame = self.packer.pack(samples)
+            frame = []
+            for m_lane in self.lookup:
+                f_lane = []
+                for m_byte in m_lane:
+                    f_byte = sydpy.Bit(8)(0)
+                    for i, m_bit in enumerate(m_byte.val):
+                        if m_bit:
+                            f_byte[i] = samples[m_bit[0]][m_bit[1]][m_bit[2]]
+                        else:
+                            f_byte[i] = 0
+                    f_lane.append(f_byte)
+                    
+                frame.append(f_lane)
+                
             self.c['frame'].push(frame)
+                
             print()
-            print('Algo Output Frame:')
+            print('Matrix Output Frame:')
             print()
             for l in frame:
                 print(l)
-            

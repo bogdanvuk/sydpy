@@ -20,27 +20,69 @@
 
 from sydpy import ConversionError
 
-def conv(val, to_type):
-    """Converts a value to specified type."""
-    return to_type.conv(val)
+# def conv(val, to_type):
+#     """Converts a value to specified type."""
+#     return to_type.conv(val)
 
-def convgen(val, to_type, remain=None):
+def convlist(din, dtype):
+    return [d for d, _ in convgen(din, dtype)]
+
+
+def conv(val, dtype):
+    if val.__class__ == dtype:
+        return val
+    else:
+        l = convlist(val, dtype)
+        if l:
+            return l[0]
+        else:
+            return dtype()
+
+def convgen(din, dtype, dout=None):
     """Generator conversion function. It can output multiple converted values 
     from a single source value.
     
     For an example conversion of list of integers to integers.
     """
     
-    if to_type:
-        _convgen = to_type._convgen(val, remain)
-        while True:
-            data, _remain = next(_convgen)
-            
-            yield data
-    else:
-        yield val
+    if dout is None:
+        dout = dtype()
+    
+    def is_empty_dflt():
+        return din is None
+    
+    started_new_dout = False
+    while (din is not None) and (not getattr(din, '_empty', is_empty_dflt)()):
+        try:
+            din = dout._iconcat(din)
+        except (ConversionError, AttributeError):
+            try:
+                din = dout._convfrom(din.__class__, din)
+            except (ConversionError, AttributeError):
+                din = din._convto(dout.__class__, din)
+
+            din = dout._iconcat(din)
         
-class TypeBase(object):
+        if dout._full():
+            yield dout, din
+            dout = dtype()
+            started_new_dout = False
+        else:
+            started_new_dout = True
+            
+    if started_new_dout:
+        yield dout, din
+    
+#     if to_type:
+#         _convgen = to_type._convgen(val, remain)
+#         while True:
+#             data, _remain = next(_convgen)
+#             
+#             yield data
+#     else:
+#         yield val
+        
+class TypeBase:
     """Base type for all sydpy typles."""
     
     @classmethod
@@ -48,6 +90,25 @@ class TypeBase(object):
         """Check if the types are of the same class."""
         return object.__eq__(cls, other)
     
+    
+    @classmethod
+    def _from_NoneType(cls, other):
+        return cls([])
+    
+    @classmethod
+    def _convfrom(cls, cls_other, other):
+        if not hasattr(cls, '_from_' + cls_other.__name__):
+            raise ConversionError
+        
+        return getattr(cls, '_from_' + cls_other.__name__)(other)
+
+    @classmethod
+    def _convto(cls, cls_other, val):
+        if not hasattr(cls, '_to_' + cls_other.__name__):
+            raise ConversionError
+        
+        return getattr(cls, '_to_' + cls_other.__name__)(val)
+
     @classmethod
     def _conv_direct(cls, other):
         try:

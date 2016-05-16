@@ -4,7 +4,7 @@ from sydpy._event import EventSet, Event
 from sydpy.unit import Unit
 from sydpy.intfs.intf import Intf, SlicedIntf
 import copy
-from sydpy.types._type_base import convgen
+from sydpy.types._type_base import convgen, conv
 from sydpy.process import Process
 
 class Isig(Intf):
@@ -19,7 +19,7 @@ class Isig(Intf):
         self._dtype = dtype
 
         if self._dtype:
-            self._dflt = self._dtype.conv(dflt)
+            self._dflt = conv(dflt, self._dtype)
         else:
             self._dflt = dflt
             
@@ -78,7 +78,7 @@ class Isig(Intf):
             pass
         
         if self._get_dtype():
-            val = self._get_dtype().conv(val)
+            val = conv(val, self._get_dtype())
         
         if not self._sourced:
             self._create_source_sig()

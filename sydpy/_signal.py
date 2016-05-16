@@ -61,14 +61,21 @@ class Signal(object):
     def get_queue(self):
         return self.mem
     
+    def empty(self):
+        return len(self.mem) == 0
+    
+    def top(self):
+        return self.mem[0]
+    
     def bpop(self):
         """Pop the value from the signal queue. If the queue is empty, wait 
         for the value to become available."""
         
         if not self.mem:
             ddic['sim'].wait(self.e['enqueued'])
-        
+            
         self._next = self.mem.pop(0)
+#         print('BPOP DONE: {}, id={}, eid={}'.format(self._next, id(self), id(self.e)))
         ddic['sim'].update(self)
         ddic['sim'].wait(self.e['updated'])
             
@@ -98,7 +105,7 @@ class Signal(object):
         """Push value to signal queue without triggering the update."""
         
         self.mem.append(val)
-        if 'enqueued' in self.e:
+        if 'enqueued' in self.e.c:
             self.e['enqueued'].trigger()
         
     def write(self, val):
@@ -122,15 +129,15 @@ class Signal(object):
             
         val = self._val
         
-        if 'updated' in self.e:
+        if 'updated' in self.e.c:
             self.e['updated'].trigger()
         
         if val != next_val:
             
-            if 'changed' in self.e:
+            if 'changed' in self.e.c:
                 self.e['changed'].trigger()
                 
-            if 'event_def' in self.e:
+            if 'event_def' in self.e.c:
                 self.e['event_def'].trigger()
                 
                 for _, sube in self.e['event_def'].subevents.items():
@@ -140,10 +147,10 @@ class Signal(object):
                         sube.trigger()
 
             if not val and next_val and (val is not None):
-                if 'posedge' in self.e:
+                if 'posedge' in self.e.c:
                     self.e['posedge'].trigger()
             elif not next_val and val:
-                if 'negedge' in self.e:
+                if 'negedge' in self.e.c:
                     self.e['negedge'].trigger()
 
             self._val = copy.deepcopy(next_val)

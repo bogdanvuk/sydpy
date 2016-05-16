@@ -103,6 +103,42 @@ class bit(TypeBase):
             self.val = val & self._mask
             self.vld = vld & self._mask
 
+    def _iconcat(self, other):
+        if not isinstance(other, bit):
+            raise ConversionError
+
+        for last_unset in reversed(range(self.w)):
+            if (self.vld & (1 << last_unset)):
+                last_unset += 1
+                break
+        else:
+            last_unset = 0
+
+        space_left = self.w - last_unset
+        
+        oth_val = other.val & ((1 << space_left) - 1)
+        oth_vld = other.vld & ((1 << space_left) - 1)
+        
+        if other.w > space_left:
+        
+            oth_left_val = other.val >> space_left
+            oth_left_vld = other.vld >> space_left
+            
+            new_other = Bit(other.w - space_left)(oth_left_val, oth_left_vld)
+    
+        else:
+            new_other = None
+
+        vld_mask = (1 << last_unset) - 1
+        
+        self.val = (oth_val << last_unset) | (vld_mask & self.val)
+        self.vld = (oth_vld << last_unset) | self.vld
+
+        return new_other
+
+    def _empty(self):
+        return self.vld == 0
+
     def _replace(self, key, val):
         if isinstance( key, slice ) :
             #Get the start, stop, and step from the slice
@@ -250,7 +286,8 @@ class bit(TypeBase):
         w_slice = high - low + 1
         
         if high >= self.w:
-            raise IndexError("The index ({0}) is out of range.".format(key))
+            return Bit(0)()
+#            raise IndexError("The index ({0}) is out of range.".format(key))
         
         val = self.val >> low
         vld = self.vld >> low
@@ -275,9 +312,10 @@ class bit(TypeBase):
     def __str__(self):
         val = self.val
         vld = self.vld
+        mask = self._mask
         hexstr = ''
         for i in range(-(int(-self.w//4))):
-            if vld & 0xf:
+            if vld & 0xf == 0xf & mask:
                 hexstr += '{0:1x}'.format(int(val & 0xf))
             else:
                 if (vld & 0xf) == 0:
@@ -286,6 +324,7 @@ class bit(TypeBase):
                     hexstr += 'u'
             vld >>= 4
             val >>= 4
+            mask >>= 4
             
         return '0x' + hexstr[::-1]
 
@@ -295,7 +334,7 @@ class bit(TypeBase):
         return self.w
     
     def _full(self):
-        if self.vld == self._mask:
+        if (self.vld == self._mask) or (self.w == 0):
             return True
         else:
             return False
@@ -333,14 +372,14 @@ class bit(TypeBase):
         except:
             raise ConversionError
     
-    def __concat__(self, other):
+    def _concat(self, other):
         if isinstance(other, bit):
             return Bit(self.w + other.w)((self.val << other.w) + other.val, (self.vld << other.w) + other.vld)
         else:
             raise TypeError('unsupported operand type(s) for +'+
                             ': \''+ self.__class__.__name__ +'\' and \''+ other.__class__.__name__ +'\'')
     
-    concat = __concat__
+    concat = _concat
 #     __mod__ = __concat__
 
     def __mod__(self, other):
@@ -362,6 +401,11 @@ class bit(TypeBase):
     @classmethod    
     def _from_int(cls, other):
         return cls(other)
+    
+    @classmethod    
+    def _from_bool(cls, other):
+        return cls._from_int(int(other))
+
     
     
 #     def __nonzero__(self):

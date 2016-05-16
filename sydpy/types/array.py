@@ -22,20 +22,20 @@
 __array_classes = {}
 
 # from .type_base import TypeBase
-from sydpy.types._type_base import TypeBase
+from sydpy.types._type_base import TypeBase, convlist
 from sydpy import ConversionError
 from sydpy.types import convgen
 
-def Array(cls, max_size=((1 << 16) - 1)):
-    if (cls, max_size) not in __array_classes:
-        __array_classes[(cls, max_size)] = type('array', (array,), dict(dtype=cls,max_size=max_size))
+def Array(cls, w=((1 << 16) - 1)):
+    if (cls, w) not in __array_classes:
+        __array_classes[(cls, w)] = type('array', (array,), dict(dtype=cls,w=w))
         
-    return __array_classes[(cls, max_size)] 
+    return __array_classes[(cls, w)] 
 
 class array(TypeBase):
     
     dtype = None
-    max_size = (1 << 16) - 1
+    w = (1 << 16) - 1
     
     def __init__(self, val=[]):
         
@@ -56,16 +56,13 @@ class array(TypeBase):
         else:
             raise TypeError("Invalid argument type.")
     
-    def _full(self):
-        return False
-    
     @classmethod
     def _from_NoneType(cls, other):
         return cls([])
        
     @classmethod
     def _rnd(cls, rnd_gen):
-        size = rnd_gen.rnd_int(1, cls.max_size)
+        size = rnd_gen.rnd_int(1, cls.w)
         
         val = [rnd_gen._rnd(cls.dtype) for _ in range(size)] 
         
@@ -85,6 +82,9 @@ class array(TypeBase):
     
     def __len__(self):
         return len(self._val)
+    
+    def __getitem__(self, key):
+        return self._val[key]
     
     def __iadd__(self, other):
         for v in other:
@@ -126,7 +126,7 @@ class array(TypeBase):
         try:
             if len(self) == len(other):
                 try:
-                    for s, o in zip(self._val, other._val):
+                    for s, o in zip(self, other):
                         if s != o:
                             return False
                     return True
@@ -136,6 +136,74 @@ class array(TypeBase):
                 return False
         except TypeError:
             return False
+
+    def _full(self):
+        if (len(self._val) == self.w) and (self._val[-1]._full):
+            return True
+        else:
+            return False
+
+    def _empty(self):
+        return len(self._val) == 0
+
+    def _iconcat_item(self, other):
+        dt_remain = None
+            
+        if (self._val) and (not self._val[-1]._full):
+            dt_remain = self._val[-1]
+            self._val.pop()
+        else:
+            dt_remain = self.dtype()
+
+        for d, r in convgen(other, self.dtype, dt_remain):
+            self._val.append(d)
+            if self._full():
+                return r
+
+        return r
+        
+    def _iconcat(self, other):
+        if other is Array:
+            for item in other:
+                self._iconcat_item(item)
+        else:
+            self._iconcat_item(other)
+    
+    @classmethod
+    def _convto(cls, cls_other, val):
+        convlist = []
+        remain = cls_other()
+        for item in val:
+            for d, r in convgen(item, cls_other, remain):
+                if d._full():
+                    convlist.append(d)
+                    remain = r
+                else:
+                    remain = d
+        
+        if (remain is not None) and (not remain._empty()):
+            convlist.append(remain)
+         
+        conval = convlist[0]
+        for item in convlist[1:]:
+            conval = item._concat(conval)
+        
+        return conval    
+#             print(convlist(cls, item))
+#             for d, r in convgen(remain, item):
+#                 conval._concat()
+#                 self._val.append(d)
+#                 if self._full():
+#                     return r
+#             
+#             convgen(dtype(), item)
+#             for item = convlist(cls, item)
+#             if conval is None:
+#                 conval = item
+#             else:
+#                 conval._concat(item)
+        
+        
     
     def _icon(self, other):
 

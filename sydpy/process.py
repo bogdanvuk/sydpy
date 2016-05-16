@@ -4,13 +4,14 @@ from sydpy._util._util import getio_vars
 from sydpy.component import Component #, sydsys
 from sydpy import Dependency
 from sydpy.intfs.intf import Intf
+from ddi.ddi import diinit
 
 class Process(Component, greenlet):
     """Wrapper class for functions that implement processes in user modules.
     
     Class turns function in the greenlet task.""" 
 
-    def __init__(self, name, func, sim : Dependency('sim'), senslist=None, pargs = (), pkwargs = {}, **kwargs):
+    def __init__(self, name, func, senslist=None, pargs = (), pkwargs = {}, sim : Dependency('sim')=None):
         Component.__init__(self, name)
         self.func = func
 
@@ -20,7 +21,7 @@ class Process(Component, greenlet):
         self.sim = sim
 
         if self.senslist is None:
-            if func.__self__:
+            if func.__self__ is not None:
 #                 parent_name = '.'.join(self.name.split('.')[:-1])
 #                 qname_intfs = {c.name: c for c in system.search(parent_name + '.*', of_type=Intf)}
                 qname_intfs = {c.name: c for c in func.__self__.search(of_type=Intf)}
