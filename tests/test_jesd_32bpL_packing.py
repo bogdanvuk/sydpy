@@ -69,18 +69,40 @@ class Oversampler(sydpy.Component):
 #     def __init__(self):
       
 
-class JesdPackerCosim(Cosim):
+# class JesdPackerCosim(Cosim):
+#     def __init__(self, name, frame_out, ch_samples, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0)):
+#         diinit(super().__init__)(name)
+#         frame_out <<= self.inst(sydpy.Isig, 'frame_out', dtype=Bit(32*jesd_params['L']))
+# 
+#         self.overframe_num = (1 if jesd_params['F'] >= 4 else int(4 / jesd_params['F']))
+#         self.oversample_num = jesd_params['S']*self.overframe_num
+#         single_converter_vector_w = self.oversample_num*(jesd_params['N'] + jesd_params['CS'])
+#         self.input_vector_w = jesd_params['M']*single_converter_vector_w
+#         
+#         idin = self.inst(sydpy.Iseq, 'din', dtype=Bit(self.input_vector_w), dflt=0)
+#         
+#         for i, d in enumerate(ch_samples):
+#             d >>= idin[i*single_converter_vector_w : (i+1)*single_converter_vector_w - 1]
+
+class JesdPackerCosim(sydpy.Component):
     def __init__(self, name, frame_out, ch_samples, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0)):
         diinit(super().__init__)(name)
         frame_out <<= self.inst(sydpy.Isig, 'frame_out', dtype=Bit(32*jesd_params['L']))
 
         self.overframe_num = (1 if jesd_params['F'] >= 4 else int(4 / jesd_params['F']))
         self.oversample_num = jesd_params['S']*self.overframe_num
-        self.input_vector_w = self.oversample_num*(jesd_params['N'] + jesd_params['CS'])
+        single_converter_vector_w = self.oversample_num*(jesd_params['N'] + jesd_params['CS'])
+        self.input_vector_w = jesd_params['M']*single_converter_vector_w
+        
+        idin = self.inst(sydpy.Iseq, 'din', dtype=Bit(self.input_vector_w), dflt=0)
         
         for i, d in enumerate(ch_samples):
-            idin = self.inst(sydpy.Iseq, 'din{}'.format(i), dtype=Bit(self.input_vector_w), dflt=0)
-            d >>= idin
+            d >>= idin[i*single_converter_vector_w : (i+1)*single_converter_vector_w - 1]
+        
+        self.inst(sydpy.Process, 'pack', self.pack, senslist=[idin.c['clk'].e['posedge']])
+    
+    def pack(self):
+        print(self.c['din']) 
 
 class JesdPacking(sydpy.Component):
     def __init__ (self, name, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0)):
@@ -119,8 +141,9 @@ sydpy.ddic.configure('top/*.tSample'    , sydpy.Struct(('d', sydpy.Bit(N)),
 sydpy.ddic.provide_on_demand('cls/sim', sydpy.Simulator, 'sim') # inst_kwargs=dict(log_signal_updates=True, log_event_triggers=True, log_task_switching=True))
 sydpy.ddic.provide('scheduler', sydpy.Scheduler())
 sydpy.ddic.provide_on_demand('cls/tracing', VCDTracer, 'tracing')
-sydpy.ddic.provide_on_demand('cls/xsimserver', Server,'xsimserver')
-sydpy.ddic.provide_on_demand('cls/xsimintf', XsimIntf, 'xsimintf')
+
+#sydpy.ddic.provide_on_demand('cls/xsimserver', Server,'xsimserver')
+#sydpy.ddic.provide_on_demand('cls/xsimintf', XsimIntf, 'xsimintf')
 # sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard, 'verif/inst/', inst_args=('verif'))#, 'verif/inst/')
 #inst(FrameScoreboard, 'verif/inst/')
 clk = inst(sydpy.Clocking, 'clocking')
