@@ -338,5 +338,7 @@ class Simulator(Component):
         """Register event to trigger pool."""
         self.trig_pool.add(event)
 
+    def __repr__(self):
+        return "Simulator"
     
 #     def apply_

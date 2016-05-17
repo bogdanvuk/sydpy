@@ -29,7 +29,7 @@ class Itlm(Isig):
         
         return sig
         
-    def _from_itlm(self, other):
+    def _from_itlm(self, other, keys=[]):
         if self._get_dtype() is other._get_dtype():
 #             other._tlm_sinks.add(self)
 #            self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
@@ -93,7 +93,7 @@ class Itlm(Isig):
 #         val = self._prep_write(val)
         
         while not all([s.empty() for s in self._sinks]):
-            ddic['sim'].wait(*[s.e['updated'] for s in self._sinks])
+            ddic['sim'].wait(*[s.e.updated for s in self._sinks])
         
 #         self._sig.bpush(val)
         self.push(val)
@@ -108,7 +108,7 @@ class Itlm(Isig):
         
     def bpop(self):
         if not self._sourced:
-            ddic['sim'].wait(self.e['enqueued'])
+            ddic['sim'].wait(self.e.enqueued)
         
         #print('BPOP: {}, sigid={}, eid={}'.format(self.name, id(self._sig), id(self._sig.e)))
         return self._sig.bpop()

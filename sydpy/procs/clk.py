@@ -40,7 +40,7 @@ class Clocking(Component):
         self.clk_name = clk_name
         
     def clk_proc(self):
-        self.c[self.clk_name] <<= ~self.c[self.clk_name]
+        self.c[self.clk_name] <<= ~self.c[self.clk_name].val
 
 # 
 # from sydpy import arch_def, Delay, always, Module

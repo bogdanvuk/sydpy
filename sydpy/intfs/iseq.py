@@ -28,35 +28,44 @@ class Iseq(Intf):
         
         self.c['clk'] = clk
         
-        self.e = self.inst(EventSet, 'e')
+        self.inst(EventSet, 'e')
         self._dout = Signal(val=dtype(dflt), event_set=self.e)
         
-        self.inst(Process, '_p_ff_proc', self._ff_proc, senslist=[self.c['clk'].e['posedge']])
+        self.inst(Process, '_p_ff_proc', self._ff_proc, senslist=[self.clk.e.posedge])
 #        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
         
 #         self.e = self._dout.e
         self._itlm_sinks = set()
     
+    def __call__(self):
+        return self.read()
+    
     def _fifo_proc(self, srcsig, keys):
         while(1):
             if not srcsig.mem:
-                ddic['sim'].wait(srcsig.e['enqueued'])
+                ddic['sim'].wait(srcsig.e.enqueued)
+            
+            self._get_dtype()
             
             data = []
             while not srcsig.empty():
                 val = srcsig.pop()
-                for d, _ in convgen(val, self._dtype.deref(keys[-1])):
+                for d, _ in convgen(val, self._get_dtype()):
                     data.append(d)
+
+#                 for d, _ in convgen(val, self._dtype.deref(keys[-1])):
+#                     data.append(d)
                     
             for i, d in enumerate(data):
-                data_sig = self.c['data']
-                for k in keys:
-                    data_sig = data_sig[k]
-                        
-                data_sig <<= d
+                self.data <<= d
+#                 data_sig = self.c['data']
+#                 for k in keys:
+#                     data_sig = data_sig[k]
+#                         
+#                 data_sig <<= d
                 self.c['last'] <<= (i == (len(data) - 1))
                 self.c['valid'] <<= True
-                ddic['sim'].wait(self.e['updated'])
+                ddic['sim'].wait(self.e.updated)
         
     def _ff_proc(self):
         if (self.c['ready'] and self.c['valid'] and
@@ -167,4 +176,48 @@ class Iseq(Intf):
         return self._dout.get_queue()
     
     def deref(self, key):
-        return SlicedIntf(self, key)
+        return SlicedIseq(self, key)
+
+class SlicedIseq(Iseq):
+    """Provides access to the parent interface via a key."""
+    def __init__(self, intf, key):
+        """"Create SlicedIntf of a parent with specific key."""
+        #_IntfBase.__init__(self)
+        self._dtype = intf._get_dtype().deref(key)
+        self._key = key
+        self._parent = intf
+
+    def _get_dtype(self):
+        return self._dtype
+
+    def __getattr__(self, name):
+        if name in self._parent.c:
+            if name != 'dout':
+                return self._parent.c[name][self._key]
+            else:
+                return self._parent.c[name]
+        else:
+            return getattr(self._parent, name)
+    
+    def read(self):
+        return self._parent.read()[self._key]
+    
+    def write(self, val):
+        next_val = self._parent.read_next()
+        for k in self._key[:-1]:
+            next_val = next_val[k]
+            
+        next_val[self._key[-1]] = val
+        return self._parent.write(next_val)
+    
+    def unsubscribe(self, proc, event=None):
+        if event is None:
+            self._parent.e.event_def[self._key].unsubscribe(proc)
+        else:
+            getattr(self._parent.e, event)[self._key].unsubscribe(proc)
+        
+    def subscribe(self, proc, event=None):
+        if event is None:
+            return self._parent.e.event_def[self._key].subscribe(proc)
+        else:
+            getattr(self._parent.e, event)[self._key].subscribe(proc)

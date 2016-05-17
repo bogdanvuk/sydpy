@@ -74,9 +74,7 @@ class VCDTracer:
             self.vcdfile.write("s{0} {1}\n".format(str(self.isig.read()).replace(' ', '').replace("'", ""), self._code))
 
     def create_trace(self, isig):
-        if isig.name == 'top/pack_lookup/frame_out':
-            pass
-        
+       
         code =  "".join(self.last_code)
      
         if self.last_code[2] != 'z':

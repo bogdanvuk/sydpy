@@ -42,10 +42,13 @@ class EventSet(Component):
     def _missing_event_err(self, _, name):
         raise Exception("no such event")
     
-    def __getitem__(self, name):
-        if name in self.c:
-            return self.c[name]
-        else:
+    def __getitem__(self, key):
+        return SlicedEventSet(self, key)
+    
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
             return self.missing_event(self, name)
     
 class Event(Component):
@@ -83,4 +86,33 @@ class Event(Component):
                 s.resolve(pool)
             else:
                 pool.add(s)    
+
+    def __getitem__(self, key):
+        if repr(key) not in self.subevents:
+            subevent = SlicedEvent(self, key)
+            self.subevents[repr(key)] = subevent
+        else:
+            subevent = self.subevents[repr(key)]
+        return subevent
+
+class SlicedEvent(Event):
+    def __init__(self, e, key):
+        self._key = key
+        self._parent = e
         
+    def __getattr__(self, name):
+        if name in self._parent.c:
+            return self._parent.c[name][self._key]
+        else:
+            return getattr(self._parent, name)
+
+class SlicedEventSet(EventSet):
+    def __init__(self, e, key):
+        self._key = key
+        self._parent = e
+        
+    def __getattr__(self, name):
+        if name in self._parent.c:
+            return self._parent.c[name][self._key]
+        else:
+            return getattr(self._parent, name)

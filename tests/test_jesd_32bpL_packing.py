@@ -99,10 +99,11 @@ class JesdPackerCosim(sydpy.Component):
         for i, d in enumerate(ch_samples):
             d >>= idin[i*single_converter_vector_w : (i+1)*single_converter_vector_w - 1]
         
-        self.inst(sydpy.Process, 'pack', self.pack, senslist=[idin.c['clk'].e['posedge']])
+        self.inst(sydpy.Process, 'pack', self.pack, senslist=[idin.clk.e.posedge])
     
     def pack(self):
-        print(self.c['din']) 
+        #print(self.din())
+        pass
 
 class JesdPacking(sydpy.Component):
     def __init__ (self, name, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0)):
@@ -125,7 +126,7 @@ class JesdPacking(sydpy.Component):
 #        self.inst(PackerTlAlgo, 'pack_algo', ch_samples=ch_gen)
         self.inst(Oversampler, 'oversampler', ch_samples=self.ch_samples, ch_oversamples=self.ch_oversamples)
         
-        self.inst(Jesd32bpLLookupPacker, 'pack_lookup', frame_out=self.c['frame_out'], ch_samples=self.ch_oversamples)
+        self.inst(Jesd32bpLLookupPacker, 'pack_lookup', frame_out=self.frame_out, ch_samples=self.ch_oversamples)
         self.inst(JesdPackerCosim, 'pack_cosim', 
                   frame_out=self.inst(sydpy.Channel, 'frame_cosim_out'),
                   ch_samples=self.ch_oversamples)
@@ -147,7 +148,7 @@ sydpy.ddic.provide_on_demand('cls/tracing', VCDTracer, 'tracing')
 # sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard, 'verif/inst/', inst_args=('verif'))#, 'verif/inst/')
 #inst(FrameScoreboard, 'verif/inst/')
 clk = inst(sydpy.Clocking, 'clocking')
-sydpy.ddic.configure('top/*.clk', clk.c['clk'])
+sydpy.ddic.configure('top/*.clk', clk.clk)
 inst(JesdPacking, 'top')
 
 sydpy.ddic['sim'].run()

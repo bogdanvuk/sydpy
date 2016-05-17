@@ -86,6 +86,13 @@ class Isig(Intf):
             
         return val
     
+    def __call__(self):
+        return self.read()
+    
+    def __ilshift__(self, other):
+        self.write(other)
+        return self
+    
     def write(self, val):
         val = self._prep_write(val)
         self._sig.write(val)
@@ -103,7 +110,7 @@ class Isig(Intf):
             return self._sig.read()
         
     def deref(self, key):
-        return SlicedIntf(self, key)
+        return SlicedIsig(self, key)
    
     def _missing_event(self, event_set, name):
         event = self.e.inst(Event, name)
@@ -113,3 +120,41 @@ class Isig(Intf):
                 getattr(self._sig.e, name).subscribe(event)
 
         return event
+    
+class SlicedIsig(Isig):
+    """Provides access to the parent interface via a key."""
+    def __init__(self, intf, key):
+        """"Create SlicedIntf of a parent with specific key."""
+        #_IntfBase.__init__(self)
+        self._dtype = intf._get_dtype().deref(key)
+        self._key = key
+        self._parent = intf
+
+    def _get_dtype(self):
+        return self._dtype
+
+    def __getattr__(self, name):
+        if name in self._parent.c:
+            return self._parent.c[name][self._key]
+        else:
+            return getattr(self._parent, name)
+    
+    def read(self):
+        return self._parent.read()[self._key]
+    
+    def write(self, val):
+        next_val = self._parent.read_next()
+        next_val[self._key] = val
+        return self._parent.write(next_val)
+    
+    def unsubscribe(self, proc, event=None):
+        if event is None:
+            self._parent.e.event_def[self._key].unsubscribe(proc)
+        else:
+            getattr(self._parent.e, event)[self._key].unsubscribe(proc)
+        
+    def subscribe(self, proc, event=None):
+        if event is None:
+            return self._parent.e.event_def[self._key].subscribe(proc)
+        else:
+            getattr(self._parent.e, event)[self._key].subscribe(proc)

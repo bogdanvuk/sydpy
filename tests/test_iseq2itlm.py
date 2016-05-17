@@ -31,17 +31,17 @@ class Generator(Component):
             for i, r in enumerate(itertools.islice(self.rnd_gen, 0, self.burst_len)):
                 if i == 0:
                     self.samples.append([])
-                    self.c['dout'].bpush(r)
+                    self.dout.bpush(r)
                     self.samples[-1].append(r)
                 else:
-                    self.c['dout'].push(r)
+                    self.dout.push(r)
                     self.samples[-1].append(r)
 
     def array_gen(self):
         while len(self.samples) < self.sequence_len:
             dout = Array(self.dtype)(list(itertools.islice(self.rnd_gen, 0, self.burst_len)))
             self.samples.append(dout)
-            self.c['dout'].bpush(dout)
+            self.dout.bpush(dout)
                 
 class Receiver(Component):
     def __init__(self, name, chin, dtype=bit8):
@@ -52,19 +52,19 @@ class Receiver(Component):
         for i, ch in enumerate(chin):
             ch >>= din[i*slice_size: (i+1)*slice_size - 1]
             
-        self.inst(Process, 'proc', func=self.proc, senslist=[self.c['din'].c['clk'].e['posedge']])
+        self.inst(Process, 'proc', func=self.proc, senslist=[self.din.clk.e.posedge])
         self.samples = []
         self.transaction_done = True
         
     def proc(self):
-        if self.c['din'].c['valid'].val:
+        if self.din.valid():
             if self.transaction_done:
                 self.samples.append([])
                 self.transaction_done = False
             
-            self.samples[-1].append(self.c['din'].c['data'].val)
+            self.samples[-1].append(self.din.data())
             
-            if self.c['din'].c['last'].val:
+            if self.din.last():
                 self.transaction_done = True
         
 class TestIseq2Itlm(Component):
@@ -125,9 +125,11 @@ def itlm2iseq_default(gen_num = random.randint(1, 8),
 
 def test_itlm2iseq_sequence():
     ddic.configure('top/*.gen_proc', 'sequence_gen')
+#     itlm2iseq_default(gen_num=2, sequence_len=1, burst_len=1)
     itlm2iseq_default()
 
 def test_itlm2iseq_array_unroll():
     ddic.configure('top/*.gen_proc', 'array_gen')
     itlm2iseq_default()
 
+# test_itlm2iseq_sequence()
