@@ -26,7 +26,7 @@ class Iseq(Intf):
         self.inst(Isig, 'last', dtype=bit, dflt=0)
 #         self.inst(Isig, '_dout', dtype=dtype, dflt=0)
         
-        self.c['clk'] = clk
+        self.clk = clk
         
         self.inst(EventSet, 'e')
         self._dout = Signal(val=dtype(dflt), event_set=self.e)
@@ -42,41 +42,63 @@ class Iseq(Intf):
     
     def _fifo_proc(self, srcsig, keys):
         while(1):
-            if not srcsig.mem:
-                ddic['sim'].wait(srcsig.e.enqueued)
             
-            self._get_dtype()
+            while (not self.ready()) or (not srcsig.mem):
+                if not self.ready():
+                    ddic['sim'].wait(self.ready.e.changed)
+                 
+                if not srcsig.mem:
+                    ddic['sim'].wait(srcsig.e.enqueued)
             
-            data = []
-            while not srcsig.empty():
-                val = srcsig.pop()
-                for d, _ in convgen(val, self._get_dtype()):
-                    data.append(d)
-
-#                 for d, _ in convgen(val, self._dtype.deref(keys[-1])):
-#                     data.append(d)
-                    
+            if (not self._fifo_data) and (srcsig.mem):
+                data = []
+                for val in srcsig.mem:
+                    for d, _ in convgen(val, self._get_dtype()):
+                        data.append(d)
+                        
+                fifo_reserved_cnt = len(srcsig.mem)
+                        
             for i, d in enumerate(data):
-                self.data <<= d
-#                 data_sig = self.c['data']
-#                 for k in keys:
-#                     data_sig = data_sig[k]
-#                         
-#                 data_sig <<= d
-                self.c['last'] <<= (i == (len(data) - 1))
-                self.c['valid'] <<= True
-                ddic['sim'].wait(self.e.updated)
+                self.data <<= d 
+                self.valid <<= True
+                self.last <<= (i == (len(data)-1))
+                ddic['sim'].wait(self._dout.e.updated)
+
+                for _ in range(fifo_reserved_cnt):
+                    srcsig.pop()
+                fifo_reserved_cnt = 0
+                
+            self.valid <<= False
+
+#             self.ready <<= True
+#             ddic['sim'].wait(srcsig.e.enqueued, srcsig.e.updated)                
+# #                 for d, _ in convgen(val, self._dtype.deref(keys[-1])):
+# #                     data.append(d)
+#                     
+#             for i, d in enumerate(data):
+#                 self.data <<= d
+# #                 data_sig = self.data
+# #                 for k in keys:
+# #                     data_sig = data_sig[k]
+# #                         
+# #                 data_sig <<= d
+#                 self.last <<= (i == (len(data) - 1))
+#                 self.valid <<= True
+#             ddic['sim'].wait(self.clk.e.posedge)
         
     def _ff_proc(self):
-        if (self.c['ready'] and self.c['valid'] and
+        if (self.ready() and self.valid() and
             all([i.empty() for i in self._itlm_sinks])):
             
-            self._dout.write(self.c['data'].read())
+            self._dout.write(self.data())
             for i in self._itlm_sinks:
-                i.push(self.c['data'])
+                i.push(self.data)
+            
+#             if hasattr(self, '_fifo_data'):
+#                 self._fifo_data.pop(0)
                 
-        self.c['last'] <<= False
-        self.c['valid'] <<= False
+        self.last <<= False
+        self.valid <<= False
         
     def con_driver(self, intf):
         pass
@@ -101,7 +123,7 @@ class Iseq(Intf):
         
     
     def _from_isig(self, other):
-        self.c['data']._connect(other)
+        self.data._connect(other)
     
     def _to_isig(self, other):
         other._connect(self._dout)
@@ -112,10 +134,12 @@ class Iseq(Intf):
     def _from_itlm(self, other, keys=[]):
         sig = other._subscribe(self, self._get_dtype())
 #         self.inst(Itlm,  'data', dtype=self._get_dtype(), dflt=sig.read())
-#         self.c['data']._sig = sig
-#         self.c['data']._sig.e = self.c['data'].e
-#         self.c['data']._sourced = True
-        
+#         self.data._sig = sig
+#         self.data._sig.e = self.data.e
+#         self.data._sourced = True
+        self._fifo_data = []
+        self.valid._dflt = 0
+        self.last._dflt = 0
         self.inst(Process, '', self._fifo_proc, senslist=[], pkwargs=dict(srcsig=sig, keys=keys))
     
 #     def _pfunc_tlm_to_sig(self, other):
@@ -161,10 +185,10 @@ class Iseq(Intf):
         self._sch = channel
     
     def write(self, val):
-        self.c['data'].write(val)
+        self.data.write(val)
         
     def push(self, val):
-        self.c['data'].push(val)
+        self.data.push(val)
     
     def read_next(self):
         return self._dout._next
@@ -192,7 +216,7 @@ class SlicedIseq(Iseq):
 
     def __getattr__(self, name):
         if name in self._parent.c:
-            if name != 'dout':
+            if name == 'data':
                 return self._parent.c[name][self._key]
             else:
                 return self._parent.c[name]

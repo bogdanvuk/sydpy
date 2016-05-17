@@ -125,7 +125,7 @@ def itlm2iseq_default(gen_num = random.randint(1, 8),
 
 def test_itlm2iseq_sequence():
     ddic.configure('top/*.gen_proc', 'sequence_gen')
-#     itlm2iseq_default(gen_num=2, sequence_len=1, burst_len=1)
+#     itlm2iseq_default(gen_num=2, sequence_len=2, burst_len=2)
     itlm2iseq_default()
 
 def test_itlm2iseq_array_unroll():

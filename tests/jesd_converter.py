@@ -14,5 +14,4 @@ class Converter(sydpy.Component):
     def gen(self):
         for r in self.rnd_gen:
             data = {'d': r[0:self.N-1], 'cs': r[self.N:self.N+self.CS-1]}
-#            print('GEN {}: {}'.format(self.name, data))
-            self.c['sample'].bpush(data)
+            self.sample.bpush(data)

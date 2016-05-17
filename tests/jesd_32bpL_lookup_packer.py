@@ -41,8 +41,10 @@ class Jesd32bpLLookupPacker(sydpy.Component):
         for i, d in enumerate(ch_samples):
             idin = self.inst(sydpy.Iseq, 'din{}'.format(i), dtype=Bit(self.input_vector_w), dflt=0)
             if self.segments_32b_num == 1:
-                idin.ready <<= True 
-
+                idin.ready <<= True
+            else:
+                idin.ready <<= False
+                
             self.idin.append(idin)
             d >>= idin
             
