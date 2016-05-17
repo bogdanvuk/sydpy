@@ -17,6 +17,10 @@ class Jesd32bpLLookupPacker(sydpy.Component):
         self.oversample_per_frame_w = jesd_params['S']*(tSample.dtype['d'].w + tSample.dtype['cs'].w)
         
         self.lookup = []
+        print()
+        print('Prepared Frame:')
+        print()
+
         for frame_lane in frame_lookup:
             lane = []
             for frame_cnt in range(self.overframe_num):
@@ -27,6 +31,8 @@ class Jesd32bpLLookupPacker(sydpy.Component):
                     lane.append(SymbolicBit(b.w)(b_shift))
                     
             self.lookup.append(lane)
+            
+            print(lane)
         
         for i in range(2):
             self.inst(sydpy.Isig, 'frame{}'.format(i)) #, dtype=Array(Array(bit8, jesd_params['F']), jesd_params['L']))

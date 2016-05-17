@@ -39,9 +39,9 @@ class Isig(Intf):
     
     def _from_isig(self, other):
         if self._get_dtype() is other._get_dtype():
-            self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
-            other._subscribe(self)
-#             self._sig = other
+#             self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
+#             other._subscribe(self)
+            self._sig = other
 #             for event in self.e.search(of_type=Event):
 #                 getattr(other.e, event).subscribe(event)
             

@@ -18,9 +18,9 @@ class Intf(Component):
 #         if self._intf_eq(other):
 #             self._add_source(other)
         if hasattr(self, '_from_' + other._intf_type):
-            getattr(self, '_from_' + other._intf_type)(other, keys)
+            getattr(self, '_from_' + other._intf_type)(other)
         elif hasattr(other, '_to_' + self._intf_type):
-            getattr(other, '_to_' + self._intf_type)(self, keys)
+            getattr(other, '_to_' + self._intf_type)(self)
         else:
             raise Exception('Cannot connect to master interface!')
             
@@ -53,15 +53,15 @@ class Intf(Component):
 
     def subscribe(self, proc, event=None):
         if event is None:
-            return self.e['event_def'].subscribe(proc)
+            return self.e.event_def.subscribe(proc)
         else:
-            return self.e[event].subscribe(proc)
+            return getattr(self.e, event).subscribe(proc)
 
     def unsubscribe(self, proc, event=None):
         if event is None:
-            return self.e['event_def'].unsubscribe(proc)
+            return self.e.event_def.unsubscribe(proc)
         else:
-            return self.e[event].subscribe(proc)
+            return getattr(self.e, event).unsubscribe(proc)
 
     def __str__(self):
         return str(self.read())

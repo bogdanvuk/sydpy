@@ -36,7 +36,7 @@ class VCDTracer:
         self.patterns = patterns
         self.vcd_filename = vcd_filename
         self.channel_hrchy = channel_hrchy
-        self.vcd_out_path = vcd_out_path
+        self.vcd_out_path = os.path.realpath(vcd_out_path)
         self.timescale = timescale
         self.trace_deltas = trace_deltas
         self.max_delta_count = sim.max_delta_count

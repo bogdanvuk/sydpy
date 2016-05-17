@@ -8,7 +8,7 @@ def test_command_decode():
     for _ in range(100):
         params = []
         for _ in range(random.randint(0,128)):
-            params.append(''.join(random.choice(string.ascii_letters + string.digits) for _ in range(random.randint(1, 31))))
+            params.append(''.join(random.choice(string.ascii_letters + string.digits) for _ in range(random.randint(1, 256))))
 
         cmd_id = random.randint(0,len(commands)-1)
         command = '$' + commands[cmd_id]
@@ -107,8 +107,10 @@ def test_command_handler():
                     self.state = "SET_DELAY"
                 elif self.xsimintf_state == "S_IMPORT":
                     self.sv_import = []
-                    for _ in range(random.randint(0,128)):
-                        self.sv_import.append(''.join(random.choice(string.ascii_letters + string.digits) for _ in range(random.randint(1, 31))))
+                    self.sv_import = ['273596f36b2a952c716d5d7557d78a784267d76b6d1536ff46ae1b77595529db',
+                                      '1','1','1']
+                    # for _ in range(random.randint(0,128)):
+                    #     self.sv_import.append(''.join(random.choice(string.ascii_letters + string.digits) for _ in range(random.randint(1, 31))))
 
                     self.state = "IMPORT"
                 elif self.xsimintf_state == "S_EXPORT":

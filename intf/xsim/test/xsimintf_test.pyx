@@ -12,7 +12,7 @@ cdef extern from "xsimintf.c":
     int msg_buf_cnt
     ctypedef struct T_Command:
         int cmd
-        char params[128][32]
+        char params[128][1024]
         int param_cnt
 
     T_Command recv_cmd

@@ -2,16 +2,17 @@
 #include <stdio.h>
 #include "xsimintf_socket.h"
 
-#define IMPORT_BUF_LEN 8192
-#define EXPORT_BUF_LEN 8192
-#define MSG_BUF_LEN 8192
+#define IMPORT_BUF_LEN 65536
+#define EXPORT_BUF_LEN 65536
+#define MSG_BUF_LEN 65536
 #define MAX_PARAMS 128
-#define MAX_PARAM_LEN 32
+#define MAX_PARAM_LEN 1024
 
 #ifdef CYTHON_XSIMINTF_DBG
 void cython_get_new_message(void);
 void cython_post_new_message(void);
 void cython_print(const char* str);
+char cython_print_buf[1024];
 #endif
 
 FILE *fp = NULL;
@@ -78,6 +79,9 @@ static int decode_command(void) {
                     }
                 }
             } else {
+                /* cython_print(token); */
+                /* sprintf(cython_print_buf, "Token ID: %d", token_cnt); */
+                /* cython_print(cython_print_buf); */
                 strncpy(recv_cmd.params[token_cnt-1], token, MAX_PARAM_LEN);
 
             }
@@ -204,9 +208,11 @@ void cmd_handler(void) {
 
     }
 
+#ifndef CYTHON_XSIMINTF_DBG
     if (finish) {
         socket_close();
     }
+#endif
 }
 
 DPI_DLLESPEC int xsimintf_init(void)

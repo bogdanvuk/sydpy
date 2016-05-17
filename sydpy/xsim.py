@@ -86,10 +86,11 @@ class XsimIntf:
             }
 
     #@compinit
-    def __init__(self, server: Dependency('xsimserver'), builddir='./xsimintf'):
+    def __init__(self, server: Dependency('xsimserver'), log_communication=False, builddir='./xsimintf'):
         self.builddir = builddir
         self.server = server
         self.cosim_pool = []
+        self.log_communication = log_communication
         ddic['sim'].events['run_start'].append(self.sim_run_start)
         ddic['sim'].events['run_end'].append(self.sim_run_end)
         ddic['sim'].events['delta_settled'].append(self.sim_delta_settled)
@@ -139,22 +140,25 @@ class XsimIntf:
             self.outputs.update({'_'.join([cosim.module_name, k]):v for k,v in cosim.outputs.items()})
             self.fileset.extend(cosim.fileset)
     
-    def send_command(self, type, params = []):
-        msg = "$" + type
+    def send_command(self, msg_type, params = []):
+        msg = "$" + msg_type
         if params:
             msg += ',' + ','.join(params)
             
         self.server.send(msg)
-        print(msg)
+        if self.log_communication:
+            print(msg)
 
-        ret = self.server.recv().split(',')
-        print(ret)
-        if len(ret) > 1:
-            params = ret[1:]
-        else:
-            params = []
-            
-        return ret[0][1:], params
+        if msg_type != "CLOSE":
+            ret = self.server.recv().split(',')
+            if self.log_communication:
+                print(ret)
+            if len(ret) > 1:
+                params = ret[1:]
+            else:
+                params = []
+                
+            return ret[0][1:], params
     
     def get_xsim_state(self):
         cmd_type, params = self.send_command('GET', ['state'])
@@ -168,7 +172,7 @@ class XsimIntf:
         ret_type, params = self.send_command('EXPORT')
         
         for intf, p in zip(sorted(self.outputs.items()), params):
-            intf[1].write('0x' + p.replace('x', 'u').replace('z', 'u'))
+            intf[1].write(intf[1].__class__('0x' + p.replace('x', 'u').replace('z', 'u')))
             
         ddic['sim']._update()
 
@@ -198,37 +202,41 @@ class XsimIntf:
 #                  'v'  : [],
 #                  'vhd': []
 #                  }
-#         
+#          
 #         for f in self.fileset:
 #             files[os.path.splitext(f)[1][1:]].append(f)
-# 
+#  
 #         if files['sv']:
 #             _, _, ret = shell(cmd = ['xvlog', '-sv'] + files['sv'])
 #             if ret:
-#                 sydsys().server.sock.close()
+#                 self.server.sock.close()
 #                 raise Exception('Error in HDL source compilation!') 
-#          
+#           
 #         if files['v']:
 #             shell(cmd = ['xvlog'] + files['v'])
-#          
+#           
 #         if files['vhd']:
 #             _,_,ret =shell(cmd = ['xvhdl'] + files['vhd'])
 #             if ret:
-#                 sydsys().server.sock.close()
+#                 self.server.sock.close()
 #                 raise Exception('Error in HDL source compilation!') 
-#  
+#   
+#           
+#         _,_,ret = shell(cmd = ['xelab', '-m64', '-svlog', 'wrapper.sv', '-sv_root', '/home/bvukobratovic/projects/sydpy/intf/xsim/build', '-sv_lib', 'dpi', '-debug', 'all'])
+#         if ret:
+#             self.server.sock.close()
+#             raise Exception('Error in HDL source compilation!')
 #          
-#         shell(cmd = ['xelab', '-m64', '-svlog', 'wrapper.sv', '-sv_root', '/home/bvukobratovic/projects/sydpy/intf/xsim/build', '-sv_lib', 'dpi', '-debug', 'all'])
 # #         shell(cmd = ['xsim', 'work.wrap', '-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl'])
 #         cmd = ['xsim', 'work.wrap', '--runall'] #-t', '/home/bvukobratovic/projects/sydpy/tests/dpi/run.tcl']
 #         self.xsim_proc = Popen(' '.join(cmd), shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-        
-        xsim_state = self.get_xsim_state()
-        
-        if xsim_state != 'S_CONNECTED':
-            raise Exception('Error in the connection with Xsim!')
-        
-#         self.send_import()
+#         
+#         xsim_state = self.get_xsim_state()
+#         
+#         if xsim_state != 'S_CONNECTED':
+#             raise Exception('Error in the connection with Xsim!')
+#         
+# #         self.send_import()
         
         self.send_command('CONTINUE')
     

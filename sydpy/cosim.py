@@ -34,7 +34,7 @@ class Cosim(Component):
         self.inputs = {}
         self.outputs = {}
         self.resolve_intf(self)
-        self.inst(Process, 'proc', self.proc, senslist=[self.inputs.values()])
+        self.inst(Process, 'proc', self.proc, senslist=list(self.inputs.values()))
         
     def proc(self):
         self.cosim_intf.updated(self)
