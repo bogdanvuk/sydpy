@@ -2,7 +2,7 @@ from sydpy.component import Component, inst
 from sydpy.intfs.isig import Isig
 from sydpy._delay import Delay
 from sydpy.process import Process
-from sydpy.types.bit import bit8, bit16
+from sydpy.types.bit import bit8, bit16, Bit
 from sydpy.channel import Channel
 from sydpy import rnd
 from sydpy.intfs.itlm import Itlm
@@ -68,11 +68,11 @@ class Receiver(Component):
                 self.transaction_done = True
         
 class TestIseq2Itlm(Component):
-    def __init__ (self, name, gen_cnt=1):
+    def __init__ (self, name, gen_num=1):
         super().__init__(name)
         
         chin=[]
-        for i in range(gen_cnt):
+        for i in range(gen_num):
             ch = self.inst(Channel, 'ch_gen{}'.format(i))
             self.inst(Generator, 'gen{}'.format(i), chout=ch)
             chin.append(ch)
@@ -98,28 +98,36 @@ def default_setup_and_run(duration):
     ddic['sim'].run()
 
 
-def itlm2iseq_default(sequence_len = random.randint(1, 10),
-                      burst_len = random.randint(1, 10)):
+def itlm2iseq_default(gen_num = random.randint(1, 8),
+                      sequence_len = random.randint(1, 10),
+                      burst_len = random.randint(1, 10),
+                      gen_dtype=bit8):
+    
+    ddic.configure('top/recv.dtype', Bit(gen_dtype.w*gen_num))
+    ddic.configure('top.gen_num', gen_num)
     ddic.configure('top/*.sequence_len', sequence_len)
     ddic.configure('top/*.burst_len', burst_len)
 
     default_setup_and_run(burst_len*sequence_len+1)
     
-    assert len(ddic['top/gen'].samples) == len(ddic['top/recv'].samples)
-    for g, r in zip(ddic['top/gen'].samples, ddic['top/recv'].samples):
-        assert g==r
+    samples_num = len(ddic['top/recv'].samples)
     
+    for i in range(gen_num):
+        assert len(ddic['top/gen{}'.format(i)].samples) == samples_num
 
-# def test_itlm2iseq_sequence():
-#     ddic.configure('top/*.gen_proc', 'sequence_gen')
-#     itlm2iseq_default()
+    for i, s in enumerate(ddic['top/recv'].samples):
+        for k in range(burst_len):
+            gen_val = Bit(0)()
+            for j in range(gen_num):
+                gen_val = ddic['top/gen{}'.format(j)].samples[i][k] % gen_val
+            
+            assert gen_val == s[k]
+
+def test_itlm2iseq_sequence():
+    ddic.configure('top/*.gen_proc', 'sequence_gen')
+    itlm2iseq_default()
 
 def test_itlm2iseq_array_unroll():
-    ddic.configure('top.gen_cnt', 2)
-    ddic.configure('top/recv.dtype', bit16)
     ddic.configure('top/*.gen_proc', 'array_gen')
-    itlm2iseq_default(sequence_len=2, burst_len=4)
+    itlm2iseq_default()
 
-test_itlm2iseq_array_unroll()
-
-pass
