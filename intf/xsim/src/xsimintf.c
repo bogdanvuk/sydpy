@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include "xsimintf_socket.h"
 
+#define XSIM_DPI_DBG 0
+
 #define IMPORT_BUF_LEN 65536
 #define EXPORT_BUF_LEN 65536
 #define MSG_BUF_LEN 65536
@@ -101,8 +103,10 @@ static int decode_command(void) {
 
 static int recv_command(void) {
     get_new_message();
-    //    puts("*** RECV ***");
-    //puts(msg_buf);
+#if XSIM_DPI_DBG == 1
+    puts("*** RECV ***");
+    puts(msg_buf);
+#endif
     return decode_command();
 }
 
@@ -110,8 +114,10 @@ static int send_msg() {
 #ifdef CYTHON_XSIMINTF_DBG
     cython_post_new_message();
 #else
-    //    puts("*** SEND ***");
-    //puts(msg_buf);
+#if XSIM_DPI_DBG == 1
+    puts("*** SEND ***");
+    puts(msg_buf);
+#endif
     socket_send(msg_buf);
 #endif
 }
@@ -133,8 +139,9 @@ void cmd_handler(void) {
     int i;
 
     recv_cmd.cmd = CMD_ERROR;
-
-    //    puts("entered cmd handler");
+#if XSIM_DPI_DBG == 1
+    puts("entered cmd handler");
+#endif
     while ((recv_cmd.cmd != CMD_CONTINUE) && (finish == 0)) {
         //        puts("cmd handler entered loop...");
         if (recv_command() < 0) {
@@ -197,6 +204,9 @@ void cmd_handler(void) {
                 send_cmd.cmd = CMD_RESP;
                 send_cmd.param_cnt = 0;
                 send_command();
+#if XSIM_DPI_DBG == 1
+                puts("continuing...");
+#endif
                 break;
             case CMD_CLOSE:
                 finish = 1;
@@ -211,7 +221,11 @@ void cmd_handler(void) {
 #ifndef CYTHON_XSIMINTF_DBG
     if (finish) {
         socket_close();
+        fclose(fp);
     }
+#endif
+#if XSIM_DPI_DBG == 1
+    puts("exiting cmd handler");
 #endif
 }
 
@@ -232,7 +246,9 @@ DPI_DLLESPEC int xsimintf_init(void)
     }
 #endif
     state = S_CONNECTED;
-
+#if XSIM_DPI_DBG == 1
+    puts("To cmd handler from xsimintf_init");
+#endif
     cmd_handler();
     return 0;
 }
@@ -240,6 +256,9 @@ DPI_DLLESPEC int xsimintf_init(void)
 DPI_DLLESPEC int xsimintf_delay(void)
 {
     state = S_DELAY;
+#if XSIM_DPI_DBG == 1
+    puts("To cmd handler from xsimintf_delay");
+#endif
     cmd_handler();
 
     if (finish) {
@@ -254,6 +273,9 @@ DPI_DLLESPEC const char* xsimintf_export(const char * vals)
     strcpy(export_buf, vals);
     state = S_EXPORT;
     //    puts(export_buf);
+#if XSIM_DPI_DBG == 1
+    puts("To cmd handler from xsimintf_export");
+#endif
     cmd_handler();
     return import_buf;
 }
@@ -261,6 +283,9 @@ DPI_DLLESPEC const char* xsimintf_export(const char * vals)
 DPI_DLLESPEC const char* xsimintf_import()
 {
     state = S_IMPORT;
+#if XSIM_DPI_DBG == 1
+    puts("To cmd handler from xsimintf_import");
+#endif
     cmd_handler();
     return import_buf;
 }

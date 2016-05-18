@@ -22,19 +22,20 @@ module wrap();
         if (xsimintf_init()) begin
           $$finish;
         end
-        $$dumpfile("xsim.vdc");
-        $$dumpvars(${in_port_list}, ${out_port_list});
-        strimp = xsimintf_import();
-        $$display("INIT: %s", strimp);
-        vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
+        // $$dumpfile("xsim.vdc");
+        // $$dumpvars(${in_port_list}, ${out_port_list});
+        // strimp = xsimintf_import();
+        // $$display("INIT: %s", strimp);
+        // vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
     end
     
-    always #1 begin
+    always #0 begin
         automatic int  vals_read;
         automatic int  delay;
         automatic string       strimp;
         
         delay = xsimintf_delay();
+        $$display("Delay set to %d", delay);
         if (delay > 0) begin
             #delay;
         end else if (delay < 0) begin
@@ -53,8 +54,9 @@ module wrap();
         
         $$sformat(strexp, ${export_str_format}, ${out_port_list});
         strimp = xsimintf_export(strexp);
-        $$display("DELTA: %s", strimp);
-        vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
+        $$display("DELTA EXPORT: %s", strexp);
+        // $$display("DELTA IMPORT: %s", strimp);
+        // vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
     end
     
     ${module_instantiation}
@@ -86,14 +88,16 @@ class XsimIntf:
             }
 
     #@compinit
-    def __init__(self, server: Dependency('xsimserver'), log_communication=False, builddir='./xsimintf'):
+    def __init__(self, server: Dependency('xsimserver'), log_communication=True, builddir='./xsimintf'):
         self.builddir = builddir
         self.server = server
         self.cosim_pool = []
         self.log_communication = log_communication
         ddic['sim'].events['run_start'].append(self.sim_run_start)
         ddic['sim'].events['run_end'].append(self.sim_run_end)
-        ddic['sim'].events['delta_settled'].append(self.sim_delta_settled)
+#         ddic['sim'].events['delta_end'].append(self.sim_delta_settled)
+        ddic['sim'].events['delta_start'].append(self.sim_delta_started)
+        ddic['sim'].events['delta_end'].append(self.sim_delta_ended)
         ddic['sim'].events['timestep_start'].append(self.sim_timestep_start)
         
     
@@ -170,9 +174,9 @@ class XsimIntf:
     
     def recv_export(self):
         ret_type, params = self.send_command('EXPORT')
-        
+        print(ddic['sim'].time, ' : ', ddic['sim'].delta_count, ' : ', params)
         for intf, p in zip(sorted(self.outputs.items()), params):
-            intf[1].write(intf[1].__class__('0x' + p.replace('x', 'u').replace('z', 'u')))
+            intf[1].write(intf[1]._get_dtype()('0x' + p.replace('x', 'u').replace('z', 'u')))
             
         ddic['sim']._update()
 
@@ -252,44 +256,108 @@ class XsimIntf:
     
     def sim_timestep_start(self, time, sim):
         if time > 0:
-            xsim_state = self.get_xsim_state()
-            # The XSIM either:
-            #    - Waits at the end of the delta cycle (the always block) for new inputs
-            #    - Waits to receive the timestep waiting period (delay)
-            if xsim_state == 'S_EXPORT':
-                # If XSIM waits at the end of the delta cycle, just send it to CONTINUE, this will affect no input signals, hence XSIM will move straight to timestep process
-                self.send_command('CONTINUE')
-                
-            self.send_command('SET', ['delay', str(time - self.cosim_time - 1)])
+#             xsim_state = self.get_xsim_state()
+#             while xsim_state == 'S_EXPORT':
+#                 # The XSIM either:
+#                 #    - Waits at the end of the delta cycle (the always block) for new inputs
+#                 #    - Waits to receive the timestep waiting period (delay)
+#                 print('From Timestep Start : ')
+#                 self.recv_export()
+#                 # If XSIM waits at the end of the delta cycle, just send it to CONTINUE, this will affect no input signals, hence XSIM will move straight to timestep process
+#                 self.send_command('CONTINUE')
+#                 xsim_state = self.get_xsim_state()
+            print('SIM TIMESTEP: ', self.get_xsim_state())
+            self.send_command('SET', ['delay', str(time - self.cosim_time)])
             self.send_command('CONTINUE')
 
         self.cosim_time = time
         
         return True
     
-    def sim_delta_settled(self, sim):
-        # The XSIM is either in: 
-        #    - initial import - This is the first finished sydpy delta cycle in the simultaion, 
-        #    - timestep import - This is the first finished sydpy delta cycle in this timestep 
-        #    - delta cycle import state
+    def sim_delta_started(self, sim, time, delta):
+#         
+#         print('SIM DELTA STARTED: ', self.get_xsim_state())
+#         self.send_command('SET', ['delay', '0'])
+#         self.send_command('CONTINUE')
+#         self.send_import()
+#         self.send_command('CONTINUE')
+        return True
+    
+    def sim_delta_ended(self, sim, time, delta):
+        print('SIM DELTA ENDED: ', self.get_xsim_state())
+        if self.get_xsim_state() == 'S_DELAY':
+            self.send_command('SET', ['delay', '0'])
+            self.send_command('CONTINUE')
+        
         self.send_import()
         self.send_command('CONTINUE')
         
-        xsim_state = self.get_xsim_state()
-
-        # The XSIM either:
-        #    - Entered new delta cycle (the always block) since its outputs have changed
-        #    - Entered the timestep process and is waiting for the length of the waiting period, since its outputs have settled
-        if xsim_state == 'S_EXPORT':
+        if self.get_xsim_state() == 'S_EXPORT':
             self.recv_export()
-        elif xsim_state == 'S_DELAY':
-            pass
-        else:
-            raise Exception('Error in the connection with Xsim!')
-        
+            self.send_command('CONTINUE')
+            
+        while (not (ddic['sim']._ready_pool or ddic['sim'].trig_pool)):
+            print('SIM DELTA SETTLED: ', self.get_xsim_state())
+            self.send_command('SET', ['delay', '0'])
+            self.send_command('CONTINUE')
+            self.send_import()
+            self.send_command('CONTINUE')
+            
+            if self.get_xsim_state() == 'S_EXPORT':
+                self.recv_export()
+                self.send_command('CONTINUE')
+            else:
+                break
+
+            
         return True
-                    
+    
+#     def sim_delta_settled(self, sim, time, delta):
+#         if xsim_state == 'S_EXPORT'
+#         # The XSIM is either in: 
+#         #    - initial import - This is the first finished sydpy delta cycle in the simultaion, 
+#         #    - timestep import - This is the first finished sydpy delta cycle in this timestep 
+#         #    - delta cycle import state
+#         self.send_import()
+#         
+#         self.send_command('CONTINUE')
+# #         xsim_state = self.get_xsim_state()
+#         self.recv_export()
+# 
+#         # The XSIM either:
+#         #    - Entered new delta cycle (the always block) since its outputs have changed
+#         #    - Entered the timestep process and is waiting for the length of the waiting period, since its outputs have settled
+# #         while (xsim_state == 'S_EXPORT') and (not (ddic['sim']._ready_pool or ddic['sim'].trig_pool)):
+# #             self.recv_export()
+# #             if xsim_state == 'S_EXPORT':
+# #                 self.send_command('CONTINUE')
+# #             xsim_state = self.get_xsim_state()
+#             
+#         #if xsim_state != 'S_DELAY':
+# #             from time import sleep
+# #             while (1):
+# #                 #xsim_state = self.get_xsim_state()
+# #                 self.send_command('CONTINUE')
+# #                 print(xsim_state)
+# #                 sleep(0.5)
+#         #    raise Exception('Error in the connection with Xsim!')
+#         
+#         return True
+#                     
     def updated(self, cosim):
+#         self.send_import()
+#         
+#         self.send_command('CONTINUE')
+#         xsim_state = self.get_xsim_state()
+# 
+#         # The XSIM either:
+#         #    - Entered new delta cycle (the always block) since its outputs have changed
+#         #    - Entered the timestep process and is waiting for the length of the waiting period, since its outputs have settled
+#         while (xsim_state == 'S_EXPORT') and (not (ddic['sim']._ready_pool or ddic['sim'].trig_pool)):
+#             self.recv_export()
+#             if xsim_state == 'S_EXPORT':
+#                 self.send_command('CONTINUE')
+#             xsim_state = self.get_xsim_state()
 #         self.update = True
         pass
     

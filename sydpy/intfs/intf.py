@@ -6,6 +6,8 @@ from sydpy.wrappers import ObjectProxy
 
 class Intf(Component):
 
+    feedback_subintfs = []
+
     def __init__(self, name):
         Component.__init__(self, name)
         self._sliced_intfs = {}

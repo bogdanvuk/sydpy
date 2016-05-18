@@ -17,14 +17,19 @@ class Cosim(Component):
         
         self.cosim_intf.register(self)
     
-    def resolve_intf(self, intf):
+    def resolve_intf(self, intf, feedback=False):
         subintfs = [c for c in intf.search(of_type=Intf)]
         if subintfs:
             for s in subintfs:
-                self.resolve_intf(s)
+                if isinstance(intf, Intf):
+                    subintf_feedback = s.name.rpartition('/')[-1] in intf.feedback_subintfs
+                else:
+                    subintf_feedback = False
+                    
+                self.resolve_intf(s, feedback=(subintf_feedback!=feedback))
         elif intf is not self:
             name = intf.name[len(self.name)+1:].replace('/', '_')
-            if intf._mch is None:
+            if (intf._mch is None) and (feedback==False):
                 self.inputs[name] = intf
             else:
                 self.outputs[name] = intf

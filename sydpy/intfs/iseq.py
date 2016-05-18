@@ -11,6 +11,7 @@ from sydpy._event import EventSet
 
 class Iseq(Intf):
     _intf_type = 'iseq'
+    feedback_subintfs = ['ready']
 
     def __init__(self, name, dtype=None, dflt=None, clk=None):
         super().__init__(name)
@@ -40,18 +41,18 @@ class Iseq(Intf):
     def __call__(self):
         return self.read()
     
-    def _fifo_proc(self, srcsig, keys):
+    def _fifo_proc(self, srcsig):
+        data = []
         while(1):
             
-            while (not self.ready()) or (not srcsig.mem):
-                if not self.ready():
-                    ddic['sim'].wait(self.ready.e.changed)
-                 
-                if not srcsig.mem:
-                    ddic['sim'].wait(srcsig.e.enqueued)
+#             while (not self.ready()) or (not srcsig.mem):
+#                 if not self.ready():
+#                     ddic['sim'].wait(self.ready.e.changed)
+#                  
+            if not srcsig.mem:
+                ddic['sim'].wait(srcsig.e.enqueued)
             
-            if (not self._fifo_data) and (srcsig.mem):
-                data = []
+            if (not data) and (srcsig.mem):
                 for val in srcsig.mem:
                     for d, _ in convgen(val, self._get_dtype()):
                         data.append(d)
@@ -64,9 +65,10 @@ class Iseq(Intf):
                 self.last <<= (i == (len(data)-1))
                 ddic['sim'].wait(self._dout.e.updated)
 
-                for _ in range(fifo_reserved_cnt):
-                    srcsig.pop()
-                fifo_reserved_cnt = 0
+            for _ in range(fifo_reserved_cnt):
+                srcsig.pop()
+            data = []
+            fifo_reserved_cnt = 0
                 
             self.valid <<= False
 
@@ -87,18 +89,21 @@ class Iseq(Intf):
 #             ddic['sim'].wait(self.clk.e.posedge)
         
     def _ff_proc(self):
+        if self.name == 'top/jesd_packer/din':
+            print('COSIM DIN: ', self.data())
+            print('COSIM VALID: ', self.last())
+            print('COSIM LAST: ', self.valid())
+            print('COSIM READY: ', self.ready())
+            
         if (self.ready() and self.valid() and
             all([i.empty() for i in self._itlm_sinks])):
             
             self._dout.write(self.data())
             for i in self._itlm_sinks:
                 i.push(self.data)
-            
-#             if hasattr(self, '_fifo_data'):
-#                 self._fifo_data.pop(0)
                 
-        self.last <<= False
-        self.valid <<= False
+#         self.last <<= False
+#         self.valid <<= False
         
     def con_driver(self, intf):
         pass
@@ -131,16 +136,15 @@ class Iseq(Intf):
     def _to_itlm(self, other):
         self._itlm_sinks.add(other)
     
-    def _from_itlm(self, other, keys=[]):
+    def _from_itlm(self, other):
         sig = other._subscribe(self, self._get_dtype())
 #         self.inst(Itlm,  'data', dtype=self._get_dtype(), dflt=sig.read())
 #         self.data._sig = sig
 #         self.data._sig.e = self.data.e
 #         self.data._sourced = True
-        self._fifo_data = []
         self.valid._dflt = 0
         self.last._dflt = 0
-        self.inst(Process, '', self._fifo_proc, senslist=[], pkwargs=dict(srcsig=sig, keys=keys))
+        self.inst(Process, '', self._fifo_proc, senslist=[], pkwargs=dict(srcsig=sig))
     
 #     def _pfunc_tlm_to_sig(self, other):
 #         data_fifo = []
@@ -222,6 +226,11 @@ class SlicedIseq(Iseq):
                 return self._parent.c[name]
         else:
             return getattr(self._parent, name)
+
+    def _from_itlm(self, other):
+        self._parent.valid._dflt = 0
+        self._parent.last._dflt = 0
+        super()._from_itlm(other)
     
     def read(self):
         return self._parent.read()[self._key]
