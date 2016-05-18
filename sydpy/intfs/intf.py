@@ -2,7 +2,6 @@ from sydpy._event import Event
 from inspect import signature
 import types
 from sydpy.component import Component#, compinit, sydsys
-from sydpy.wrappers import ObjectProxy
 
 class Intf(Component):
 

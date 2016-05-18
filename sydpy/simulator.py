@@ -171,8 +171,10 @@ class Simulator(Component):
                 self.events['post_evaluate'](self.time, self.delta_count, self)
                  
                 self._update()
-                 
+                
                 self.events['delta_end'](self.time, self.delta_count, self)
+                
+                self._resolve()
                  
                 self.delta_count += 1
                  
@@ -260,7 +262,8 @@ class Simulator(Component):
                 # If process supplied no waiting events, it is to be terminated
                 self._proc_pool.remove(proc)
                 proc.exit_func()
-        
+
+    def _resolve(self):        
         # Resolve all triggered events          
         while self.trig_pool:
             trig = self.trig_pool.pop()

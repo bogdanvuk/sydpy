@@ -1,89 +1,80 @@
-from sydpy.configurator import Configurator
-from sydpy.component import Component, system, compinit
-from sydpy.unit import Unit
-from sydpy.channel import Channel
-from sydpy.intfs.isig import Isig
-from sydpy.types import bit8, bit, bit64, bit32
-from sydpy._delay import Delay
-from sydpy.module import proc, Module
-from sydpy.process import Process
-from sydpy.simulator import Simulator
 from sydpy.cosim import Cosim
+from sydpy.intfs.isig import Isig
+from sydpy.types.bit import bit32
+from sydpy.component import Component, inst
+from sydpy.types import bit
+from sydpy.process import Process
+from sydpy.procs.clk import Clocking
+from ddi.ddi import ddic, diinit
+from sydpy.channel import Channel
+from sydpy.simulator import Simulator, Scheduler
 from sydpy.xsim import XsimIntf
+from asyncio.base_events import Server
 from sydpy.server import Server
 
-class Generator(Component):
-    
-    @compinit 
-    def __init__(self, chout, dtype=bit8, **kwargs):
-        chout <<= self.inst('sout', Isig, dtype=dtype, dflt=0)
-        self.inst('p_gen', Process, self.gen, [Delay(20)])
-    def gen(self):
-        self.sout <<= self.sout + 1
-        print("GEN : ", system['sim'].time, ': ', self.sout.read() + 1)
+class CosimDominoes(Cosim):
+    def __init__(self, name, trigger, last, 
+                 fileset=['./dominoes_test.vhd'],
+                 module_name='dominoes_test'):
         
+        diinit(super().__init__)(name, fileset, module_name)
+        trigger >>= self.inst(Isig, 'trigger', dtype=bit)
+        last <<= self.inst(Isig, 'last', dtype=bit)
 
-# class Sink(Cosim):
-#     @compinit
-#     def __init__(self, chin, chout, dtype=bit, **kwargs):
-#         chin >>= self.inst('din', Isig, dtype=dtype, dflt=0)
-#         chout <<= self.inst('dout', Isig, dtype=dtype, dflt=0)
-
-class Ping(Component):
-    @compinit
-    def __init__(self, chin, chout, chgen, dtype=bit, **kwargs):
-        chin >>= self.inst('din', Isig, dtype=dtype, dflt=0)
-        chout <<= self.inst('dout', Isig, dtype=dtype, dflt=0)
-        chgen >>= self.inst('gen', Isig, dtype=bit8, dflt=0)
-        self.inst('p_ping', Process, self.ping)
+class Trigger(Component):
+    def __init__(self, name, trigger, clk=None):
+        super().__init__(name)
         
-    def ping(self):
-        print("PONG : ", system['sim'].time, ': ', self.din)
-        self.dout <<= self.din[23:16] % self.din[15:8] % self.din[7:0] % self.gen 
-
-class Pong(Component):
-    @compinit
-    def __init__(self, chin, chout, dtype=bit, **kwargs):
-        chin >>= self.inst('din', Isig, dtype=dtype, dflt=0)
-        chout <<= self.inst('dout', Isig, dtype=dtype, dflt=0)
-        self.inst('p_pong', Process, self.pong)
+        trigger <<= self.inst(Isig, 'trigger', dtype=bit)
+        self.inst(Process, func=self.proc_trigger, senslist=[clk.e.posedge])
         
-    def pong(self):
-        print("PING : ", system['sim'].time, ': ', self.din)
-        self.dout <<= self.din
+    def proc_trigger(self):
+        self.trigger <<= not self.trigger()
 
-# class Printout(Component):
-#     @compinit
-#     def __init__(self, chin, dtype=bit, **kwargs):
-#         chin >>= self.inst('sin', Isig, dtype=dtype, dflt=0)
-#         self.inst('p_sink', Process, self.psink)
-# 
-#     def psink(self):
-#         print(system['sim'].time, ': ', self.sin)
-    
-class TestDff(Component):
-    @compinit
-    def __init__ (self, name):
-        for ch in ['ch_gen', 'ch_ping', 'ch_pong']:
-            self.inst(ch, Channel)
+class Dominoes(Component):
+    def __init__(self, name, trigger, last):
+        super().__init__(name)
+        
+        trigger >>= self.inst(Isig, 'trigger', dtype=bit)
+        last <<= self.inst(Isig, 'last', dtype=bit, dflt=0)
+        
+        self.inst(Isig, 'dominoes', dtype=bit32, dflt=0)
+        
+        self.inst(Process, func=self.proc_dominoes)
+        
+    def proc_dominoes(self):
+        print(self.dominoes())
+        print(self.last())
+        self.dominoes[0] <<= self.trigger()
+        for i in range(1, 32):
+            self.dominoes[i] <<= self.dominoes[i-1]()
             
-        self.inst('gen', Generator, chout=self.ch_gen)
-        self.inst('ping', Ping, chin=self.ch_pong, chout=self.ch_ping, chgen=self.ch_gen)
-        self.inst('pong', Pong, chin=self.ch_ping, chout=self.ch_pong)
-#         self.inst('print', Printout, chin=self.ch_out)
+        self.last <<= self.dominoes[31]() 
 
-conf = [
-        ('sim'              , Simulator),
-#         ('xsim'             , XsimIntf),
-#         ('server'           , Server),
-        ('xsim.builddir'    , './xsim'),
-        ('sim.top.*.cosim_intf', 'xsim'),
-        ('sim.top.sink.fileset', ['/home/bvukobratovic/projects/sydpy/tests/sink.sv']),
-        ('sim.top'          , TestDff),
-        ('sim.top.ping.dtype'  , bit32),
-        ('sim.top.pong.dtype'  , bit32),
-        ('sim.duration'     , 10000)
-        ]
+class TestDominoes(Component):
+    def __init__(self, name):
+        super().__init__(name)
+        
+        for chname in ['ch_trigger', 'ch_last_dominoe', 'ch_last_cosim_dominoe']:
+            self.inst(Channel, chname)
+        
+        self.inst(Trigger, 'trigger', trigger=self.ch_trigger)
+        self.inst(Dominoes, 'dominoes', trigger=self.ch_trigger, last=self.ch_last_dominoe)
+        self.inst(CosimDominoes, 'cosim_dominoes', trigger=self.ch_last_dominoe, last=self.ch_last_cosim_dominoe)
 
-system.set_config(conf)
-system.sim.run()
+ddic.configure('sim.duration'         , 200)
+ddic.provide_on_demand('cls/sim', Simulator, 'sim') #, inst_kwargs=dict(log_signal_updates=True, log_event_triggers=True, log_task_switching=True))
+ddic.provide('scheduler', Scheduler())
+ddic.provide_on_demand('cls/xsimintf', XsimIntf, 'xsimintf')
+ddic.provide_on_demand('cls/xsimserver', Server,'xsimserver')
+clk = inst(Clocking, 'clocking')
+ddic.configure('top/*.clk', clk.clk)
+inst(TestDominoes, 'top')
+
+
+def delta_monitor(sim):
+    print(sim.delta_count)
+    return True
+
+ddic['sim'].events['delta_settled'].append(delta_monitor)
+ddic['sim'].run()

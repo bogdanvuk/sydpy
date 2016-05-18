@@ -3,6 +3,7 @@ from sydpy._util._util import class_load
 from sydpy.intfs.intf import Intf
 from sydpy.process import Process
 from ddi.ddi import Dependency, diinit
+import os
 
 class Cosim(Component):
     
@@ -10,7 +11,7 @@ class Cosim(Component):
         super().__init__(name)
         self.cosim_intf = cosim_intf
         self.module_name = module_name
-        self.fileset = fileset
+        self.fileset = [os.path.abspath(f) for f in fileset]
 
         if self.module_name is None:
             self.module_name = self.name.rsplit('/', 1)[-1]
