@@ -23,11 +23,11 @@ module wrap();
         if (xsimintf_init()) begin
           $$finish;
         end
-        $$dumpfile("xsim.vdc");
-        $$dumpvars(${in_port_list}, ${out_port_list});
+        $$dumpfile("xsim.vcd");
+        $$dumpvars;
     end
     
-    always #0 begin
+    always #1 begin
         automatic int  vals_read;
         automatic int  delay;
         automatic string       strimp;
@@ -53,6 +53,9 @@ module wrap();
         $$sformat(strexp, ${export_str_format}, ${out_port_list});
         strimp = xsimintf_export(strexp);
         $$display("DELTA EXPORT: %s", strexp);
+        $$display("DELTA IMPORT: %s", strimp);        
+        vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
+
     end
     
     ${module_instantiation}
@@ -83,7 +86,7 @@ class XsimIntf:
             'CONTINUE': {'type': 'CONTINUE', 'params': ['state']}
             }
 
-    def __init__(self, server: Dependency('xsimserver'), remote_debug=False, log_communication=False, builddir='./xsimintf'):
+    def __init__(self, server: Dependency('xsimserver'), remote_debug=False, log_communication=True, builddir='./xsimintf'):
         self.builddir = builddir
         self.server = server
         self.cosim_pool = []
@@ -91,7 +94,7 @@ class XsimIntf:
         self.remote_debug = remote_debug
         ddic['sim'].events['run_start'].append(self.sim_run_start)
         ddic['sim'].events['run_end'].append(self.sim_run_end)
-        ddic['sim'].events['delta_end'].append(self.sim_delta_ended)
+        ddic['sim'].events['delta_settled'].append(self.sim_delta_ended)
         ddic['sim'].events['timestep_start'].append(self.sim_timestep_start)
         atexit.register(self.terminate)
     
@@ -168,11 +171,11 @@ class XsimIntf:
     
     def recv_export(self):
         ret_type, params = self.send_command('EXPORT')
-        print(ddic['sim'].time, ' : ', ddic['sim'].delta_count, ' : ', params)
         for intf, p in zip(sorted(self.outputs.items()), params):
             intf[1].write(intf[1]._get_dtype()('0x' + p.replace('x', 'u').replace('z', 'u')))
             
         ddic['sim']._update()
+        ddic['sim']._resolve()
 
                   
     def send_import(self):
@@ -224,8 +227,7 @@ class XsimIntf:
         if xsim_state != 'S_CONNECTED':
             raise Exception('Error in the connection with Xsim!')
          
-#         self.send_import()
-        
+        self.send_import()
         self.send_command('CONTINUE')
 
     def create_wrapper_module(self):
@@ -258,44 +260,26 @@ class XsimIntf:
                 self.send_command('CONTINUE')
             
         self.send_command('CLOSE')
-#         self.xsim_proc.terminate()
     
     def sim_timestep_start(self, time, sim):
         if time > 0:
-            print('SIM TIMESTEP: ', self.get_xsim_state())
-            self.send_command('SET', ['delay', str(time - self.cosim_time)])
+            self.send_command('SET', ['delay', str(time - self.cosim_time - 1)])
             self.send_command('CONTINUE')
 
         self.cosim_time = time
         
         return True
     
-    def sim_delta_ended(self, sim, time, delta):
-        print('SIM DELTA ENDED: ', self.get_xsim_state())
-        if self.get_xsim_state() == 'S_DELAY':
-            self.send_command('SET', ['delay', '0'])
-            self.send_command('CONTINUE')
-        
-        self.send_import()
-        self.send_command('CONTINUE')
-        
-        if self.get_xsim_state() == 'S_EXPORT':
-            self.recv_export()
-            self.send_command('CONTINUE')
-            
-        while (not (ddic['sim']._ready_pool or ddic['sim'].trig_pool)):
-            print('SIM DELTA SETTLED: ', self.get_xsim_state())
-            self.send_command('SET', ['delay', '0'])
-            self.send_command('CONTINUE')
+    def sim_delta_ended(self, sim):
+        while not (ddic['sim']._ready_pool or ddic['sim'].trig_pool):
             self.send_import()
             self.send_command('CONTINUE')
-            
-            if self.get_xsim_state() == 'S_EXPORT':
-                self.recv_export()
-                self.send_command('CONTINUE')
-            else:
-                break
 
+            if self.get_xsim_state() == 'S_DELAY':
+                break
+            else:
+                self.recv_export()
+                
         return True
     
     def updated(self, cosim):

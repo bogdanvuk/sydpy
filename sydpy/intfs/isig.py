@@ -99,13 +99,19 @@ class Isig(Intf):
     
     def read_next(self):
         if not self._sourced:
-            return copy.deepcopy(self._dflt)
+            if self._get_dtype():
+                return conv(self._dflt, self._get_dtype())
+            else:
+                return self._dflt
         else:
             return self._sig._next
     
     def read(self):
         if not self._sourced:
-            return copy.deepcopy(self._dflt)
+            if self._get_dtype():
+                return conv(self._dflt, self._get_dtype())
+            else:
+                return self._dflt
         else:
             return self._sig.read()
         
