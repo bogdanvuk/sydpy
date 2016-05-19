@@ -276,6 +276,7 @@ DPI_DLLESPEC const char* xsimintf_export(const char * vals)
 #if XSIM_DPI_DBG == 1
     puts("To cmd handler from xsimintf_export");
 #endif
+    import_buf[0] = 0;
     cmd_handler();
     return import_buf;
 }
@@ -286,6 +287,7 @@ DPI_DLLESPEC const char* xsimintf_import()
 #if XSIM_DPI_DBG == 1
     puts("To cmd handler from xsimintf_import");
 #endif
+    import_buf[0] = 0;
     cmd_handler();
     return import_buf;
 }

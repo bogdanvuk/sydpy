@@ -14,18 +14,49 @@ module wrap();
     import "DPI-C" pure function string xsimintf_import ();
     import "DPI-C" pure function int xsimintf_delay ();
     
+    event delta_restart;
+    logic output_changed;
+    
     ${port_definition}
     
     initial begin
-        int      vals_read;
+        automatic int  vals_read;
         automatic string       strimp;
+    
+        output_changed = 0;
         
         if (xsimintf_init()) begin
           $$finish;
         end
         $$dumpfile("xsim.vcd");
         $$dumpvars;
+        
+        strimp = xsimintf_import();
+        vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
     end
+    
+    always #0 begin
+        automatic int       vals_read; //Not importing properly without this return value!
+        automatic string       strimp;
+        automatic string       strexp;
+            
+        if (output_changed == 1) begin
+            $$sformat(strexp, ${export_str_format}, ${out_port_list});
+            strimp = xsimintf_export(strexp);
+            $$display("DELTA EXPORT: %s", strexp);
+            output_changed = 0;
+        end else begin
+            strimp = xsimintf_import();
+        end
+        if (strimp != "-") begin
+            if (strimp.len() > 0) begin 
+                $$display("DELTA IMPORT: %s", strimp);        
+                vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
+            end
+        end else begin
+            @delta_restart;
+        end
+    end    
     
     always #1 begin
         automatic int  vals_read;
@@ -40,22 +71,12 @@ module wrap();
             $$dumpflush;
             $$finish;
         end
-        strimp = xsimintf_import();
-        $$display("TIMESTEP: %s", strimp);        
-        vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
+        -> delta_restart;
     end
 
     always @(${out_port_list}) begin
-        automatic string       strexp;
-        automatic string       strimp;
-        automatic integer      vals_read;
-        
-        $$sformat(strexp, ${export_str_format}, ${out_port_list});
-        strimp = xsimintf_export(strexp);
-        $$display("DELTA EXPORT: %s", strexp);
-        $$display("DELTA IMPORT: %s", strimp);        
-        vals_read = $$sscanf(strimp, ${import_str_format}, ${in_port_list});
-
+        output_changed = 1;
+        -> delta_restart;        
     end
     
     ${module_instantiation}
@@ -86,7 +107,7 @@ class XsimIntf:
             'CONTINUE': {'type': 'CONTINUE', 'params': ['state']}
             }
 
-    def __init__(self, server: Dependency('xsimserver'), remote_debug=False, log_communication=True, builddir='./xsimintf'):
+    def __init__(self, server: Dependency('xsimserver'), remote_debug=False, log_communication=False, builddir='./xsimintf'):
         self.builddir = builddir
         self.server = server
         self.cosim_pool = []
@@ -94,7 +115,8 @@ class XsimIntf:
         self.remote_debug = remote_debug
         ddic['sim'].events['run_start'].append(self.sim_run_start)
         ddic['sim'].events['run_end'].append(self.sim_run_end)
-        ddic['sim'].events['delta_settled'].append(self.sim_delta_ended)
+        ddic['sim'].events['delta_end'].append(self.sim_delta_ended)
+        ddic['sim'].events['delta_settled'].append(self.sim_delta_settled)
         ddic['sim'].events['timestep_start'].append(self.sim_timestep_start)
         atexit.register(self.terminate)
     
@@ -247,11 +269,14 @@ class XsimIntf:
 
         self.create_wrapper_module()
         self.fileset.append('wrapper.sv')
-        
+        self.outputs_updated = False
+
         if not self.remote_debug:
             self.run_xsim()
 
-    
+        self.send_import()
+        self.send_command('CONTINUE')
+        
     def sim_run_end(self, sim):
         xsim_state = None
         while (xsim_state != 'S_DELAY'):
@@ -270,20 +295,33 @@ class XsimIntf:
         
         return True
     
-    def sim_delta_ended(self, sim):
-        while not (ddic['sim']._ready_pool or ddic['sim'].trig_pool):
+    def sim_delta_ended(self, sim, time, delta_count):
+        if self.get_xsim_state() == 'S_EXPORT':
+            self.recv_export()
+
+        if self.outputs_updated:
+            self.outputs_updated = False
             self.send_import()
             self.send_command('CONTINUE')
-
-            if self.get_xsim_state() == 'S_DELAY':
-                break
-            else:
+        
+        return True
+        
+    def sim_delta_settled(self, sim):
+        
+        while self.get_xsim_state() != 'S_DELAY':
+            if self.get_xsim_state() == 'S_EXPORT':
                 self.recv_export()
+
+            if not (ddic['sim']._ready_pool or ddic['sim'].trig_pool):
+                self.send_command('IMPORT', '-')
+                self.send_command('CONTINUE')
+            else:
+                break
                 
         return True
     
     def updated(self, cosim):
-        pass
+        self.outputs_updated = True
     
     def register(self, cosim):
         self.cosim_pool.append(cosim)
