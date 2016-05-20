@@ -1,19 +1,27 @@
 from sydpy.component import Component#, compinit#, sydsys
 from sydpy._signal import Signal
 from sydpy.intfs.intf import Intf, SlicedIntf
-from sydpy.intfs.isig import Isig
+from sydpy.intfs.isig import Isig, Csig
 from sydpy.types import bit
 from sydpy.process import Process
 from sydpy.types._type_base import convgen
 from ddi.ddi import ddic
 from sydpy.intfs.itlm import Itlm
 from sydpy._event import EventSet
+from sydpy.types.array import Array
+from enum import Enum
+
+class FlowCtrl(Enum):
+    both = 1
+    valid = 2
+    ready = 3
+    none = 4
 
 class Iseq(Intf):
     _intf_type = 'iseq'
     feedback_subintfs = ['ready']
 
-    def __init__(self, name, dtype=None, dflt=None, clk=None):
+    def __init__(self, name, dtype=None, dflt=None, clk=None, flow_ctrl=FlowCtrl.both, trans_ctrl=True):
         super().__init__(name)
         
         self._mch = None
@@ -22,9 +30,20 @@ class Iseq(Intf):
         self._dflt = dflt
         
         self.inst(Isig, 'data', dtype=dtype, dflt=dflt)
-        self.inst(Isig, 'valid', dtype=bit, dflt=1)
-        self.inst(Isig, 'ready', dtype=bit, dflt=1)
-        self.inst(Isig, 'last', dtype=bit, dflt=0)
+        if flow_ctrl == FlowCtrl.both or flow_ctrl == FlowCtrl.valid:
+            self.inst(Isig, 'valid', dtype=bit, dflt=0)
+        else:
+            self.inst(Csig, 'valid', dtype=bit, dflt=1)
+        
+        if flow_ctrl == FlowCtrl.both or flow_ctrl == FlowCtrl.ready:
+            self.inst(Isig, 'ready', dtype=bit, dflt=0)
+        else:
+            self.inst(Csig, 'ready', dtype=bit, dflt=1)
+    
+        if trans_ctrl:        
+            self.inst(Isig, 'last', dtype=bit, dflt=0)
+        else:
+            self.inst(Csig, 'last', dtype=bit, dflt=1)
 #         self.inst(Isig, '_dout', dtype=dtype, dflt=0)
         
         self.clk = clk
@@ -37,6 +56,7 @@ class Iseq(Intf):
         
 #         self.e = self._dout.e
         self._itlm_sinks = set()
+        self._itlm_data = []
     
     def __call__(self):
         return self.read()
@@ -89,7 +109,7 @@ class Iseq(Intf):
 #             ddic['sim'].wait(self.clk.e.posedge)
         
     def _ff_proc(self):
-        if self.name == 'top/jesd_packer/din':
+        if self.name == 'top/pack_lookup/frame_out':
             print('COSIM DIN: ', self.data())
             print('COSIM VALID: ', self.last())
             print('COSIM LAST: ', self.valid())
@@ -99,8 +119,20 @@ class Iseq(Intf):
             all([i.empty() for i in self._itlm_sinks])):
             
             self._dout.write(self.data())
-            for i in self._itlm_sinks:
-                i.push(self.data)
+            
+            if not self._itlm_data:
+                for i in self._itlm_sinks:
+                    self._itlm_data.append(Array(self._get_dtype())())
+            
+            for i, intf in enumerate(self._itlm_sinks):
+                self._itlm_data[i].append(self.data())
+                
+            if self.last():
+                for i, intf in enumerate(self._itlm_sinks):
+                    for d, _ in convgen(self._itlm_data[i], intf._get_dtype()):
+                        intf.push(d)
+                        
+                self._itlm_data = []
                 
 #         self.last <<= False
 #         self.valid <<= False
@@ -181,7 +213,7 @@ class Iseq(Intf):
     
     def _drive(self, channel):
         self._mch = channel
-        self._dout._drive(channel)
+#         self._dout._drive(channel)
 #         self._sig = Signal(val=self._dtype.conv(self._dflt))
 #         self.e = self._sig.e
         

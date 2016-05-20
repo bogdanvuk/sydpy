@@ -204,15 +204,18 @@ class VCDTracer:
         self.vcdfile.write("$end\n")
     
     def component_hier_dfs(self, hier, path):
-        self.writeComponentHeaderStart(ddic[path])
+        if path in ddic:
+            self.writeComponentHeaderStart(ddic[path])
+            
         for name, c in hier.items():
             if isinstance(c, VCDTrace):
                 c.print_var_declaration()
                 self.used_codes.add(c.code)
             else:
                 self.component_hier_dfs(c, '/'.join([path, name]))
-                
-        self.writeComponentHeaderEnd()
+        
+        if path in ddic:    
+            self.writeComponentHeaderEnd()
     
     def writeComponentHeader(self, top):
 #         self.visited_traces = set()
@@ -224,7 +227,7 @@ class VCDTracer:
             trace.vcdfile = self.vcdfile
             path = name.split('/')
             hier_cur = hier
-            for p in path[1:-1]:
+            for p in path[:-1]:
                 if p not in hier_cur:
                     hier_cur[p] = {}
                     

@@ -118,7 +118,7 @@ class _SigNameVisitor(ast.NodeVisitor):
                     if p in ['write', 'push', 'bpush']:
                         self.store = True
                         break
-                    elif hasattr(intf, p) and isinstance(intf.p, Intf):
+                    elif hasattr(intf, p) and isinstance(getattr(intf, p), Intf):
                         intf = getattr(intf, p)
                     else:
                         break

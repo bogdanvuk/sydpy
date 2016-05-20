@@ -16,6 +16,7 @@ from sydpy.server import Server
 from sydpy.types.bit import Bit
 from sydpy.intfs.isig import Isig
 from sydpy.types import bit
+from sydpy.intfs.iseq import FlowCtrl
 
 # jesd_params = dict(M=3, N=8, S=2, CS=2, CF=0, L=1, F=8, HD=0)
 # frame_lookup = create_lookup(jesd_params, sample_flatten=True)
@@ -33,10 +34,10 @@ from sydpy.types import bit
 class FrameScoreboard(Scoreboard):
     def __init__(self, 
                  name, 
-                 pack_algo_frame: Dependency('top/pack_algo/frame'),
-                 pack_matrix_frame: Dependency('top/pack_lookup/frame')
+                 cosim_packer_frame: Dependency('top/jesd_packer/frame_out'),
+                 lookup_packer_frame: Dependency('top/pack_lookup/frame_out')
                  ):
-        super().__init__(name, [pack_algo_frame, pack_matrix_frame])
+        super().__init__(name, [cosim_packer_frame, lookup_packer_frame])
 
 class Oversampler(sydpy.Component):
     def __init__ (self, name, ch_samples, ch_oversamples, 
@@ -71,7 +72,7 @@ class JesdPackerCosim(Cosim):
     def __init__(self, name, frame_out, ch_samples, clk=None, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), 
                  fileset=['/home/bvukobratovic/projects/sydpy/tests/packing/jesd_packer_rtl.vhd']):
         diinit(super().__init__)(name, fileset)
-        frame_out <<= self.inst(sydpy.Isig, 'frame_out', dtype=Bit(32*jesd_params['L']))
+        frame_out <<= self.inst(sydpy.Iseq, 'frame_out', dtype=Bit(32*jesd_params['L']), flow_ctrl=FlowCtrl.none, trans_ctrl=False)
  
         self.overframe_num = (1 if jesd_params['F'] >= 4 else int(4 / jesd_params['F']))
         self.oversample_num = jesd_params['S']*self.overframe_num
@@ -159,12 +160,14 @@ sydpy.ddic.provide_on_demand('cls/tracing', VCDTracer, 'tracing')
 sydpy.ddic.provide_on_demand('cls/xsimserver', Server,'xsimserver')
 sydpy.ddic.provide_on_demand('cls/xsimintf', XsimIntf, 'xsimintf')
 # sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard, 'verif/inst/', inst_args=('verif'))#, 'verif/inst/')
-#inst(FrameScoreboard, 'verif/inst/')
+inst(FrameScoreboard, 'verif/inst/')
 clk = inst(sydpy.Clocking, 'clocking')
 sydpy.ddic.configure('top/*.clk', clk.clk)
 inst(JesdPacking, 'top')
 
 sydpy.ddic['sim'].run()
+
+pass
 
 # for s in sydpy.ddic.search('verif/inst/*', assertion=lambda obj: isinstance(obj, Scoreboard)):
 #     assert len(sydpy.ddic[s].scoreboard_results['fail']) == 0

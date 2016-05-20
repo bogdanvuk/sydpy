@@ -164,3 +164,6 @@ class SlicedIsig(Isig):
             return self._parent.e.event_def[self._key].subscribe(proc)
         else:
             getattr(self._parent.e, event)[self._key].subscribe(proc)
+            
+class Csig(Isig):
+    pass

@@ -186,8 +186,12 @@ class array(TypeBase):
         
         if (remain is not None) and (not remain._empty()):
             convlist.append(remain)
-         
-        conval = convlist[0]
+        
+        if convlist:
+            conval = convlist[0]
+        else:
+            conval = remain
+            
         for item in convlist[1:]:
             conval = item._concat(conval)
         

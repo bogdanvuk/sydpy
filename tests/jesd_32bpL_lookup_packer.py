@@ -2,6 +2,7 @@ import sydpy
 from sydpy.types.bit import Bit, bit8
 from tests.jesd_packer_lookup_gen import create_lookup, SymbolicBit
 from sydpy.types.array import Array
+from sydpy.intfs.iseq import FlowCtrl
 
 class Jesd32bpLLookupPacker(sydpy.Component):
 
@@ -41,7 +42,7 @@ class Jesd32bpLLookupPacker(sydpy.Component):
         self.inst(sydpy.Isig, 'segments_32b_cnt', dtype=int)
         self.inst(sydpy.Isig, 'cur_frame_out', dtype=int, dflt=1)
         
-        frame_out <<= self.inst(sydpy.Isig, 'frame_out', dtype=Bit(32*jesd_params['L']))
+        frame_out <<= self.inst(sydpy.Iseq, 'frame_out', dtype=Bit(32*jesd_params['L']), flow_ctrl=FlowCtrl.none, trans_ctrl=False)
         
         self.idin = []
         for i, d in enumerate(ch_samples):
@@ -112,6 +113,6 @@ class Jesd32bpLLookupPacker(sydpy.Component):
             for l in range(self.jesd_params['L']):
                 for i in range(4):
                     out_word.append(frame[l][self.segments_32b_cnt()*4 + i])
-                    self.frame_out[l*32+(i+1)*8 - 1:l*32+i*8] <<= frame[l][self.segments_32b_cnt()*4 + i]
+                    self.frame_out.data[l*32+(i+1)*8 - 1:l*32+i*8] <<= frame[l][self.segments_32b_cnt()*4 + i]
                 
-            print('32bpL out: {}, {}'.format(self.frame_out.read_next(), out_word))
+            print('32bpL out: {}, {}'.format(self.frame_out.data.read_next(), out_word))

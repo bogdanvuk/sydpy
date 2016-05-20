@@ -104,7 +104,7 @@ class Itlm(Isig):
         for s in self._sinks:
             s.push(val)
             
-#         self._sig.push(val)
+        self._sig.push(val)
         
     def bpop(self):
         if not self._sourced:
