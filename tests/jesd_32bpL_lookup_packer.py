@@ -42,7 +42,7 @@ class Jesd32bpLLookupPacker(sydpy.Component):
         self.inst(sydpy.Isig, 'segments_32b_cnt', dtype=int)
         self.inst(sydpy.Isig, 'cur_frame_out', dtype=int, dflt=1)
         
-        frame_out <<= self.inst(sydpy.Iseq, 'frame_out', dtype=Bit(32*jesd_params['L']), flow_ctrl=FlowCtrl.none, trans_ctrl=False)
+        frame_out <<= self.inst(sydpy.Iseq, 'frame_out', dtype=Bit(32*jesd_params['L']), flow_ctrl=FlowCtrl.none, trans_ctrl=False, dflt=0)
         
         self.idin = []
         for i, d in enumerate(ch_samples):

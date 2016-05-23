@@ -100,9 +100,9 @@ class Isig(Intf):
     def read_next(self):
         if not self._sourced:
             if self._get_dtype():
-                return conv(self._dflt, self._get_dtype())
+                return conv(copy.deepcopy(self._dflt), self._get_dtype())
             else:
-                return self._dflt
+                return copy.deepcopy(self._dflt)
         else:
             return self._sig._next
     

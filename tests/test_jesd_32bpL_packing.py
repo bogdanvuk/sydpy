@@ -167,12 +167,6 @@ inst(JesdPacking, 'top')
 
 sydpy.ddic['sim'].run()
 
-pass
-
-# for s in sydpy.ddic.search('verif/inst/*', assertion=lambda obj: isinstance(obj, Scoreboard)):
-#     assert len(sydpy.ddic[s].scoreboard_results['fail']) == 0
-
-# import cProfile
-# cProfile.run("sydpy.ddic['sim'].run()", sort='tottime')
-
+for s in sydpy.ddic.search('verif/inst/*', assertion=lambda obj: isinstance(obj, Scoreboard)):
+    assert len(sydpy.ddic[s].scoreboard_results['fail']) == 0
 

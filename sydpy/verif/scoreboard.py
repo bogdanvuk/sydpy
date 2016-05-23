@@ -17,6 +17,7 @@
 #  <http://www.gnu.org/licenses/>.
 from sydpy.intfs.itlm import Itlm
 from sydpy.process import Process
+from ddi.ddi import ddic
 
 """Module implements the basic scoreboard module."""
 
@@ -60,6 +61,7 @@ class Scoreboard(Component):
                 
             score = {
                      'trans': [str(v) for v in vals],
+                     'time' : ddic['sim'].time,
                      'score': score
                      }
             
