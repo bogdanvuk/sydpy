@@ -51,8 +51,8 @@ class Oversampler(sydpy.Component):
         for i in range(jesd_params['M']):
             sample = self.inst(Itlm, 'sample{}'.format(i), tSample)
             oversample = self.inst(Itlm, 'oversample{}'.format(i), self.oversample_dtype)
-            ch_samples[i] >>= sample
-            ch_oversamples[i] <<= oversample
+            ch_samples[i] >> sample
+            ch_oversamples[i] << oversample
             self.isamples.append(sample)
             self.ioversamples.append(oversample)
 
@@ -69,22 +69,22 @@ class Oversampler(sydpy.Component):
                             oversample.bpush(d)
 
 class JesdPackerCosim(Cosim):
-    def __init__(self, name, frame_out, ch_samples, clk=None, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), 
+    def __init__(self, name, frame_out, ch_samples, clk:Dependency('clocking/clk')=None, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), 
                  fileset=['/home/bvukobratovic/projects/sydpy/tests/packing/jesd_packer_rtl.vhd']):
         diinit(super().__init__)(name, fileset)
-        frame_out <<= self.inst(sydpy.Iseq, 'frame_out', dtype=Bit(32*jesd_params['L']), flow_ctrl=FlowCtrl.none, trans_ctrl=False)
+        frame_out << self.inst(sydpy.Iseq, 'frame_out', dtype=Bit(32*jesd_params['L']), flow_ctrl=FlowCtrl.none, trans_ctrl=False, clk=clk)
  
         self.overframe_num = (1 if jesd_params['F'] >= 4 else int(4 / jesd_params['F']))
         self.oversample_num = jesd_params['S']*self.overframe_num
         single_converter_vector_w = self.oversample_num*(jesd_params['N'] + jesd_params['CS'])
         self.input_vector_w = jesd_params['M']*single_converter_vector_w
          
-        idin = self.inst(sydpy.Iseq, 'din', dtype=Bit(self.input_vector_w), dflt=0)
-        self.inst(Isig, 'clk', dtype=bit)
-        self.clk._connect(clk)
+        idin = self.inst(sydpy.Iseq, 'din', dtype=Bit(self.input_vector_w), dflt=0, clk=clk)
+        clk >> self.inst(Isig, 'clk', dtype=bit)
+#         self.clk._connect(clk)
          
         for i, d in enumerate(ch_samples):
-            d >>= idin[i*single_converter_vector_w : (i+1)*single_converter_vector_w - 1]
+            d >> idin[i*single_converter_vector_w : (i+1)*single_converter_vector_w - 1]
             
 #         self.inst(sydpy.Process, 'pack', self.pack, senslist=[idin.clk.e.posedge])
 #      
@@ -162,7 +162,7 @@ sydpy.ddic.provide_on_demand('cls/xsimintf', XsimIntf, 'xsimintf')
 # sydpy.ddic.provide_on_demand('verif/cls/', FrameScoreboard, 'verif/inst/', inst_args=('verif'))#, 'verif/inst/')
 inst(FrameScoreboard, 'verif/inst/')
 clk = inst(sydpy.Clocking, 'clocking')
-sydpy.ddic.configure('top/*.clk', clk.clk)
+# sydpy.ddic.configure('top/*.clk', clk.clk)
 inst(JesdPacking, 'top')
 
 sydpy.ddic['sim'].run()

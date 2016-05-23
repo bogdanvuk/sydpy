@@ -3,10 +3,11 @@ from sydpy.types.bit import Bit, bit8
 from tests.jesd_packer_lookup_gen import create_lookup, SymbolicBit
 from sydpy.types.array import Array
 from sydpy.intfs.iseq import FlowCtrl
+from ddi.ddi import Dependency
 
 class Jesd32bpLLookupPacker(sydpy.Component):
 
-    def __init__(self, name, frame_out, ch_samples, tSample = None, arch='tlm', jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), **kwargs):
+    def __init__(self, name, frame_out, ch_samples, clk:Dependency('clocking/clk')=None, tSample = None, arch='tlm', jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), **kwargs):
         sydpy.Component.__init__(self, name)
         self.jesd_params = jesd_params
 
@@ -42,18 +43,18 @@ class Jesd32bpLLookupPacker(sydpy.Component):
         self.inst(sydpy.Isig, 'segments_32b_cnt', dtype=int)
         self.inst(sydpy.Isig, 'cur_frame_out', dtype=int, dflt=1)
         
-        frame_out <<= self.inst(sydpy.Iseq, 'frame_out', dtype=Bit(32*jesd_params['L']), flow_ctrl=FlowCtrl.none, trans_ctrl=False, dflt=0)
+        frame_out << self.inst(sydpy.Iseq, 'frame_out', dtype=Bit(32*jesd_params['L']), flow_ctrl=FlowCtrl.none, trans_ctrl=False, dflt=0, clk=clk)
         
         self.idin = []
         for i, d in enumerate(ch_samples):
-            idin = self.inst(sydpy.Iseq, 'din{}'.format(i), dtype=Bit(self.input_vector_w), dflt=0)
+            idin = self.inst(sydpy.Iseq, 'din{}'.format(i), dtype=Bit(self.input_vector_w), dflt=0, clk=clk)
             if self.segments_32b_num == 1:
                 idin.ready <<= True
             else:
                 idin.ready <<= False
                 
             self.idin.append(idin)
-            d >>= idin
+            d >> idin
             
         self.inst(sydpy.Process, 'pack', self.pack, senslist=[self.din0.clk.e.posedge])
         self.inst(sydpy.Process, 'dispatch', self.dispatch, senslist=[self.din0.clk.e.posedge])

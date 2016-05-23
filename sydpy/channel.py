@@ -30,10 +30,6 @@ class Channel(Component):
         self.master = None
         self.master_connected = False
     
-    def __irshift__(self, other):
-        self.drive(other)
-        return self
-
     def __rshift__(self, other):
         self.drive(other)
         return self
@@ -51,10 +47,6 @@ class Channel(Component):
         
 #         self._gen_drivers()
 #         intf._mch = self
-    
-    def __ilshift__(self, other):
-        self.sink(other)
-        return self
     
     def __lshift__(self, other):
         self.sink(other)

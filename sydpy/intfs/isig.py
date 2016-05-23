@@ -72,11 +72,6 @@ class Isig(Intf):
         self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
     
     def _prep_write(self, val):
-        try:
-            val = val.read()
-        except AttributeError:
-            pass
-        
         if self._get_dtype():
             val = conv(val, self._get_dtype())
         
@@ -88,9 +83,17 @@ class Isig(Intf):
     
     def __call__(self):
         return self.read()
-    
+
     def __ilshift__(self, other):
         self.write(other)
+        return self
+    
+    def __lshift__(self, other):
+        self._connect(other)
+        return self
+    
+    def __rshift__(self, other):
+        other._connect(self)
         return self
     
     def write(self, val):
