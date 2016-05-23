@@ -15,6 +15,7 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
+from sydpy.intfs.intf import Intf
 
 """ Module with utilility objects.
 
@@ -114,14 +115,14 @@ class _SigNameVisitor(ast.NodeVisitor):
                 intf = self.symdict[self.ref_path[0]]
                 
                 for p in self.ref_path[1:]:
-                    if hasattr(intf, p):
+                    if p in ['write', 'push', 'bpush']:
+                        self.store = True
+                        break
+                    elif hasattr(intf, p) and isinstance(getattr(intf, p), Intf):
                         intf = getattr(intf, p)
                     else:
-                        if p in ['write', 'push']:
-                            self.store = True
-
                         break
-                           
+                                                   
                 if self.store:
                     self.outputs.add(intf)
                 else:

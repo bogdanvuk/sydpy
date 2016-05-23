@@ -72,12 +72,12 @@ class Signal(object):
         for the value to become available."""
         
         if not self.mem:
-            ddic['sim'].wait(self.e['enqueued'])
+            ddic['sim'].wait(self.e.enqueued)
             
         self._next = self.mem.pop(0)
 #         print('BPOP DONE: {}, id={}, eid={}'.format(self._next, id(self), id(self.e)))
         ddic['sim'].update(self)
-        ddic['sim'].wait(self.e['updated'])
+        ddic['sim'].wait(self.e.updated)
             
         return self._val
     
@@ -97,7 +97,7 @@ class Signal(object):
         trigger the update."""
         
         while self.mem:
-            ddic['sim'].wait(self.e['updated'])
+            ddic['sim'].wait(self.e.updated)
         
         self.push(val)
            
@@ -106,7 +106,7 @@ class Signal(object):
         
         self.mem.append(val)
         if 'enqueued' in self.e.c:
-            self.e['enqueued'].trigger()
+            self.e.enqueued.trigger()
         
     def write(self, val):
         """Write a new value to the signal."""
@@ -130,17 +130,17 @@ class Signal(object):
         val = self._val
         
         if 'updated' in self.e.c:
-            self.e['updated'].trigger()
+            self.e.updated.trigger()
         
         if val != next_val:
             
             if 'changed' in self.e.c:
-                self.e['changed'].trigger()
+                self.e.changed.trigger()
                 
             if 'event_def' in self.e.c:
-                self.e['event_def'].trigger()
+                self.e.event_def.trigger()
                 
-                for _, sube in self.e['event_def'].subevents.items():
+                for _, sube in self.e.event_def.subevents.items():
                     key = sube.key
                     
                     if val.__getitem__(key) != next_val.__getitem__(key):
@@ -148,10 +148,10 @@ class Signal(object):
 
             if not val and next_val and (val is not None):
                 if 'posedge' in self.e.c:
-                    self.e['posedge'].trigger()
+                    self.e.posedge.trigger()
             elif not next_val and val:
                 if 'negedge' in self.e.c:
-                    self.e['negedge'].trigger()
+                    self.e.negedge.trigger()
 
             self._val = copy.deepcopy(next_val)
     

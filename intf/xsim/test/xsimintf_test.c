@@ -621,8 +621,8 @@ static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 __PYX_EXTERN_C DL_EXPORT(void) cython_get_new_message(void); /*proto*/
 __PYX_EXTERN_C DL_EXPORT(void) cython_post_new_message(void); /*proto*/
 __PYX_EXTERN_C DL_EXPORT(void) cython_print(char const *); /*proto*/
-static CYTHON_INLINE PyObject *__Pyx_carray_to_py_char____32__(char (*)[32], Py_ssize_t); /*proto*/
-static CYTHON_INLINE PyObject *__Pyx_carray_to_tuple_char____32__(char (*)[32], Py_ssize_t); /*proto*/
+static CYTHON_INLINE PyObject *__Pyx_carray_to_py_char____0x400__(char (*)[0x400], Py_ssize_t); /*proto*/
+static CYTHON_INLINE PyObject *__Pyx_carray_to_tuple_char____0x400__(char (*)[0x400], Py_ssize_t); /*proto*/
 #define __Pyx_MODULE_NAME "xsimintf_test"
 int __pyx_module_is_main_xsimintf_test = 0;
 
@@ -1560,13 +1560,13 @@ void cython_print(char const *__pyx_v_str) {
 
 /* "carray.to_py":112
  * 
- * @cname("__Pyx_carray_to_py_char____32__")
- * cdef inline list __Pyx_carray_to_py_char____32__(char [32] *v, Py_ssize_t length):             # <<<<<<<<<<<<<<
+ * @cname("__Pyx_carray_to_py_char____0x400__")
+ * cdef inline list __Pyx_carray_to_py_char____0x400__(char [0x400] *v, Py_ssize_t length):             # <<<<<<<<<<<<<<
  *     cdef size_t i
  *     cdef object value
  */
 
-static CYTHON_INLINE PyObject *__Pyx_carray_to_py_char____32__(char (*__pyx_v_v)[32], Py_ssize_t __pyx_v_length) {
+static CYTHON_INLINE PyObject *__Pyx_carray_to_py_char____0x400__(char (*__pyx_v_v)[0x400], Py_ssize_t __pyx_v_length) {
   size_t __pyx_v_i;
   PyObject *__pyx_v_value = 0;
   PyObject *__pyx_v_l = NULL;
@@ -1578,7 +1578,7 @@ static CYTHON_INLINE PyObject *__Pyx_carray_to_py_char____32__(char (*__pyx_v_v)
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
-  __Pyx_RefNannySetupContext("__Pyx_carray_to_py_char____32__", 0);
+  __Pyx_RefNannySetupContext("__Pyx_carray_to_py_char____0x400__", 0);
 
   /* "carray.to_py":115
  *     cdef size_t i
@@ -1648,8 +1648,8 @@ static CYTHON_INLINE PyObject *__Pyx_carray_to_py_char____32__(char (*__pyx_v_v)
 
   /* "carray.to_py":112
  * 
- * @cname("__Pyx_carray_to_py_char____32__")
- * cdef inline list __Pyx_carray_to_py_char____32__(char [32] *v, Py_ssize_t length):             # <<<<<<<<<<<<<<
+ * @cname("__Pyx_carray_to_py_char____0x400__")
+ * cdef inline list __Pyx_carray_to_py_char____0x400__(char [0x400] *v, Py_ssize_t length):             # <<<<<<<<<<<<<<
  *     cdef size_t i
  *     cdef object value
  */
@@ -1657,7 +1657,7 @@ static CYTHON_INLINE PyObject *__Pyx_carray_to_py_char____32__(char (*__pyx_v_v)
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("carray.to_py.__Pyx_carray_to_py_char____32__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("carray.to_py.__Pyx_carray_to_py_char____0x400__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = 0;
   __pyx_L0:;
   __Pyx_XDECREF(__pyx_v_value);
@@ -1669,13 +1669,13 @@ static CYTHON_INLINE PyObject *__Pyx_carray_to_py_char____32__(char (*__pyx_v_v)
 
 /* "carray.to_py":124
  * 
- * @cname("__Pyx_carray_to_tuple_char____32__")
- * cdef inline tuple __Pyx_carray_to_tuple_char____32__(char [32] *v, Py_ssize_t length):             # <<<<<<<<<<<<<<
+ * @cname("__Pyx_carray_to_tuple_char____0x400__")
+ * cdef inline tuple __Pyx_carray_to_tuple_char____0x400__(char [0x400] *v, Py_ssize_t length):             # <<<<<<<<<<<<<<
  *     cdef size_t i
  *     cdef object value
  */
 
-static CYTHON_INLINE PyObject *__Pyx_carray_to_tuple_char____32__(char (*__pyx_v_v)[32], Py_ssize_t __pyx_v_length) {
+static CYTHON_INLINE PyObject *__Pyx_carray_to_tuple_char____0x400__(char (*__pyx_v_v)[0x400], Py_ssize_t __pyx_v_length) {
   size_t __pyx_v_i;
   PyObject *__pyx_v_value = 0;
   PyObject *__pyx_v_t = NULL;
@@ -1687,7 +1687,7 @@ static CYTHON_INLINE PyObject *__Pyx_carray_to_tuple_char____32__(char (*__pyx_v
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
-  __Pyx_RefNannySetupContext("__Pyx_carray_to_tuple_char____32__", 0);
+  __Pyx_RefNannySetupContext("__Pyx_carray_to_tuple_char____0x400__", 0);
 
   /* "carray.to_py":127
  *     cdef size_t i
@@ -1754,8 +1754,8 @@ static CYTHON_INLINE PyObject *__Pyx_carray_to_tuple_char____32__(char (*__pyx_v
 
   /* "carray.to_py":124
  * 
- * @cname("__Pyx_carray_to_tuple_char____32__")
- * cdef inline tuple __Pyx_carray_to_tuple_char____32__(char [32] *v, Py_ssize_t length):             # <<<<<<<<<<<<<<
+ * @cname("__Pyx_carray_to_tuple_char____0x400__")
+ * cdef inline tuple __Pyx_carray_to_tuple_char____0x400__(char [0x400] *v, Py_ssize_t length):             # <<<<<<<<<<<<<<
  *     cdef size_t i
  *     cdef object value
  */
@@ -1763,7 +1763,7 @@ static CYTHON_INLINE PyObject *__Pyx_carray_to_tuple_char____32__(char (*__pyx_v
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("carray.to_py.__Pyx_carray_to_tuple_char____32__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("carray.to_py.__Pyx_carray_to_tuple_char____0x400__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = 0;
   __pyx_L0:;
   __Pyx_XDECREF(__pyx_v_value);
@@ -2188,8 +2188,8 @@ PyMODINIT_FUNC PyInit_xsimintf_test(void)
 
   /* "carray.to_py":124
  * 
- * @cname("__Pyx_carray_to_tuple_char____32__")
- * cdef inline tuple __Pyx_carray_to_tuple_char____32__(char [32] *v, Py_ssize_t length):             # <<<<<<<<<<<<<<
+ * @cname("__Pyx_carray_to_tuple_char____0x400__")
+ * cdef inline tuple __Pyx_carray_to_tuple_char____0x400__(char [0x400] *v, Py_ssize_t length):             # <<<<<<<<<<<<<<
  *     cdef size_t i
  *     cdef object value
  */
@@ -2776,7 +2776,7 @@ static PyObject* __pyx_convert__to_py_T_Command(T_Command s) {
         member = __Pyx_PyInt_From_int(s.cmd); if (member == NULL) goto bad;
         if (PyDict_SetItem(res, __pyx_n_s_cmd, member) < 0) goto bad;
         Py_DECREF(member);
-        member = __Pyx_carray_to_py_char____32__(s.params, 0x80); if (member == NULL) goto bad;
+        member = __Pyx_carray_to_py_char____0x400__(s.params, 0x80); if (member == NULL) goto bad;
         if (PyDict_SetItem(res, __pyx_n_s_params, member) < 0) goto bad;
         Py_DECREF(member);
         member = __Pyx_PyInt_From_int(s.param_cnt); if (member == NULL) goto bad;

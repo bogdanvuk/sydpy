@@ -1,18 +1,27 @@
 from sydpy.component import Component#, compinit#, sydsys
 from sydpy._signal import Signal
 from sydpy.intfs.intf import Intf, SlicedIntf
-from sydpy.intfs.isig import Isig
+from sydpy.intfs.isig import Isig, Csig
 from sydpy.types import bit
 from sydpy.process import Process
 from sydpy.types._type_base import convgen
 from ddi.ddi import ddic
 from sydpy.intfs.itlm import Itlm
 from sydpy._event import EventSet
+from sydpy.types.array import Array
+from enum import Enum
+
+class FlowCtrl(Enum):
+    both = 1
+    valid = 2
+    ready = 3
+    none = 4
 
 class Iseq(Intf):
     _intf_type = 'iseq'
+    feedback_subintfs = ['ready']
 
-    def __init__(self, name, dtype=None, dflt=None, clk=None):
+    def __init__(self, name, dtype=None, dflt=None, clk=None, flow_ctrl=FlowCtrl.both, trans_ctrl=True):
         super().__init__(name)
         
         self._mch = None
@@ -21,36 +30,112 @@ class Iseq(Intf):
         self._dflt = dflt
         
         self.inst(Isig, 'data', dtype=dtype, dflt=dflt)
-        self.inst(Isig, 'valid', dtype=bit, dflt=1)
-        self.inst(Isig, 'ready', dtype=bit, dflt=1)
-        self.inst(Isig, 'last', dtype=bit, dflt=0)
+        if flow_ctrl == FlowCtrl.both or flow_ctrl == FlowCtrl.valid:
+            self.inst(Isig, 'valid', dtype=bit, dflt=0)
+        else:
+            self.inst(Csig, 'valid', dtype=bit, dflt=1)
+        
+        if flow_ctrl == FlowCtrl.both or flow_ctrl == FlowCtrl.ready:
+            self.inst(Isig, 'ready', dtype=bit, dflt=0)
+        else:
+            self.inst(Csig, 'ready', dtype=bit, dflt=1)
+    
+        if trans_ctrl:        
+            self.inst(Isig, 'last', dtype=bit, dflt=0)
+        else:
+            self.inst(Csig, 'last', dtype=bit, dflt=1)
 #         self.inst(Isig, '_dout', dtype=dtype, dflt=0)
         
-        self.c['clk'] = clk
+        self.clk = clk
         
-        self.e = self.inst(EventSet, 'e')
+        self.inst(EventSet, 'e')
         self._dout = Signal(val=dtype(dflt), event_set=self.e)
         
-        self.inst(Process, '_p_ff_proc', self._ff_proc, senslist=[self.c['clk'].e['posedge']])
+        self.inst(Process, '_p_ff_proc', self._ff_proc, senslist=[self.clk.e.posedge])
 #        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
         
 #         self.e = self._dout.e
         self._itlm_sinks = set()
+        self._itlm_data = []
     
-    def _fifo_proc(self):
+    def __call__(self):
+        return self.read()
+    
+    def _fifo_proc(self, srcsig):
+        data = []
         while(1):
-            self.c['data'].bpop()
-            self.c['last'] <<= (self.c['data'].get_queue() == False)
-            self.c['valid'] <<= True
-            ddic['sim'].wait(self.e['updated'])
+            
+#             while (not self.ready()) or (not srcsig.mem):
+#                 if not self.ready():
+#                     ddic['sim'].wait(self.ready.e.changed)
+#                  
+            if not srcsig.mem:
+                ddic['sim'].wait(srcsig.e.enqueued)
+            
+            if (not data) and (srcsig.mem):
+                for val in srcsig.mem:
+                    for d, _ in convgen(val, self._get_dtype()):
+                        data.append(d)
+                        
+                fifo_reserved_cnt = len(srcsig.mem)
+                        
+            for i, d in enumerate(data):
+                self.data <<= d 
+                self.valid <<= True
+                self.last <<= (i == (len(data)-1))
+                ddic['sim'].wait(self._dout.e.updated)
+
+            for _ in range(fifo_reserved_cnt):
+                srcsig.pop()
+            data = []
+            fifo_reserved_cnt = 0
+                
+            self.valid <<= False
+
+#             self.ready <<= True
+#             ddic['sim'].wait(srcsig.e.enqueued, srcsig.e.updated)                
+# #                 for d, _ in convgen(val, self._dtype.deref(keys[-1])):
+# #                     data.append(d)
+#                     
+#             for i, d in enumerate(data):
+#                 self.data <<= d
+# #                 data_sig = self.data
+# #                 for k in keys:
+# #                     data_sig = data_sig[k]
+# #                         
+# #                 data_sig <<= d
+#                 self.last <<= (i == (len(data) - 1))
+#                 self.valid <<= True
+#             ddic['sim'].wait(self.clk.e.posedge)
         
     def _ff_proc(self):
-        if (self.c['ready'] and self.c['valid'] and
+        if self.name == 'top/pack_lookup/frame_out':
+            print('COSIM DIN: ', self.data())
+            print('COSIM VALID: ', self.last())
+            print('COSIM LAST: ', self.valid())
+            print('COSIM READY: ', self.ready())
+            
+        if (self.ready() and self.valid() and
             all([i.empty() for i in self._itlm_sinks])):
             
-            self._dout.write(self.c['data'].read())
-            for i in self._itlm_sinks:
-                i.push(self.c['data'])
+            self._dout.write(self.data())
+            
+            if not self._itlm_data:
+                for i in self._itlm_sinks:
+                    self._itlm_data.append(Array(self._get_dtype())())
+            
+            for i, intf in enumerate(self._itlm_sinks):
+                self._itlm_data[i].append(self.data())
+                
+            if self.last():
+                for i, intf in enumerate(self._itlm_sinks):
+                    for d, _ in convgen(self._itlm_data[i], intf._get_dtype()):
+                        intf.push(d)
+                        
+                self._itlm_data = []
+                
+#         self.last <<= False
+#         self.valid <<= False
         
     def con_driver(self, intf):
         pass
@@ -75,7 +160,7 @@ class Iseq(Intf):
         
     
     def _from_isig(self, other):
-        self.c['data']._connect(other)
+        self.data._connect(other)
     
     def _to_isig(self, other):
         other._connect(self._dout)
@@ -85,12 +170,13 @@ class Iseq(Intf):
     
     def _from_itlm(self, other):
         sig = other._subscribe(self, self._get_dtype())
-        self.inst(Itlm,  'data', dtype=self._get_dtype(), dflt=sig.read())
-        self.c['data']._sig = sig
-        self.c['data']._sig.e = self.c['data'].e
-        self.c['data']._sourced = True
-        
-        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
+#         self.inst(Itlm,  'data', dtype=self._get_dtype(), dflt=sig.read())
+#         self.data._sig = sig
+#         self.data._sig.e = self.data.e
+#         self.data._sourced = True
+        self.valid._dflt = 0
+        self.last._dflt = 0
+        self.inst(Process, '', self._fifo_proc, senslist=[], pkwargs=dict(srcsig=sig))
     
 #     def _pfunc_tlm_to_sig(self, other):
 #         data_fifo = []
@@ -127,7 +213,7 @@ class Iseq(Intf):
     
     def _drive(self, channel):
         self._mch = channel
-        self._dout._drive(channel)
+#         self._dout._drive(channel)
 #         self._sig = Signal(val=self._dtype.conv(self._dflt))
 #         self.e = self._sig.e
         
@@ -135,10 +221,10 @@ class Iseq(Intf):
         self._sch = channel
     
     def write(self, val):
-        self.c['data'].write(val)
+        self.data.write(val)
         
     def push(self, val):
-        self.c['data'].push(val)
+        self.data.push(val)
     
     def read_next(self):
         return self._dout._next
@@ -150,4 +236,53 @@ class Iseq(Intf):
         return self._dout.get_queue()
     
     def deref(self, key):
-        return SlicedIntf(self, key)
+        return SlicedIseq(self, key)
+
+class SlicedIseq(Iseq):
+    """Provides access to the parent interface via a key."""
+    def __init__(self, intf, key):
+        """"Create SlicedIntf of a parent with specific key."""
+        #_IntfBase.__init__(self)
+        self._dtype = intf._get_dtype().deref(key)
+        self._key = key
+        self._parent = intf
+
+    def _get_dtype(self):
+        return self._dtype
+
+    def __getattr__(self, name):
+        if name in self._parent.c:
+            if name == 'data':
+                return self._parent.c[name][self._key]
+            else:
+                return self._parent.c[name]
+        else:
+            return getattr(self._parent, name)
+
+    def _from_itlm(self, other):
+        self._parent.valid._dflt = 0
+        self._parent.last._dflt = 0
+        super()._from_itlm(other)
+    
+    def read(self):
+        return self._parent.read()[self._key]
+    
+    def write(self, val):
+        next_val = self._parent.read_next()
+        for k in self._key[:-1]:
+            next_val = next_val[k]
+            
+        next_val[self._key[-1]] = val
+        return self._parent.write(next_val)
+    
+    def unsubscribe(self, proc, event=None):
+        if event is None:
+            self._parent.e.event_def[self._key].unsubscribe(proc)
+        else:
+            getattr(self._parent.e, event)[self._key].unsubscribe(proc)
+        
+    def subscribe(self, proc, event=None):
+        if event is None:
+            return self._parent.e.event_def[self._key].subscribe(proc)
+        else:
+            getattr(self._parent.e, event)[self._key].subscribe(proc)

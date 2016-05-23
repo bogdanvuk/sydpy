@@ -86,6 +86,9 @@ class array(TypeBase):
     def __getitem__(self, key):
         return self._val[key]
     
+    def append(self, val):
+        self._val.append(self.dtype(val))
+    
     def __iadd__(self, other):
         for v in other:
             self._val.append(self.dtype(v))
@@ -183,8 +186,12 @@ class array(TypeBase):
         
         if (remain is not None) and (not remain._empty()):
             convlist.append(remain)
-         
-        conval = convlist[0]
+        
+        if convlist:
+            conval = convlist[0]
+        else:
+            conval = remain
+            
         for item in convlist[1:]:
             conval = item._concat(conval)
         

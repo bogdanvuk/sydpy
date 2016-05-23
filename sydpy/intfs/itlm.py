@@ -18,18 +18,18 @@ class Itlm(Isig):
             self._isig_sinks.add(other)
         
     def _subscribe(self, intf, dtype=None):
-        sig = Signal(val=copy.deepcopy(self._dflt))
-        if dtype is None:
-            dtype = self._get_dtype()
-        sig._dtype = dtype
+        sig = Signal(val=copy.deepcopy(self._dflt), event_set=EventSet('e'))
+#         if dtype is None:
+#             dtype = self._get_dtype()
+#         sig._dtype = dtype
         self._sinks.add(sig)
         
-        if self._sourced and ('_pfunc_tlm_dispatch' not in self.c):
-            self.inst(Process, '_pfunc_tlm_dispatch', self._pfunc_tlm_dispatch)
+#         if self._sourced and ('_pfunc_tlm_dispatch' not in self.c):
+#             self.inst(Process, '_pfunc_tlm_dispatch', self._pfunc_tlm_dispatch)
         
         return sig
         
-    def _from_itlm(self, other):
+    def _from_itlm(self, other, keys=[]):
         if self._get_dtype() is other._get_dtype():
 #             other._tlm_sinks.add(self)
 #            self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
@@ -43,21 +43,26 @@ class Itlm(Isig):
         else:
             self.inst('_p_dtype_convgen', Process, self._pfunc_dtype_convgen, [], pargs=(other,))
 
-    def _pfunc_tlm_dispatch(self):
-        while(1):
-#             if self._sig.empty():
+#     def _pfunc_tlm_dispatch(self):
+#         while(1):
+# #             if self._sig.empty():
+# #                 ddic['sim'].wait(self.e['enqueued'])
+# #
+#             if not self._sig.mem:
 #                 ddic['sim'].wait(self.e['enqueued'])
+#             
+#             for data_recv in self._sig.mem()
+#             self._next = self.mem.pop(0)
+#             data_recv = self._sig.bpop()
+#             for s in self._sinks:
+#                 if self._get_dtype() is s._dtype:
+#                     s.push(data_recv)
+#                 else:
+#                     for d, _ in convgen(data_recv, s._dtype):
+#                         s.push(d)
 #                 
-            data_recv = self._sig.bpop()
-            for s in self._sinks:
-                if self._get_dtype() is s._dtype:
-                    s.push(data_recv)
-                else:
-                    for d, _ in convgen(data_recv, s._dtype):
-                        s.push(d)
-                
-            while not all([s.empty() for s in self._sinks]):
-                ddic['sim'].wait(*[s.e['updated'] for s in self._sinks])
+#             while not all([s.empty() for s in self._sinks]):
+#                 ddic['sim'].wait(*[s.e['updated'] for s in self._sinks])
                 
 #             for s in self._sinks:
 #                 data_conv_gen = convgen(data_recv, s._get_dtype())
@@ -80,21 +85,30 @@ class Itlm(Isig):
     
     def _create_source_sig(self):
         self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
-        if self._sinks:
-            self.inst(Process, '_pfunc_tlm_dispatch', self._pfunc_tlm_dispatch)
+#         if self._sinks:
+#             self.inst(Process, '_pfunc_tlm_dispatch', self._pfunc_tlm_dispatch)
 #         Process('_pfunc_tlm_dispatch', self, self._pfunc_tlm_dispatch)
     
     def bpush(self, val):
-        val = self._prep_write(val)
-        self._sig.bpush(val)
+#         val = self._prep_write(val)
+        
+        while not all([s.empty() for s in self._sinks]):
+            ddic['sim'].wait(*[s.e.updated for s in self._sinks])
+        
+#         self._sig.bpush(val)
+        self.push(val)
         
     def push(self, val):
         val = self._prep_write(val)
+
+        for s in self._sinks:
+            s.push(val)
+            
         self._sig.push(val)
         
     def bpop(self):
         if not self._sourced:
-            ddic['sim'].wait(self.e['enqueued'])
+            ddic['sim'].wait(self.e.enqueued)
         
         #print('BPOP: {}, sigid={}, eid={}'.format(self.name, id(self._sig), id(self._sig.e)))
         return self._sig.bpop()

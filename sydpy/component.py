@@ -70,22 +70,31 @@ class Component:
 #     def __contains__(self, key):
 #         return key in self._comp
 
-    def inst(self, cls, name, *args, **kwargs):
+    def inst(self, cls, name='', *args, **kwargs):
         c_name = name
-        name = sep.join([self.name, name])
-        
-        if anonymous(name):
-            name += str(random.randint(0, 1e8))
-        
+        if anonymous(c_name):
+            c_name += 'c' + str(random.randint(0, 1e8))
+
+        name = sep.join([self.name, c_name])
+
         ddic.provide_on_demand(sep.join(['cls', name]), cls, name, inst_args = (name,) + args, inst_kwargs = kwargs)
         
         if name in ddic:
             c = ddic[name]
             self.c[c_name] = c
+#             setattr(self, c_name, c)
             return c
         else:
             return None
-
+        
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            if name in self.c:
+                return self.c[name]
+            else:
+                raise
     
 #         self.comp[key] = val
 #     

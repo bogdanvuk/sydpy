@@ -23,10 +23,10 @@ int socket_open()
     setsockopt(sock,SOL_SOCKET,SO_REUSEADDR, &so_reuseaddr, sizeof so_reuseaddr);
 
 
-    tv.tv_sec = 10;  /* 10 Secs Timeout */
-    tv.tv_usec = 0;  // Not init'ing this can cause strange errors
+    /* tv.tv_sec = 10;  /\* 10 Secs Timeout *\/ */
+    /* tv.tv_usec = 0;  // Not init'ing this can cause strange errors */
 
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(struct timeval));
+    /* setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(struct timeval)); */
 
     server.sin_addr.s_addr = inet_addr("127.0.0.1");
     server.sin_family = AF_INET;

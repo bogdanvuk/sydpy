@@ -17,6 +17,8 @@
 #  <http://www.gnu.org/licenses/>.
 from ddi.ddi import Dependency, ddic
 from sydpy.intfs.isig import Isig
+from sydpy.types.bit import Bit
+from sydpy.types import bit
 
 """Module implements VCDTracer simulator extension."""
 
@@ -36,7 +38,7 @@ class VCDTracer:
         self.patterns = patterns
         self.vcd_filename = vcd_filename
         self.channel_hrchy = channel_hrchy
-        self.vcd_out_path = vcd_out_path
+        self.vcd_out_path = os.path.realpath(vcd_out_path)
         self.timescale = timescale
         self.trace_deltas = trace_deltas
         self.max_delta_count = sim.max_delta_count
@@ -44,26 +46,32 @@ class VCDTracer:
         if (not os.path.isdir(self.vcd_out_path)):
             os.makedirs(self.vcd_out_path, exist_ok=True)
         
-        self.vcdfile = open(self.vcd_out_path + "/" + self.vcd_filename + ".tmp", 'w')
+        #self.vcdfile = open(self.vcd_out_path + "/" + self.vcd_filename + ".tmp", 'w')
+        self.vcdfile = open(self.vcd_out_path + "/" + self.vcd_filename, 'w')
         
-        self.trace_list = []
+        self.traces = None
+        self.unconnected = None
+        self.connected = None
+        self.sig_to_traces_map = {}
         self.last_code = ['a', 'a', 'a']
         sim.events['timestep_start'].append(self.write_timestamp)
         sim.events['timestep_end'].append(self.write_traces)
         sim.events['update'].append(self.signal_update)
-        self.trace_list = None
-        self.untraced_isigs = None
-        self.sig_to_traces_map = {}
+
         self.updated_signals = set()
         
 #         if self.trace_deltas:
 #             sim.events['delta_start'].append(self.write_delta_traces)
             
-        sim.events['run_end'].append(self.writeVcdHeader)
+        sim.events['run_start'].append(self.writeVcdHeader)
+        sim.events['run_end'].append(self.sim_end)
 
     def signal_update(self, signal, sim):
         self.updated_signals.add(signal)
         return True 
+    
+    def sim_end(self, sim):
+        self.vcdfile.close()
     
     def _print_val(self):
         if isinstance(self.isig.read(), bool):
@@ -74,9 +82,7 @@ class VCDTracer:
             self.vcdfile.write("s{0} {1}\n".format(str(self.isig.read()).replace(' ', '').replace("'", ""), self._code))
 
     def create_trace(self, isig):
-        if isig.name == 'top/pack_lookup/frame_out':
-            pass
-        
+       
         code =  "".join(self.last_code)
      
         if self.last_code[2] != 'z':
@@ -94,50 +100,52 @@ class VCDTracer:
              
         return trace
     
+    def init_trace_list(self):
+        self.traces = []
+        self.unconnected = []
+        self.connected = []
+        self.selected_isigs = []
+        
+        for p in self.patterns:
+            for name in ddic.search(p, lambda obj: isinstance(obj, Isig)):
+                isig = ddic[name]
+                trace = self.create_trace(isig)
+                self.traces.append(trace)  
+                if isig._sourced:
+                    self.connected.append(trace)
+
+                    if isig._sig not in self.sig_to_traces_map:
+                        self.sig_to_traces_map[isig._sig] = set()
+                         
+                    self.sig_to_traces_map[isig._sig].add(trace)
+                else:
+                    self.unconnected.append(trace)
+    
     def write_traces(self, time, sim):
-        if self.trace_list is None:
-            self.untraced_isigs = []
-            self.trace_list = []
-            
-            for p in self.patterns:
-                for name in ddic.search(p, lambda obj: isinstance(obj, Isig)):
-                    isig = ddic[name]  
-                    if isig._sourced:
-                        trace = self.create_trace(isig)
-                        self.trace_list.append(trace)
-
-                        if isig._sig not in self.sig_to_traces_map:
-                            self.sig_to_traces_map[isig._sig] = set()
-                             
-                        self.sig_to_traces_map[isig._sig].add(trace)
-                    else:
-                        self.untraced_isigs.append(isig)
-
 #         for t in self.trace_list:
 #             if t._sourced and t._sig in self.updated_signals:
 #                 t.print_val()
         
-        if self.untraced_isigs:
+        if self.unconnected:
             traced = []
-            for i, isig in enumerate(self.untraced_isigs):
-                if isig._sourced:
+            for i, trace in enumerate(self.unconnected):
+                if trace.isig._sourced:
                     traced.append(i)
-                    trace = self.create_trace(isig)
-                    self.trace_list.append(trace)
-                    if isig._sig not in self.sig_to_traces_map:
-                        self.sig_to_traces_map[isig._sig] = set() 
+                    self.connected.append(trace)
+                    if trace.isig._sig not in self.sig_to_traces_map:
+                        self.sig_to_traces_map[trace.isig._sig] = set() 
                     
-                    self.sig_to_traces_map[isig._sig].add(trace)
+                    self.sig_to_traces_map[trace.isig._sig].add(trace)
                     
             for i in reversed(traced):
-                del self.untraced_isigs[i]
+                del self.unconnected[i]
 
         for signal in self.updated_signals:
             if signal not in self.sig_to_traces_map:
                 traces = set()
-                for i in self.untraced_isigs:
-                    if signal is i._sig:
-                        traces.add(self.create_trace(i))
+                for t in self.unconnected:
+                    if signal is t.isig._sig:
+                        traces.add(t)
                  
                 self.sig_to_traces_map[signal] = traces
                  
@@ -148,28 +156,30 @@ class VCDTracer:
         return True
     
     def writeVcdHeader(self, sim):
-        self.vcdfile.close()
-        self.vcdfile = open(self.vcd_out_path + "/" + self.vcd_filename, 'w')
+#         self.vcdfile.close()
+#         self.vcdfile = open(self.vcd_out_path + "/" + self.vcd_filename, 'w')
          
         self.used_codes = set()
          
         self.writeVcdHeaderStart()
+        self.init_trace_list()
         self.writeComponentHeader(ddic['top'])
         self.writeVcdHeaderEnd()
         self.writeVcdInitValuesStart()
-         
+        for s in self.traces:
+            s.print_val()
         self.writeVcdInitValuesEnd()
          
-        with open(self.vcd_out_path + "/" + self.vcd_filename + ".tmp", 'r+') as vcdfile_tmp:
-            for line in vcdfile_tmp:
-                if line[0] == '#':
-                    self.vcdfile.write(line)
-                else:
-                    code = line.split(' ')[1].strip()
-                    if code in self.used_codes:
-                        self.vcdfile.write(line)
-         
-        self.vcdfile.close()
+#         with open(self.vcd_out_path + "/" + self.vcd_filename + ".tmp", 'r+') as vcdfile_tmp:
+#             for line in vcdfile_tmp:
+#                 if line[0] == '#':
+#                     self.vcdfile.write(line)
+#                 else:
+#                     code = line.split(' ')[1].strip()
+#                     if code in self.used_codes:
+#                         self.vcdfile.write(line)
+#          
+#         self.vcdfile.close()
      
     def writeVcdHeaderStart(self):
         self.vcdfile.write("$date\n")
@@ -192,30 +202,32 @@ class VCDTracer:
          
     def writeVcdInitValuesEnd(self):
         self.vcdfile.write("$end\n")
-     
     
     def component_hier_dfs(self, hier, path):
-        self.writeComponentHeaderStart(ddic[path])
+        if path in ddic:
+            self.writeComponentHeaderStart(ddic[path])
+            
         for name, c in hier.items():
             if isinstance(c, VCDTrace):
                 c.print_var_declaration()
                 self.used_codes.add(c.code)
             else:
                 self.component_hier_dfs(c, '/'.join([path, name]))
-                
-        self.writeComponentHeaderEnd()
+        
+        if path in ddic:    
+            self.writeComponentHeaderEnd()
     
     def writeComponentHeader(self, top):
 #         self.visited_traces = set()
 #         component_visitor(top, before_comp=self.writeComponentHeaderVisitorBegin, end_comp=self.writeComponentHeaderVisitorEnd)
         hier = {}
         
-        for trace in self.trace_list:
+        for trace in self.traces:
             name = trace.isig.name
             trace.vcdfile = self.vcdfile
             path = name.split('/')
             hier_cur = hier
-            for p in path[1:-1]:
+            for p in path[:-1]:
                 if p not in hier_cur:
                     hier_cur[p] = {}
                     
@@ -372,15 +384,22 @@ class VCDTrace():
      
     def print_var_declaration(self):
         name = self.isig.name.replace(':','_').replace('[', '_').replace(']', '')
-        if isinstance(self.isig.read(), bool):
-            s = "$var wire 1 {0} {1} $end\n".format(self.code, name)
-        elif hasattr(self.isig.read(), 'bitstr'):
-            str_val = self.isig.read().bitstr()
-             
-            if len(str_val) == 3:
+        
+        if name == 'top/jesd_packer/din/data':
+            pass
+        
+        if self.isig._get_dtype():
+            if self.isig._get_dtype() is bool:
                 s = "$var wire 1 {0} {1} $end\n".format(self.code, name)
-            else:
-                s = "$var wire {0} {1} {2} $end\n".format(len(str_val) - 2, self.code, name)
+            elif issubclass(self.isig._get_dtype(), bit):
+                str_val = self.isig.read().bitstr()
+                 
+                if len(str_val) == 3:
+                    s = "$var wire 1 {0} {1} $end\n".format(self.code, name)
+                else:
+                    s = "$var wire {0} {1} {2} $end\n".format(len(str_val) - 2, self.code, name)
+            else: # default to 'string'
+                s ="$var real 1 {0} {1} $end\n".format(self.code, name)
         else: # default to 'string'
             s ="$var real 1 {0} {1} $end\n".format(self.code, name)
          
