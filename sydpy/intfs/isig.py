@@ -6,6 +6,7 @@ from sydpy.intfs.intf import Intf, SlicedIntf
 import copy
 from sydpy.types._type_base import convgen, conv
 from sydpy.process import Process
+from collections import OrderedDict
 
 class Isig(Intf):
     _intf_type = 'isig'
@@ -47,14 +48,14 @@ class Isig(Intf):
             
             self._sourced = True
         else:
-            self.inst('_p_dtype_convgen', Process, self._pfunc_dtype_convgen, [], pargs=(other,))
+            self.inst(Process, '_p_dtype_convgen', self._pfunc_dtype_convgen, [], pargs=(other,))
    
     
     def _pfunc_dtype_convgen(self, other):
         while(1):
-            data_recv = other.bpop()
-            data_conv_gen = convgen(data_recv, self._dtype)
-             
+#             for d, _ in convgen(other(), self._dtype)
+#                 
+#              
             try:
                 while True:
                     self.bpush(next(data_conv_gen))
@@ -170,3 +171,24 @@ class SlicedIsig(Isig):
             
 class Csig(Isig):
     pass
+
+class Istruct(Intf):
+    _intf_type = 'istruct'
+    
+    def __init__(self, name, fields=[], dflt={}):
+        super().__init__(name)
+        self.fields = OrderedDict(fields)
+        for f, t in self.fields.items():
+            f_dflt = None
+            if f in dflt:
+                f_dflt = dflt[f]
+                
+            self.inst(Isig, f, dtype=t, dflt=f_dflt)
+            
+    
+    def _from_isig(self, other):
+        for f in self.fields:
+            intf = getattr(self, f)
+            intf << other[f]
+
+    

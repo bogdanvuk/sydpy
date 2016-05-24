@@ -4,7 +4,8 @@ from sydpy.intfs.intf import Intf
 from sydpy.process import Process
 from ddi.ddi import Dependency, diinit
 import os
-from sydpy.intfs.isig import Csig
+from sydpy.intfs.isig import Csig, Isig, Istruct
+from sydpy.types.struct import struct
 
 class Cosim(Component):
     
@@ -32,11 +33,27 @@ class Cosim(Component):
                     
                 self.resolve_intf(s, feedback=(subintf_feedback!=feedback), master=master)
         elif (intf is not self) and (not isinstance(intf, Csig)):
-            name = intf.name[len(self.name)+1:].replace('/', '_')
+            base_name = os.path.relpath(intf.name, self.name)
             if (not master) and (feedback==False):
-                self.inputs[name] = intf
+                direction = self.inputs
             else:
-                self.outputs[name] = intf
+                direction = self.outputs
+                
+            itype = intf._get_dtype()
+            if issubclass(itype, struct):
+                struct_intf = self.inst(Istruct, base_name.replace('/', '_'), fields=list(itype.dtype.items()), dflt=intf._dflt) 
+                base_name = os.path.dirname(base_name)
+                for n, t in itype.dtype.items():
+                    direction[os.path.join(base_name, n).replace('/', '_')] = getattr(struct_intf, n)
+                
+                if direction == self.inputs:
+                    intf >> struct_intf
+                else:
+                    intf << struct_intf
+            else:
+                direction[base_name.replace('/', '_')] = intf
+                
+          
 
     
     def resolve(self):

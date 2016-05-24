@@ -327,9 +327,12 @@ class XsimIntf:
         self.cosim_pool.append(cosim)
         
     def terminate(self):
-        self.server.send('$CLOSE')
-        self.server.close()
-        self.xsim_proc.terminate()
+        try:
+            self.server.send('$CLOSE')
+            self.server.close()
+            self.xsim_proc.terminate()
+        except:
+            pass
         
 #     def __del__(self):
 #         try:

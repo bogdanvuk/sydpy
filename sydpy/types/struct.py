@@ -120,7 +120,7 @@ class struct(TypeBase):
     
     @classmethod
     def deref(self, key):
-        return self.dtype
+        return self.dtype[key]
 
     def __str__(self):
         return "(" + ",".join([str(e) for e in self._val]) + ")"
@@ -165,8 +165,14 @@ class struct(TypeBase):
             return st(list(self._val[key]))
         elif isinstance( key, int ) :
             return self._val[key]
+        elif isinstance(key, str):
+            pos = list(self.dtype.keys()).index(key)
+            return self._val[pos]
         else:
             raise TypeError("Invalid argument type.")
+
+    def __contains__(self, key):
+        return key in self.dtype.keys()
 
     def __setitem__(self, key):
         return self._val[key]
