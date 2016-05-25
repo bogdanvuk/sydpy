@@ -26,18 +26,21 @@ class Cosim(Component):
             for s in subintfs:
                 if isinstance(intf, Intf):
                     subintf_feedback = s.name.rpartition('/')[-1] in intf.feedback_subintfs
-                    master = not (intf._mch is None) 
+                    master = not (intf._mch is None)
                 else:
-                    master = False
+                    master = not (s._mch is None)
                     subintf_feedback = False
+                    
+                
                     
                 self.resolve_intf(s, feedback=(subintf_feedback!=feedback), master=master)
         elif (intf is not self) and (not isinstance(intf, Csig)):
             base_name = os.path.relpath(intf.name, self.name)
-            if (not master) and (feedback==False):
-                direction = self.inputs
-            else:
+            
+            if master != feedback:
                 direction = self.outputs
+            else:
+                direction = self.inputs
                 
             itype = intf._get_dtype()
             if issubclass(itype, struct):

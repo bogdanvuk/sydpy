@@ -174,8 +174,12 @@ class struct(TypeBase):
     def __contains__(self, key):
         return key in self.dtype.keys()
 
-    def __setitem__(self, key):
-        return self._val[key]
+    def __setitem__(self, key, val):
+        if isinstance( key, int ) :
+            self._val[key] = val
+        elif isinstance(key, str):
+            pos = list(self.dtype.keys()).index(key)
+            self._val[pos] = val
     
 #     @classmethod
 #     def _from_NoneType(cls, other):
@@ -246,7 +250,14 @@ class struct(TypeBase):
         return dt_remain
    
     def _empty(self):
-        return sum(self._vld) == 0
+   
+        for v in self._val:
+            if (v is None) or getattr(v, '_empty', lambda : False)():
+                return True
+        else:
+            return False    
+           
+#         return sum(self._vld) == 0
    
     @classmethod
     def _convto(cls, cls_other, val):

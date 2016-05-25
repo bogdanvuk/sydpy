@@ -39,17 +39,20 @@ class Isig(Intf):
         self._sinks.add(intf)
     
     def _from_isig(self, other):
-        if self._get_dtype() is other._get_dtype():
-#             self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
-#             other._subscribe(self)
-            self._sig = other
-#             for event in self.e.search(of_type=Event):
-#                 getattr(other.e, event).subscribe(event)
-            
-            self._sourced = True
-        else:
-            self.inst(Process, '_p_dtype_convgen', self._pfunc_dtype_convgen, [], pargs=(other,))
-   
+        self.inst(Process, '_p_from_isig', self._p_from_isig, senslist=[other], pargs=(other,))
+#         if self._get_dtype() is other._get_dtype():
+# #             self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
+# #             other._subscribe(self)
+#             self._sig = other
+# #             for event in self.e.search(of_type=Event):
+# #                 getattr(other.e, event).subscribe(event)
+#             
+#             self._sourced = True
+#         else:
+#             self.inst(Process, '_p_dtype_convgen', self._pfunc_dtype_convgen, [], pargs=(other,))
+    
+    def _p_from_isig(self, other):
+        self <<= other()
     
     def _pfunc_dtype_convgen(self, other):
         while(1):
@@ -190,5 +193,10 @@ class Istruct(Intf):
         for f in self.fields:
             intf = getattr(self, f)
             intf << other[f]
+
+    def _to_isig(self, other):
+        for f in self.fields:
+            intf = getattr(self, f)
+            intf >> other[f]
 
     
