@@ -40,7 +40,7 @@ class Scoreboard(Component):
         
         for i, intf in enumerate(intfs):
             self.recv_intfs.append(self.inst(Itlm, str(i), dtype=intf._get_dtype()))
-            self.recv_intfs[-1]._connect(intf)
+            self.recv_intfs[-1] << intf
             
         self.inst(Process, 'dflt', self.dflt)
 

@@ -141,7 +141,7 @@ class Signal(object):
                 self.e.event_def.trigger()
                 
                 for _, sube in self.e.event_def.subevents.items():
-                    key = sube.key
+                    key = sube._key
                     
                     if val.__getitem__(key) != next_val.__getitem__(key):
                         sube.trigger()

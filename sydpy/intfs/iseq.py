@@ -52,6 +52,7 @@ class Iseq(Intf):
         self._dout = Signal(val=dtype(dflt), event_set=self.e)
         
         self.inst(Process, '_p_ff_proc', self._ff_proc, senslist=[self.clk.e.posedge])
+      
 #        self.inst(Process, '_p_fifo_proc', self._fifo_proc, senslist=[])
         
 #         self.e = self._dout.e
@@ -64,11 +65,7 @@ class Iseq(Intf):
     def _fifo_proc(self, srcsig):
         data = []
         while(1):
-            
-#             while (not self.ready()) or (not srcsig.mem):
-#                 if not self.ready():
-#                     ddic['sim'].wait(self.ready.e.changed)
-#                  
+                 
             if not srcsig.mem:
                 ddic['sim'].wait(srcsig.e.enqueued)
             
@@ -92,22 +89,7 @@ class Iseq(Intf):
                 
             self.valid <<= False
 
-#             self.ready <<= True
-#             ddic['sim'].wait(srcsig.e.enqueued, srcsig.e.updated)                
-# #                 for d, _ in convgen(val, self._dtype.deref(keys[-1])):
-# #                     data.append(d)
-#                     
-#             for i, d in enumerate(data):
-#                 self.data <<= d
-# #                 data_sig = self.data
-# #                 for k in keys:
-# #                     data_sig = data_sig[k]
-# #                         
-# #                 data_sig <<= d
-#                 self.last <<= (i == (len(data) - 1))
-#                 self.valid <<= True
-#             ddic['sim'].wait(self.clk.e.posedge)
-        
+
     def _ff_proc(self):
         if self.name == 'top/pack_lookup/frame_out':
             print('COSIM DIN: ', self.data())
@@ -115,8 +97,8 @@ class Iseq(Intf):
             print('COSIM LAST: ', self.valid())
             print('COSIM READY: ', self.ready())
             
-        if (self.ready() and self.valid() and
-            all([i.empty() for i in self._itlm_sinks])):
+        if (self.ready() and self.valid()): # and
+            #all([i.empty() for i in self._itlm_sinks])):
             
             self._dout.write(self.data())
             
@@ -133,31 +115,12 @@ class Iseq(Intf):
                         intf.push(d)
                         
                 self._itlm_data = []
-                
-#         self.last <<= False
-#         self.valid <<= False
         
     def con_driver(self, intf):
         pass
     
     def _get_dtype(self):
         return self._dtype
-    
-#     def _find_sources(self):
-#         if self._sch:
-#             if self._sig is None:
-#                 self.conn_to_intf(self._sch.master)
-#             
-#             if self._sig is not None:
-#                 return True
-#             else:
-#                 return False
-#         else:
-#             return True
-
-#     def _connect(self, master):
-#         self.con
-        
     
     def _from_isig(self, other):
         self.data._connect(other)
@@ -167,55 +130,28 @@ class Iseq(Intf):
     
     def _to_itlm(self, other):
         self._itlm_sinks.add(other)
+        self.ready._dflt = 1
+#         self._ready_src_events.add(other.)
+#         if '_p_ready_proc' not in self.c:
+#             self.inst(Process, '_p_ready_proc', self._ready_proc, senslist=[])
     
     def _from_itlm(self, other):
         sig = other._subscribe(self, self._get_dtype())
-#         self.inst(Itlm,  'data', dtype=self._get_dtype(), dflt=sig.read())
-#         self.data._sig = sig
-#         self.data._sig.e = self.data.e
-#         self.data._sourced = True
         self.valid._dflt = 0
         self.last._dflt = 0
         self.inst(Process, '', self._fifo_proc, senslist=[], pkwargs=dict(srcsig=sig))
-    
-#     def _pfunc_tlm_to_sig(self, other):
-#         data_fifo = []
-#         last_fifo = []
-# 
-#         while(1):
-#             data_recv = other.bpop()
-# 
-#             data_conv_gen = convgen(data_recv, self._dtype)
-#             data_fifo = []
-#             
-#             try:
-#                 while True:
-#                     data_fifo.append(next(data_conv_gen))
-#             except StopIteration as e:
-#                 remain = e.value
-#                 if remain is not None:
-#                     data_fifo.append(remain)
-#                     remain = None
-#                 
-#             for d in data_fifo:
-#                 
-#                 
-#                 if not data_o.valid.read(False):
-#                     data_o.data.next = data_fifo[0]
-#                     data_o.last.next = last_fifo[0]
-#                     data_o.valid.next = True
-# 
-#                 simwait(last_data_event)
         
-    def _from_iseq(self, intf):
-        self._sig = intf._sig
-        self.e = self._sig.e
+    def _to_iseq(self, other):
+        self._iseq_sinks.add(other)
+#         if '_p_ready_proc' not in self.c:
+#             self.inst(Process, '_p_ready_proc', self._ready_proc, senslist=[])
+        
+        self.valid >> other.valid
+        self.last >> other.last
+        self.data >> other.data
     
     def _drive(self, channel):
         self._mch = channel
-#         self._dout._drive(channel)
-#         self._sig = Signal(val=self._dtype.conv(self._dflt))
-#         self.e = self._sig.e
         
     def _sink(self, channel):
         self._sch = channel

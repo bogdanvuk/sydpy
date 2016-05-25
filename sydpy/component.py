@@ -94,7 +94,7 @@ class Component:
             if name in self.c:
                 return self.c[name]
             else:
-                raise
+                raise AttributeError('Component does not have an attribute ' + name)
     
 #         self.comp[key] = val
 #     

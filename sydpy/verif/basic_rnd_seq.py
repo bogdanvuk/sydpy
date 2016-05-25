@@ -15,10 +15,11 @@
 #  You should have received a copy of the GNU Lesser General 
 #  Public License along with sydpy.  If not, see 
 #  <http://www.gnu.org/licenses/>.
+from sydpy.intfs.itlm import Itlm
 
 """Module implements the basic random sequencer module."""
 
-from sydpy import arch_def, rnd
+from sydpy import rnd
 from .basic_seq import BasicSeq
 
 class BasicRndSeq(BasicSeq):
@@ -42,6 +43,11 @@ class BasicRndSeq(BasicSeq):
             of tlm and it has to be master.
     """
     
+    def __init__(self, name, seq_o, dtype=None, delay=None, seed=None, flow_ctrl=True, init=None):
+        super().__init__(name, None, self.rnd_gen(dtype, delay, seed, init), flow_ctrl)
+        seq_o << self.inst(Itlm, 'seq', dtype=dtype)
+        self.seq_o = self.seq
+    
     def rnd_gen(self, dtype, delay=None, seed=None, init=None):
         """The generator function to be supplied to BasicSeq to generate the 
         transactions."""
@@ -62,5 +68,6 @@ class BasicRndSeq(BasicSeq):
             yield (next_seq, next_delay)
     
     #@arch_def
-    def tlm(self, seq_o, delay=None, seed=None, flow_ctrl=True, init=None):
-        BasicSeq.tlm(self, seq_o, self.rnd_gen(seq_o, delay, seed, init), flow_ctrl)
+
+        
+        
