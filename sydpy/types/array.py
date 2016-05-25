@@ -82,6 +82,9 @@ class array(TypeBase):
     
     def __len__(self):
         return len(self._val)
+
+    def __setitem__(self, key, val):
+        self._val[key] = val
     
     def __getitem__(self, key):
         return self._val[key]
@@ -166,7 +169,7 @@ class array(TypeBase):
         return r
         
     def _iconcat(self, other):
-        if other is Array:
+        if isinstance(other, array) or isinstance(other, list) or isinstance(other, tuple):
             for item in other:
                 self._iconcat_item(item)
         else:

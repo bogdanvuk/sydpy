@@ -31,6 +31,9 @@ class Isig(Intf):
     def con_driver(self, intf):
         pass
     
+    def deref(self, key):
+        return SlicedIsig(self, key)
+    
 #     def _connect(self, master):
 #         if not self._sourced:
 #             self._conn_to_intf(master)
@@ -108,9 +111,6 @@ class Isig(Intf):
         else:
             return self._sig.read()
         
-    def deref(self, key):
-        return SlicedIsig(self, key)
-   
     def _missing_event(self, event_set, name):
         event = self.e.inst(Event, name)
         
@@ -128,9 +128,13 @@ class SlicedIsig(Isig):
         self._dtype = intf._get_dtype().deref(key)
         self._key = key
         self._parent = intf
+        self._sliced_intfs = {}
 
     def _get_dtype(self):
         return self._dtype
+
+    def deref(self, key):
+        return SlicedIsig(self, key)
 
     def __getattr__(self, name):
         if name in self._parent.c:
@@ -140,6 +144,9 @@ class SlicedIsig(Isig):
     
     def read(self):
         return self._parent.read()[self._key]
+    
+    def read_next(self):
+        return self._parent.read_next()[self._key]
     
     def write(self, val):
         next_val = self._parent.read_next()

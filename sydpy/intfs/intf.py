@@ -185,9 +185,18 @@ class SlicedIntf(Proxy):
         self._parent = intf
         self._sliced_dtype = intf._get_dtype().deref(key)
         self._key = key
+        self._sliced_intfs = {}
 
     def _get_dtype(self):
         return self._sliced_dtype
+
+    def __getitem__(self, key):
+        if repr(key) not in self._sliced_intfs:
+            sliced_intf = self.deref(key)
+            self._sliced_intfs[repr(key)] = sliced_intf
+        else:
+            sliced_intf = self._sliced_intfs[repr(key)]
+        return sliced_intf
 
     def __getattr__(self, name):
         if name in self._parent.c:

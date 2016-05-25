@@ -4,7 +4,8 @@ from sydpy.verif.scoreboard import Scoreboard
 from ddi.ddi import Dependency, diinit
 from sydpy.component import inst, Component
 from tests.jesd_converter import Converter
-from tests.jesd_32bpL_lookup_packer import Jesd32bpLLookupPacker
+from tests.jesd_32bpL_lookup_packer import Jesd32bpLLookupPacker,\
+    Jesd32bpLLookupUnpacker
 from sydpy.intfs.itlm import Itlm
 from sydpy.types.array import Array
 from sydpy.types._type_base import convgen
@@ -179,39 +180,49 @@ class JesdPacking(sydpy.Component):
     def __init__ (self, name, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0)):
         super().__init__(name)
 
-        self.ch_samples = []
-        self.ch_oversamples = []
+        self.ch_tx_samples = []
+        self.ch_tx_oversamples = []
+        self.ch_rx_samples = []
+        self.ch_rx_oversamples = []        
         self.conv = []
         self.ioversample = []
         for i in range(jesd_params['M']):
             ch = self.inst(sydpy.Channel, 'ch_sample{}'.format(i))
-            self.ch_samples.append(ch)
+            self.ch_tx_samples.append(ch)
             ch = self.inst(sydpy.Channel, 'ch_oversample{}'.format(i))
-            self.ch_oversamples.append(ch)
+            self.ch_tx_oversamples.append(ch)
             
-            self.inst(Converter, 'conv{}'.format(i), ch_sample=self.ch_samples[-1], N=jesd_params['N'], CS=jesd_params['CS'])
+            self.inst(Converter, 'conv{}'.format(i), ch_sample=self.ch_tx_samples[-1], N=jesd_params['N'], CS=jesd_params['CS'])
+            
+            ch = self.inst(sydpy.Channel, 'ch_rx_oversample{}'.format(i))
+            self.ch_rx_oversamples.append(ch)
         
         for ch in ['tx_data', 'rx_data', 'frame_out', 'tx_start_of_frame']:
             self.inst(sydpy.Channel, ch)
         
 #        self.inst(PackerTlAlgo, 'pack_algo', ch_samples=ch_gen)
         self.inst(Oversampler, 'oversampler', 
-                  ch_samples        = self.ch_samples, 
-                  ch_oversamples    = self.ch_oversamples)
+                  ch_samples        = self.ch_tx_samples, 
+                  ch_oversamples    = self.ch_tx_oversamples)
         
         self.inst(Jesd32bpLLookupPacker, 'pack_lookup', 
                   frame_out         = self.frame_out, 
-                  ch_samples        = self.ch_oversamples)
+                  ch_samples        = self.ch_tx_oversamples)
         
         self.inst(JesdPackerCosim, 'jesd_packer', 
                   frame_out         = self.tx_data,
-                  ch_samples        = self.ch_oversamples,
+                  ch_samples        = self.ch_tx_oversamples,
                   tx_start_of_frame = self.tx_start_of_frame)
         
         self.inst(JesdDataLink, 'jesd',
                   tx_data           = self.tx_data,
                   rx_data           = self.rx_data,
                   tx_start_of_frame = self.tx_start_of_frame)
+        
+        self.inst(Jesd32bpLLookupUnpacker, 'unpack_lookup',
+                  frame_in         = self.rx_data, 
+                  ch_samples       = self.ch_rx_oversamples)
+                  
 
 N = 16
 CS = 0
