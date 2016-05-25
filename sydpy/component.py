@@ -89,7 +89,7 @@ class Component:
         
     def __getattr__(self, name):
         if name == 'c':
-            raise AttributeError("""Component has no attribute '{}'. Component superclass probably not initialized.
+            raise AttributeError("""Component has no attribute  or subcomponent '{}'. Component superclass probably not initialized.
             Did you forget to put 'super().__init__(name)' at the beginning of the Component __init__() function?""".format(name))
         
         try:
@@ -98,7 +98,7 @@ class Component:
             if name in self.c:
                 return self.c[name]
             else:
-                raise AttributeError('Component does not have an attribute ' + name)
+                raise AttributeError("Component has no attribute or subcomponent '{}'".format(name))
     
 #         self.comp[key] = val
 #     

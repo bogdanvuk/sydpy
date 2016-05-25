@@ -155,9 +155,13 @@ class Simulator(Component):
         self.max_time = self.time + self.duration
  
         self.running = True
+                
         self.events['run_start'](self)
         self._finished = False
-        
+#         # Resolve all of the updates requested prior to simulation start
+#         self._update()
+#         self._resolve()
+
         while not self._finished:
             self.delta_count = 0
             self.events['timestep_start'](self.time, self)

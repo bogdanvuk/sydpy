@@ -274,8 +274,8 @@ class XsimIntf:
         if not self.remote_debug:
             self.run_xsim()
 
-        self.send_import()
-        self.send_command('CONTINUE')
+#         self.send_import()
+#         self.send_command('CONTINUE')
         
     def sim_run_end(self, sim):
         xsim_state = None
@@ -289,6 +289,9 @@ class XsimIntf:
     def sim_timestep_start(self, time, sim):
         if time > 0:
             self.send_command('SET', ['delay', str(time - self.cosim_time - 1)])
+            self.send_command('CONTINUE')
+        else:
+            self.send_import()
             self.send_command('CONTINUE')
 
         self.cosim_time = time

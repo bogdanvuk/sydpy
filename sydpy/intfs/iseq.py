@@ -47,7 +47,8 @@ class Iseq(Intf):
 #         self.inst(Isig, '_dout', dtype=dtype, dflt=0)
         
         self.clk = clk
-        
+        self.flow_ctrl = flow_ctrl
+        self.trans_ctrl = trans_ctrl
         self.inst(EventSet, 'e')
         self._dout = Signal(val=dtype(dflt), event_set=self.e)
         
@@ -118,12 +119,15 @@ class Iseq(Intf):
         senslist = [s.ready for s in self._iseq_sinks]
         while(1):
             ddic['sim'].wait(*senslist)
+#             
+#             if senslist[0].name == 'top/jesd/tx_data/ready':
+#                 pass
             for s in self._iseq_sinks:
                 if not s.ready():
                     self.ready <<= False
                     break;
             else:
-                self.ready <<= False
+                self.ready <<= True
     
     def con_driver(self, intf):
         pass
@@ -152,7 +156,8 @@ class Iseq(Intf):
         
     def _to_iseq(self, other):
         self._iseq_sinks.add(other)
-        if '_p_ready_proc' not in self.c:
+        if (self.flow_ctrl == FlowCtrl.both or self.flow_ctrl == FlowCtrl.ready) and \
+           ('_p_ready_proc' not in self.c):
             self.inst(Process, '_p_ready_proc', self._p_ready_proc, senslist=[])
         
         self.valid >> other.valid
