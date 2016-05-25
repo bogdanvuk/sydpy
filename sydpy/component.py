@@ -88,6 +88,10 @@ class Component:
             return None
         
     def __getattr__(self, name):
+        if name == 'c':
+            raise AttributeError("""Component has no attribute '{}'. Component superclass probably not initialized.
+            Did you forget to put 'super().__init__(name)' at the beginning of the Component __init__() function?""".format(name))
+        
         try:
             return super().__getattr__(name)
         except AttributeError:

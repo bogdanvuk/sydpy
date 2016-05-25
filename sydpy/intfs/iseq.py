@@ -57,10 +57,8 @@ class Iseq(Intf):
         
 #         self.e = self._dout.e
         self._itlm_sinks = set()
+        self._iseq_sinks = set()
         self._itlm_data = []
-    
-    def __call__(self):
-        return self.read()
     
     def _fifo_proc(self, srcsig):
         data = []
@@ -115,7 +113,18 @@ class Iseq(Intf):
                         intf.push(d)
                         
                 self._itlm_data = []
-        
+    
+    def _p_ready_proc(self):
+        senslist = [s.ready for s in self._iseq_sinks]
+        while(1):
+            ddic['sim'].wait(*senslist)
+            for s in self._iseq_sinks:
+                if not s.ready():
+                    self.ready <<= False
+                    break;
+            else:
+                self.ready <<= False
+    
     def con_driver(self, intf):
         pass
     
@@ -143,8 +152,8 @@ class Iseq(Intf):
         
     def _to_iseq(self, other):
         self._iseq_sinks.add(other)
-#         if '_p_ready_proc' not in self.c:
-#             self.inst(Process, '_p_ready_proc', self._ready_proc, senslist=[])
+        if '_p_ready_proc' not in self.c:
+            self.inst(Process, '_p_ready_proc', self._p_ready_proc, senslist=[])
         
         self.valid >> other.valid
         self.last >> other.last
@@ -173,7 +182,7 @@ class Iseq(Intf):
     
     def deref(self, key):
         return SlicedIseq(self, key)
-
+    
 class SlicedIseq(Iseq):
     """Provides access to the parent interface via a key."""
     def __init__(self, intf, key):

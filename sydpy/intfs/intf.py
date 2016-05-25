@@ -49,6 +49,21 @@ class Intf(Component):
 #                 arch = types.MethodType(arch,self.get_module())
 #                 self.get_module().arch_inst(arch, data_i=other.master, data_o=self.slave, **cfg)
 
+    def __call__(self):
+        return self.read()
+
+    def __ilshift__(self, other):
+        self.write(other)
+        return self
+    
+    def __lshift__(self, other):
+        self._connect(other)
+        return self
+    
+    def __rshift__(self, other):
+        other._connect(self)
+        return self
+
     def _get_dtype(self):
         return self._dtype
 

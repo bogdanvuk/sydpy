@@ -28,10 +28,11 @@ def test_bit_to_struct():
 
 def test_struct_to_bit():
     assert convlist(Struct(('f1', bit8), ('f2', bit8))((0xcd, 0xab)), bit16) == [0xabcd]
+    assert convlist(Struct(('f1', bit16), ('f2', Bit(0)))((0xabcd, 0)), bit16) == [0xabcd]
 
 # test_bit_to_bit()
 # test_bit_to_array()
 # test_array_to_bit()
 # test_array_to_array()
 # test_bit_to_struct()
-test_struct_to_bit()
+# test_struct_to_bit()

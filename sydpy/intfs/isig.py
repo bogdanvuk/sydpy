@@ -40,6 +40,7 @@ class Isig(Intf):
     
     def _from_isig(self, other):
         self.inst(Process, '_p_from_isig', self._p_from_isig, senslist=[other], pargs=(other,))
+        self._dflt = other._dflt
 #         if self._get_dtype() is other._get_dtype():
 # #             self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
 # #             other._subscribe(self)
@@ -84,21 +85,6 @@ class Isig(Intf):
             self._sourced = True
             
         return val
-    
-    def __call__(self):
-        return self.read()
-
-    def __ilshift__(self, other):
-        self.write(other)
-        return self
-    
-    def __lshift__(self, other):
-        self._connect(other)
-        return self
-    
-    def __rshift__(self, other):
-        other._connect(self)
-        return self
     
     def write(self, val):
         val = self._prep_write(val)

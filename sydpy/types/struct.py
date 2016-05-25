@@ -228,6 +228,8 @@ class struct(TypeBase):
         dt_remain = other
         for i, v in enumerate(self._val):
             if not v._full():
+                r = None
+                d = None
                 for d, r in convgen(dt_remain, v.__class__, v):
                     if d._full():
                         self._val[i] = d
@@ -252,10 +254,10 @@ class struct(TypeBase):
     def _empty(self):
    
         for v in self._val:
-            if (v is None) or getattr(v, '_empty', lambda : False)():
-                return True
+            if (v is not None) and (not getattr(v, '_empty', lambda : False)()):
+                return False
         else:
-            return False    
+            return True    
            
 #         return sum(self._vld) == 0
    

@@ -2,7 +2,7 @@ import sydpy
 from tests.packer_algo_tl import PackerTlAlgo
 from sydpy.verif.scoreboard import Scoreboard
 from ddi.ddi import Dependency, diinit
-from sydpy.component import inst
+from sydpy.component import inst, Component
 from tests.jesd_converter import Converter
 from tests.jesd_32bpL_lookup_packer import Jesd32bpLLookupPacker
 from sydpy.intfs.itlm import Itlm
@@ -17,6 +17,7 @@ from sydpy.types.bit import Bit
 from sydpy.intfs.isig import Isig
 from sydpy.types import bit
 from sydpy.intfs.iseq import FlowCtrl
+from sydpy.process import Process
 
 # jesd_params = dict(M=3, N=8, S=2, CS=2, CF=0, L=1, F=8, HD=0)
 # frame_lookup = create_lookup(jesd_params, sample_flatten=True)
@@ -68,11 +69,58 @@ class Oversampler(sydpy.Component):
                         if d._full():
                             oversample.bpush(d)
 
+class JesdDataLink(Component):
+    def __init__(self, name, tx_data, tx_start_of_frame, clk:Dependency('clocking/clk'), jesd_params=None):
+        super().__init__(name)
+        tx_data             >> self.inst(sydpy.Iseq, 'tx_data', 
+                                         dtype      =Bit(32*jesd_params['L']), 
+                                         flow_ctrl  =FlowCtrl.none, 
+                                         trans_ctrl =False, 
+                                         clk        =clk)
+        
+        tx_start_of_frame   << self.inst(sydpy.Iseq, 'tx_start_of_frame', 
+                                         dtype      =Bit(4), 
+                                         flow_ctrl  =FlowCtrl.none, 
+                                         trans_ctrl =False, 
+                                         clk        =clk)
+        
+        self.inst(Process, func=self.p_tx_start_of_frame, senslist=[clk.e.posedge])
+        if jesd_params['F'] == 1:
+            self.tx_start_of_frame <<= 0xf
+        elif jesd_params['F'] == 2:
+            self.tx_start_of_frame <<= 0x5
+        else:
+            self.tx_start_of_frame <<= 0x1
+        
+        self.frame_start_cnt = 0
+        self.jesd_params = jesd_params
+        
+    def p_tx_start_of_frame(self):
+        if self.jesd_params['F'] > 4:
+            self.frame_start_cnt += 1
+            self.frame_start_cnt &= (int(self.jesd_params['F']/4) - 1) 
+            
+            if self.frame_start_cnt == 0:
+                self.tx_start_of_frame <<= 0
+            else:
+                self.tx_start_of_frame <<= 0x1
+
 class JesdPackerCosim(Cosim):
-    def __init__(self, name, frame_out, ch_samples, clk:Dependency('clocking/clk')=None, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), 
+    def __init__(self, name, frame_out, tx_start_of_frame, ch_samples, clk:Dependency('clocking/clk')=None, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), 
                  fileset=['/home/bvukobratovic/projects/sydpy/tests/packing/jesd_packer_rtl.vhd']):
         diinit(super().__init__)(name, fileset)
-        frame_out << self.inst(sydpy.Iseq, 'frame_out', dtype=Bit(32*jesd_params['L']), flow_ctrl=FlowCtrl.none, trans_ctrl=False, clk=clk)
+        
+        frame_out           << self.inst(sydpy.Iseq, 'frame_out', 
+                                         dtype      = Bit(32*jesd_params['L']), 
+                                         flow_ctrl  = FlowCtrl.none, 
+                                         trans_ctrl = False, 
+                                         clk        = clk)
+        
+        tx_start_of_frame   >> self.inst(sydpy.Iseq, 'tx_start_of_frame', 
+                                         dtype      = Bit(4), 
+                                         flow_ctrl  = FlowCtrl.none, 
+                                         trans_ctrl = False, 
+                                         clk        = clk)
  
         self.overframe_num = (1 if jesd_params['F'] >= 4 else int(4 / jesd_params['F']))
         self.oversample_num = jesd_params['S']*self.overframe_num
@@ -134,15 +182,26 @@ class JesdPacking(sydpy.Component):
             
             self.inst(Converter, 'conv{}'.format(i), ch_sample=self.ch_samples[-1], N=jesd_params['N'], CS=jesd_params['CS'])
         
-        self.inst(sydpy.Channel, 'frame_out')
+        for ch in ['frame_cosim_out', 'frame_out', 'tx_start_of_frame']:
+            self.inst(sydpy.Channel, ch)
         
 #        self.inst(PackerTlAlgo, 'pack_algo', ch_samples=ch_gen)
-        self.inst(Oversampler, 'oversampler', ch_samples=self.ch_samples, ch_oversamples=self.ch_oversamples)
+        self.inst(Oversampler, 'oversampler', 
+                  ch_samples        = self.ch_samples, 
+                  ch_oversamples    = self.ch_oversamples)
         
-        self.inst(Jesd32bpLLookupPacker, 'pack_lookup', frame_out=self.frame_out, ch_samples=self.ch_oversamples)
+        self.inst(Jesd32bpLLookupPacker, 'pack_lookup', 
+                  frame_out         = self.frame_out, 
+                  ch_samples        = self.ch_oversamples)
+        
         self.inst(JesdPackerCosim, 'jesd_packer', 
-                  frame_out=self.inst(sydpy.Channel, 'frame_cosim_out'),
-                  ch_samples=self.ch_oversamples)
+                  frame_out         = self.frame_cosim_out,
+                  ch_samples        = self.ch_oversamples,
+                  tx_start_of_frame = self.tx_start_of_frame)
+        
+        self.inst(JesdDataLink, 'jesd',
+                  tx_data           = self.frame_cosim_out,
+                  tx_start_of_frame = self.tx_start_of_frame)
 
 N = 16
 CS = 0

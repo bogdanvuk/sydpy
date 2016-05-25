@@ -180,7 +180,6 @@ class Simulator(Component):
                  
                 if self.delta_count > self.max_delta_count:
                     self._finalize()
-                    self.events['run_end'](self)
                     self._finished = True
                     raise greenlet.GreenletExit
                     raise Exception("Maximum number of delta cycles reached: {0}".format(self.max_delta_count))
