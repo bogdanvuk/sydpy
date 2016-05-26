@@ -41,7 +41,7 @@ class Iseq(Intf):
             self.inst(Csig, 'ready', dtype=bit, dflt=1)
     
         if trans_ctrl:        
-            self.inst(Isig, 'last', dtype=bit, dflt=0)
+            self.inst(Isig, 'last', dtype=bit, dflt=1)
         else:
             self.inst(Csig, 'last', dtype=bit, dflt=1)
 #         self.inst(Isig, '_dout', dtype=dtype, dflt=0)
@@ -90,11 +90,12 @@ class Iseq(Intf):
 
 
     def _ff_proc(self):
-        if self.name == 'top/pack_lookup/frame_out':
-            print('COSIM DIN: ', self.data())
-            print('COSIM VALID: ', self.last())
-            print('COSIM LAST: ', self.valid())
-            print('COSIM READY: ', self.ready())
+        if self.name == 'top/unpack_lookup/sout0':
+            pass
+#             print('COSIM DIN: ', self.data())
+#             print('COSIM VALID: ', self.last())
+#             print('COSIM LAST: ', self.valid())
+#             print('COSIM READY: ', self.ready())
             
         if (self.ready() and self.valid()): # and
             #all([i.empty() for i in self._itlm_sinks])):
@@ -120,8 +121,9 @@ class Iseq(Intf):
         while(1):
             ddic['sim'].wait(*senslist)
 #             
-#             if senslist[0].name == 'top/jesd/tx_data/ready':
-#                 pass
+            if self.name == 'top/unpack_lookup/sout0':
+                pass
+        
             for s in self._iseq_sinks:
                 if not s.ready():
                     self.ready <<= False

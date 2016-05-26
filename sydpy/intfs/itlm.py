@@ -3,7 +3,7 @@ from sydpy.process import Process
 import copy
 from sydpy._signal import Signal
 from sydpy import ddic
-from sydpy.types._type_base import convgen
+from sydpy.types._type_base import convgen, conv
 from sydpy._event import Event, EventSet
 
 class Itlm(Isig):
@@ -18,11 +18,11 @@ class Itlm(Isig):
             self._isig_sinks.add(other)
         
     def _subscribe(self, intf, dtype=None):
-        sig = Signal(val=copy.deepcopy(self._dflt), event_set=EventSet('e'))
+        sig = Signal(val=conv(copy.deepcopy(self._dflt), intf._get_dtype()), event_set=EventSet('e'))
 #         if dtype is None:
 #             dtype = self._get_dtype()
 #         sig._dtype = dtype
-        self._sinks.add(sig)
+        self._sinks.add((sig, intf._get_dtype()))
         
 #         if self._sourced and ('_pfunc_tlm_dispatch' not in self.c):
 #             self.inst(Process, '_pfunc_tlm_dispatch', self._pfunc_tlm_dispatch)
@@ -30,18 +30,18 @@ class Itlm(Isig):
         return sig
         
     def _from_itlm(self, other, keys=[]):
-        if self._get_dtype() is other._get_dtype():
+#         if self._get_dtype() is other._get_dtype():
 #             other._tlm_sinks.add(self)
 #            self._sig = Signal(val=copy.deepcopy(self._dflt), event_set = self.e)
-            self._sig = other._subscribe(self)
-            self._sig.e = self.e
+        self._sig = other._subscribe(self)
+        self._sig.e = self.e
 #             self._sig = other
 #             for event in self.e.search(of_type=Event):
 #                 getattr(other.e, event).subscribe(event)
-            
-            self._sourced = True
-        else:
-            self.inst('_p_dtype_convgen', Process, self._pfunc_dtype_convgen, [], pargs=(other,))
+        
+        self._sourced = True
+#         else:
+#             self.inst('_p_dtype_convgen', Process, self._pfunc_dtype_convgen, [], pargs=(other,))
 
 #     def _pfunc_tlm_dispatch(self):
 #         while(1):
@@ -92,17 +92,20 @@ class Itlm(Isig):
     def bpush(self, val):
 #         val = self._prep_write(val)
         
-        while not all([s.empty() for s in self._sinks]):
-            ddic['sim'].wait(*[s.e.updated for s in self._sinks])
+        while not all([s.empty() for s, _ in self._sinks]):
+            ddic['sim'].wait(*[s.e.updated for s, _ in self._sinks])
         
 #         self._sig.bpush(val)
         self.push(val)
         
     def push(self, val):
         val = self._prep_write(val)
-
-        for s in self._sinks:
-            s.push(val)
+        if self.name == 'top/oversampler/oversample0':
+            pass
+        
+        for s, dtype in self._sinks:
+            for d, _ in convgen(val, dtype):
+                s.push(d)
             
         self._sig.push(val)
         
@@ -112,6 +115,12 @@ class Itlm(Isig):
         
         #print('BPOP: {}, sigid={}, eid={}'.format(self.name, id(self._sig), id(self._sig.e)))
         return self._sig.bpop()
+    
+    def pop(self):
+        if not self._sourced:
+            ddic['sim'].wait(self.e.enqueued)
+        
+        return self._sig.pop()
     
     def empty(self):
         if not self._sourced:

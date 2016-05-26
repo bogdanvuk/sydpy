@@ -1,5 +1,5 @@
 import sydpy
-from sydpy.types.bit import Bit, bit8
+from sydpy.types.bit import Bit, bit8, bit
 from tests.jesd_packer_lookup_gen import create_lookup, SymbolicBit
 from sydpy.types.array import Array
 from sydpy.intfs.iseq import FlowCtrl
@@ -14,9 +14,9 @@ def prepare_lookup(jesd_params, tSample):
     oversample_per_frame_w = jesd_params['S']*(tSample.dtype['d'].w + tSample.dtype['cs'].w)
     
     lookup = []
-    print()
-    print('Prepared Frame:')
-    print()
+#     print()
+#     print('Prepared Frame:')
+#     print()
 
     for frame_lane in frame_lookup:
         lane = []
@@ -29,14 +29,17 @@ def prepare_lookup(jesd_params, tSample):
                 
         lookup.append(lane)
         
-        print(lane)
+#         print(lane)
         
     return lookup, segments_32b_num, overframe_num, oversample_num, input_vector_w, oversample_per_frame_w
 
 class Jesd32bpLLookupPacker(sydpy.Component):
 
-    def __init__(self, name, frame_out, ch_samples, clk:Dependency('clocking/clk')=None, tSample = None, arch='tlm', jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), **kwargs):
-        sydpy.Component.__init__(self, name)
+    def __init__(self, name, frame_out, ch_samples, clk:Dependency('clocking/clk')=None, 
+                 tSample = None,
+                 jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0)
+    ):
+        super().__init__(name)
         self.jesd_params = jesd_params
 
         self.lookup, self.segments_32b_num, self.overframe_num, self.oversample_num, self.input_vector_w, self.oversample_per_frame_w = prepare_lookup(jesd_params, tSample)
@@ -97,20 +100,18 @@ class Jesd32bpLLookupPacker(sydpy.Component):
                 self.frame0 <<= frame
                 self.cur_frame_out <<= 0
             
-            print()
-            print('Prepared Frame:')
-            print()
-            for l in frame:
-                print(l)
+#             print()
+#             print('Prepared Frame:')
+#             print()
+#             for l in frame:
+#                 print(l)
             
     
     def dispatch(self):
 
         if self.cur_frame_out() == 0:
-            print('frame0 output')
             frame = self.frame0()
         else:
-            print('frame1 output')
             frame = self.frame1()        
 
         out_word = []
@@ -121,7 +122,7 @@ class Jesd32bpLLookupPacker(sydpy.Component):
                     out_word.append(frame[l][self.segments_32b_cnt()*4 + i])
                     self.frame_out.data[l*32+(i+1)*8 - 1:l*32+i*8] <<= frame[l][self.segments_32b_cnt()*4 + i]
                 
-            print('32bpL out: {}, {}'.format(self.frame_out.data.read_next(), out_word))
+#             print('32bpL out: {}, {}'.format(self.frame_out.data.read_next(), out_word))
 
 class Jesd32bpLLookupUnpacker(sydpy.Component):
 
@@ -131,17 +132,26 @@ class Jesd32bpLLookupUnpacker(sydpy.Component):
         self.lookup, self.segments_32b_num, self.overframe_num, self.oversample_num, self.input_vector_w, self.oversample_per_frame_w = prepare_lookup(jesd_params, tSample)
 
         for i in range(2):
-            self.inst(sydpy.Isig, 'frame{}'.format(i), dtype=Array(Array(bit8, jesd_params['F']), jesd_params['L']), dflt=[[0]*jesd_params['F'] for _ in range(jesd_params['L'])])
+            self.inst(sydpy.Isig, 'frame{}'.format(i), 
+                      dtype=Array(Array(bit8, jesd_params['F']), jesd_params['L']), 
+                      dflt=[[0]*jesd_params['F'] for _ in range(jesd_params['L'])]
+            )
         
-        self.cur_frame_in = self.frame0
         self.inst(sydpy.Isig, 'segments_32b_cnt', dtype=int)
         self.inst(sydpy.Isig, 'cur_frame_in', dtype=int, dflt=1)
+        self.inst(sydpy.Isig, 'frame_ready', dtype=bit, dflt=False)
         
-        frame_in >> self.inst(sydpy.Iseq, 'frame_in', dtype=Bit(32*jesd_params['L']), flow_ctrl=FlowCtrl.valid, trans_ctrl=False, dflt=0, clk=clk)
+        frame_in >> self.inst(sydpy.Iseq, 'frame_in', 
+                              dtype=Bit(32*jesd_params['L']), 
+                              flow_ctrl=FlowCtrl.valid, 
+                              trans_ctrl=False, 
+                              dflt=0, 
+                              clk=clk)
         
         self.sout = []
         for i, d in enumerate(ch_samples):
             sout = self.inst(sydpy.Iseq, 'sout{}'.format(i), dtype=Bit(self.input_vector_w), dflt=0, clk=clk)
+            sout.valid <<= False
 #             if self.segments_32b_num == 1:
 #                 idin.ready <<= True
 #             else:
@@ -150,23 +160,51 @@ class Jesd32bpLLookupUnpacker(sydpy.Component):
             self.sout.append(sout)
             d << sout
             
-        self.inst(sydpy.Process, 'unpack', self.unpack, senslist=[clk.e.posedge])
+        self.inst(sydpy.Process, 'unpack', self.unpack) #, senslist=[clk.e.posedge])
         self.inst(sydpy.Process, 'form_frame', self.form_frame, senslist=[clk.e.posedge])
 
     def unpack(self):
-        self.segments_32b_cnt <<= self.segments_32b_cnt() + 1
-        if self.segments_32b_cnt() == self.segments_32b_num - 1:
-            self.segments_32b_cnt <<= 0
+        if (self.segments_32b_cnt() == 0) and self.frame_ready():
             
-        pass
+            if self.cur_frame_in() == 1:
+                frame = self.frame0()
+            else:
+                frame = self.frame1()  
+
+            dout = [Bit(self.input_vector_w)(0) for _ in range(self.jesd_params['M'])]
+
+            for l, m_lane in enumerate(self.lookup):
+                for b, m_byte in enumerate(m_lane):
+                    for i, m_bit in enumerate(m_byte.val):
+                        if m_bit:
+                            dout[m_bit[0]][m_bit[1]] = frame[l][b][i]
+                            
+            for i, s in enumerate(self.sout):
+                s <<= dout[i]
+                s.valid <<= True
+        else:
+            for i, s in enumerate(self.sout):
+                s <<= 0
+                s.valid <<= False
     
     def form_frame(self):
-        if self.cur_frame_in() == 0:
-            frame = self.frame0
-        else:
-            frame = self.frame1        
 
-        if frame:        
+        if not self.frame_in.valid():
+            self.segments_32b_cnt <<= 0
+            self.cur_frame_in <<= 0
+            self.frame_ready <<= False
+        else:
+            self.segments_32b_cnt <<= self.segments_32b_cnt() + 1
+            if self.segments_32b_cnt() == self.segments_32b_num - 1:
+                self.segments_32b_cnt <<= 0
+                self.frame_ready <<= True
+                self.cur_frame_in <<= int(not self.cur_frame_in())
+
+            if self.cur_frame_in() == 0:
+                frame = self.frame0
+            else:
+                frame = self.frame1        
+            
             for l in range(self.jesd_params['L']):
                 for i in range(4):
                     frame[l][self.segments_32b_cnt()*4 + i] <<= self.frame_in.data()[l*32+(i+1)*8 - 1:l*32+i*8]

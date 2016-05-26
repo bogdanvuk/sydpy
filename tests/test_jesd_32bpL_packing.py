@@ -78,8 +78,6 @@ class JesdDataLink(Component):
                                          flow_ctrl  =FlowCtrl.ready, 
                                          trans_ctrl =False, 
                                          clk        =clk)
-        self.tx_data.ready <<= True
-
         rx_data             << self.inst(sydpy.Iseq, 'rx_data', 
                                          dtype      =Bit(32*jesd_params['L']), 
                                          flow_ctrl  =FlowCtrl.valid, 
@@ -89,31 +87,40 @@ class JesdDataLink(Component):
                                          dtype      =Bit(4), 
                                          flow_ctrl  =FlowCtrl.none, 
                                          trans_ctrl =False, 
+                                         dflt       =0,
                                          clk        =clk)
         
         self.inst(Process, func=self.p_tx_start_of_frame, senslist=[clk.e.posedge])
-        if jesd_params['F'] == 1:
-            self.tx_start_of_frame <<= 0xf
-        elif jesd_params['F'] == 2:
-            self.tx_start_of_frame <<= 0x5
-        else:
-            self.tx_start_of_frame <<= 0x1
         
+        self.init_delay = 0
         self.frame_start_cnt = 0
         self.jesd_params = jesd_params
         
     def p_tx_start_of_frame(self):
-        if self.jesd_params['F'] > 4:
-            self.frame_start_cnt += 1
-            self.frame_start_cnt &= (int(self.jesd_params['F']/4) - 1) 
-            
-            if self.frame_start_cnt == 0:
-                self.tx_start_of_frame <<= 0
-            else:
+        if self.init_delay < 3:
+            self.init_delay += 1
+            self.tx_start_of_frame <<= 0x0
+        elif self.init_delay == 3:
+            self.tx_data.ready <<= True
+            self.init_delay += 1
+        else:
+            if self.jesd_params['F'] == 1:
+                self.tx_start_of_frame <<= 0xf
+            elif self.jesd_params['F'] == 2:
+                self.tx_start_of_frame <<= 0x5
+            elif self.jesd_params['F'] == 4:
                 self.tx_start_of_frame <<= 0x1
-                
-        self.rx_data        <<= self.tx_data.data()
-        self.rx_data.valid  <<= True 
+            else:
+                if self.frame_start_cnt == 0:
+                    self.tx_start_of_frame <<= 0x1
+                else:
+                    self.tx_start_of_frame <<= 0
+                    
+                self.frame_start_cnt += 1
+                self.frame_start_cnt &= (int(self.jesd_params['F']/4) - 1) 
+                    
+            self.rx_data        <<= self.tx_data.data()
+            self.rx_data.valid  <<= True 
                 
 class JesdPackerCosim(Cosim):
     def __init__(self, name, frame_out, tx_start_of_frame, ch_samples, clk:Dependency('clocking/clk')=None, jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), 
@@ -226,10 +233,11 @@ class JesdPacking(sydpy.Component):
 
 N = 16
 CS = 0
+jesd_params = dict(M=8, CF=0, CS=CS, F=8, HD=1, L=4, S=2, N=N)
 
-sydpy.ddic.configure('sim.duration'         , 600)
+sydpy.ddic.configure('sim.duration'         , 1000)
 #sydpy.ddic.configure('top/pack_matrix.arch' , 'tlm')
-sydpy.ddic.configure('*.jesd_params'    , dict(M=8, CF=0, CS=CS, F=8, HD=1, L=4, S=2, N=N))
+sydpy.ddic.configure('*.jesd_params'    , jesd_params)
 sydpy.ddic.configure('top/*.tSample'    , sydpy.Struct(('d', sydpy.Bit(N)), 
                                                        ('cs', sydpy.Bit(CS))))
 #sydpy.ddic.configure('top.jesd_packer.fileset', ['/home/bvukobratovic/projects/sydpy/tests/packing/jesd_packer_rtl.vhd'])
@@ -244,6 +252,9 @@ inst(FrameScoreboard, 'verif/inst/')
 clk = inst(sydpy.Clocking, 'clocking')
 # sydpy.ddic.configure('top/*.clk', clk.clk)
 inst(JesdPacking, 'top')
+
+for i in range(jesd_params['M']):
+    inst(Scoreboard, 'verif/inst/', [sydpy.ddic['top/unpack_lookup/sout{}'.format(i)], sydpy.ddic['top/oversampler/oversample{}'.format(i)]])
 
 sydpy.ddic['sim'].run()
 
