@@ -49,6 +49,16 @@ class Intf(Component):
 #                 arch = types.MethodType(arch,self.get_module())
 #                 self.get_module().arch_inst(arch, data_i=other.master, data_o=self.slave, **cfg)
 
+    def is_master(self):
+        if self._mch is not None:
+            return True
+        else:
+            for i in self._sliced_intfs.values():
+                if i.is_master():
+                    return True
+                
+        return False 
+
     def __call__(self):
         return self.read()
 

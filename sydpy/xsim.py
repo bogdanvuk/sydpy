@@ -194,7 +194,7 @@ class XsimIntf:
     def recv_export(self):
         ret_type, params = self.send_command('EXPORT')
         for intf, p in zip(sorted(self.outputs.items()), params):
-            intf[1].write(intf[1]._get_dtype()('0x' + p.replace('x', 'u').replace('z', 'u')))
+            intf[1].write(intf[1]._get_dtype()('0x' + p.lower().replace('x', 'u').replace('z', 'u')))
             
         ddic['sim']._update()
         ddic['sim']._resolve()

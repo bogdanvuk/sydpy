@@ -26,9 +26,15 @@ class Cosim(Component):
             for s in subintfs:
                 if isinstance(intf, Intf):
                     subintf_feedback = s.name.rpartition('/')[-1] in intf.feedback_subintfs
-                    master = not (intf._mch is None)
+                    print(s.name)
+                    if s.name == 'top/jesd_packer/din':
+                        pass
+                    master = intf.is_master()
                 else:
-                    master = not (s._mch is None)
+                    print(s.name)
+                    if s.name == 'top/jesd_packer/din':
+                        pass
+                    master = s.is_master()
                     subintf_feedback = False
                     
                 
@@ -36,6 +42,9 @@ class Cosim(Component):
                 self.resolve_intf(s, feedback=(subintf_feedback!=feedback), master=master)
         elif (intf is not self) and (not isinstance(intf, Csig)):
             base_name = os.path.relpath(intf.name, self.name)
+            
+            if base_name == 'dout/data':
+                pass
             
             if master != feedback:
                 direction = self.outputs

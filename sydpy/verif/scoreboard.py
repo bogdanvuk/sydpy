@@ -40,11 +40,16 @@ class Scoreboard(Component):
         self.intfs = intfs
         
         if dtype is None:
-            dtype = intfs[0]._get_dtype()
+            for i in intfs:
+                if hasattr(i, '_get_dtype'): 
+                    dtype = i._get_dtype()
+                    break;
+            else:
+                pass
         
         for i, intf in enumerate(intfs):
             self.recv_intfs.append(self.inst(Itlm, str(i), dtype=dtype))
-            self.recv_intfs[-1] << intf
+            intf >> self.recv_intfs[-1] 
         
         self.recv_data = [[] for _ in range(len(intfs))]
         

@@ -90,7 +90,7 @@ class Iseq(Intf):
 
 
     def _ff_proc(self):
-        if self.name == 'top/unpack_lookup/sout0':
+        if self.name == 'top/jesd_packer/dout':
             pass
 #             print('COSIM DIN: ', self.data())
 #             print('COSIM VALID: ', self.last())
@@ -119,9 +119,12 @@ class Iseq(Intf):
     def _p_ready_proc(self):
         senslist = [s.ready for s in self._iseq_sinks]
         while(1):
+            if self.name == 'top/jesd_packer/dout':
+                pass
+            
             ddic['sim'].wait(*senslist)
 #             
-            if self.name == 'top/unpack_lookup/sout0':
+            if self.name == 'top/jesd_packer/dout':
                 pass
         
             for s in self._iseq_sinks:
@@ -198,6 +201,7 @@ class SlicedIseq(Iseq):
         self._dtype = intf._get_dtype().deref(key)
         self._key = key
         self._parent = intf
+        self._sliced_intfs = {}
 
     def _get_dtype(self):
         return self._dtype

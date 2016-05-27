@@ -36,7 +36,7 @@ class Channel(Component):
     
     def sink(self, intf):
         if self.master is not None:
-            raise Exception("Can only have one master per channel!")
+            raise Exception("Channel '{}' already has a master!".format(self.name))
         
         self.master = intf
         self.master_connected = True
