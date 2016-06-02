@@ -24,7 +24,10 @@ def prepare_lookup(jesd_params, tSample):
             for b in frame_lane:
                 b_shift = []
                 for v in b.val:
-                    b_shift.append((v[0], v[1] + frame_cnt*oversample_per_frame_w)) 
+                    if v != 0:
+                        b_shift.append((v[0], v[1] + frame_cnt*oversample_per_frame_w))
+                    else:
+                        b_shift.append(0)
                 lane.append(SymbolicBit(b.w)(b_shift))
                 
         lookup.append(lane)

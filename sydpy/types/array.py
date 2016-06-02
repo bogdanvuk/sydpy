@@ -26,7 +26,7 @@ from sydpy.types._type_base import TypeBase, convlist
 from sydpy import ConversionError
 from sydpy.types import convgen
 
-def Array(cls, w=((1 << 16) - 1)):
+def Array(cls, w=None): #((1 << 16) - 1)):
     if (cls, w) not in __array_classes:
         __array_classes[(cls, w)] = type('array', (array,), dict(dtype=cls,w=w))
         
@@ -35,7 +35,7 @@ def Array(cls, w=((1 << 16) - 1)):
 class array(TypeBase):
     
     dtype = None
-    w = (1 << 16) - 1
+    w = None #(1 << 16) - 1
     
     def __init__(self, val=[]):
         
@@ -62,9 +62,12 @@ class array(TypeBase):
        
     @classmethod
     def _rnd(cls, rnd_gen):
-        size = rnd_gen.rnd_int(1, cls.w)
-        
-        val = [rnd_gen._rnd(cls.dtype) for _ in range(size)] 
+        if cls.w:
+            size = cls.w
+        else:
+            size = rnd_gen.rnd_int(1, 16)
+            
+        val = [rnd_gen._rnd(cls.dtype) for _ in range(size)]
         
         return cls(val)
     
@@ -79,7 +82,7 @@ class array(TypeBase):
             s = "'{" + s + "}"
             
         return s
-    
+
     def __len__(self):
         return len(self._val)
 
@@ -144,7 +147,7 @@ class array(TypeBase):
             return False
 
     def _full(self):
-        if (len(self._val) == self.w) and (self._val[-1]._full):
+        if ((self.w is None) or (len(self._val) == self.w)) and (self._val[-1]._full):
             return True
         else:
             return False
