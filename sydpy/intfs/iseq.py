@@ -90,8 +90,6 @@ class Iseq(Intf):
 
 
     def _ff_proc(self):
-        if self.name == 'top/jesd_packer/dout':
-            pass
 #             print('COSIM DIN: ', self.data())
 #             print('COSIM VALID: ', self.last())
 #             print('COSIM LAST: ', self.valid())
@@ -99,6 +97,9 @@ class Iseq(Intf):
             
         if (self.ready() and self.valid()): # and
             #all([i.empty() for i in self._itlm_sinks])):
+            
+            if self.name == 'top/jesd_packer/dout':
+                pass
             
             self._dout.write(self.data())
             
@@ -202,6 +203,9 @@ class SlicedIseq(Iseq):
         self._key = key
         self._parent = intf
         self._sliced_intfs = {}
+        self._itlm_sinks = set()
+        self._itlm_data = []
+        self._sliced_ff_proc = None
 
     def _get_dtype(self):
         return self._dtype
@@ -214,6 +218,13 @@ class SlicedIseq(Iseq):
                 return self._parent.c[name]
         else:
             return getattr(self._parent, name)
+
+    def _to_itlm(self, other):
+        self._itlm_sinks.add(other)
+        self.ready._dflt = 1
+
+        if self._sliced_ff_proc is None:
+            self._sliced_ff_proc = self.inst(Process, func=self._ff_proc, senslist=[self.clk.e.posedge])
 
     def _from_itlm(self, other):
         self._parent.valid._dflt = 0

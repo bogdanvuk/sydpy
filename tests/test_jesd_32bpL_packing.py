@@ -1,5 +1,4 @@
 import sydpy
-from tests.packer_algo_tl import PackerTlAlgo
 from sydpy.verif.scoreboard import Scoreboard
 from ddi.ddi import Dependency, diinit
 from sydpy.component import inst, Component
@@ -19,6 +18,7 @@ from sydpy.intfs.isig import Isig
 from sydpy.types import bit
 from sydpy.intfs.iseq import FlowCtrl
 from sydpy.process import Process
+from collections import OrderedDict
 
 # jesd_params = dict(M=3, N=8, S=2, CS=2, CF=0, L=1, F=8, HD=0)
 # frame_lookup = create_lookup(jesd_params, sample_flatten=True)
@@ -136,9 +136,11 @@ class JesdPackerCosim(Cosim):
                  tx_data, tx_start_of_frame, tx_samples, 
                  rx_data, rx_start_of_frame, rx_samples, 
                  clk:Dependency('clocking/clk')=None, 
-                 jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0), 
+                 jesd_params=dict(M=1, N=8, S=1, CS=0, CF=0, L=1, F=1, HD=0),
+                 parameters=OrderedDict(),
                  fileset=['/home/bvukobratovic/projects/sydpy/tests/packing/jesd_packer_rtl.vhd']):
-        diinit(super().__init__)(name, fileset)
+        
+        diinit(super().__init__)(name, fileset=fileset, parameters=parameters)
         
         tx_data           << self.inst(sydpy.Iseq, 'tx', 
                                          dtype      = Bit(32*jesd_params['L']), 
@@ -286,6 +288,13 @@ jesd_params = dict(M=8, CF=0, CS=CS, F=8, HD=1, L=4, S=2, N=N)
 sydpy.ddic.configure('sim.duration'         , 1000)
 #sydpy.ddic.configure('top/pack_matrix.arch' , 'tlm')
 sydpy.ddic.configure('*.jesd_params'    , jesd_params)
+sydpy.ddic.configure('top/jesd_packer.parameters'    , OrderedDict([('N_g', jesd_params['N']),
+                                                                    ('CS_g', jesd_params['CS']),
+                                                                    ('M_g', jesd_params['M']),
+                                                                    ('S_g', jesd_params['S']),
+                                                                    ('F_g', jesd_params['F']),
+                                                                    ('L_g', jesd_params['L'])]))
+
 sydpy.ddic.configure('top/*.tSample'    , sydpy.Struct(('d', sydpy.Bit(N)), 
                                                        ('cs', sydpy.Bit(CS))))
 #sydpy.ddic.configure('top.jesd_packer.fileset', ['/home/bvukobratovic/projects/sydpy/tests/packing/jesd_packer_rtl.vhd'])

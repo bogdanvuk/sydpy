@@ -84,8 +84,9 @@ module wrap();
 endmodule   
 """)
 
+#${parameter_map}
 module_inst_tmpl = string.Template("""
-  ${module_name} ${instance_name} (
+  ${module_name} ${parameter_map} ${instance_name} (
     ${port_map}
   );
 """)
@@ -125,7 +126,12 @@ class XsimIntf:
         for name, intf in itertools.chain(cosim.inputs.items(), cosim.outputs.items()):
             port_map.append(port_map_tmpl.substitute(port_name = name, signal_name = '_'.join([cosim.module_name, name]))) 
     
+    
+        
+        parameter_map = '#({})'.format(','.join([str(v) for v in cosim.parameters.values()]))
+    
         return module_inst_tmpl.substitute(module_name=cosim.module_name,
+                                           parameter_map=parameter_map,
                                            instance_name='i_' + cosim.module_name,
                                            port_map=',\n    '.join(port_map))
     

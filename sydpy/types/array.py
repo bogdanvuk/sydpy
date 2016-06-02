@@ -161,6 +161,7 @@ class array(TypeBase):
         else:
             dt_remain = self.dtype()
 
+        r = None
         for d, r in convgen(other, self.dtype, dt_remain):
             self._val.append(d)
             if self._full():

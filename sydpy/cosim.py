@@ -9,10 +9,11 @@ from sydpy.types.struct import struct
 
 class Cosim(Component):
     
-    def __init__(self, name, fileset = [], module_name=None, cosim_intf: Dependency('xsimintf') = None):
+    def __init__(self, name, fileset = [], module_name=None, parameters={}, cosim_intf: Dependency('xsimintf') = None):
         super().__init__(name)
         self.cosim_intf = cosim_intf
         self.module_name = module_name
+        self.parameters = parameters
         self.fileset = [os.path.abspath(f) for f in fileset]
 
         if self.module_name is None:
